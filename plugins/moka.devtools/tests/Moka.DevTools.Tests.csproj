@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+		The plugin's logic against inputs the tests make themselves (keys, tokens, published vectors), no network, and what
+		the module registers. xunit v3 on Microsoft.Testing.Platform, like Mokaterm's own tests.
+	-->
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
+		<RootNamespace>Moka.DevTools.Tests</RootNamespace>
+	</PropertyGroup>
+
+	<!--
+		CA1707: Method_Scenario_Expectation names.
+		CA2000: tests create and drop disposables freely.
+		CA5350, CA5351: MD5 and SHA-1 are checked against their published vectors on purpose.
+	-->
+	<PropertyGroup>
+		<NoWarn>$(NoWarn);CA1707;CA2000;CA5350;CA5351</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Using Include="Xunit" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="xunit.v3" />
+		<PackageReference Include="xunit.runner.visualstudio" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" />
+		<PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+
+		<!-- The plugin takes this from its host and does not copy it; a test project is its own host. -->
+		<PackageReference Include="Mokaterm.UI.Common" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\src\Moka.DevTools.csproj" />
+	</ItemGroup>
+
+</Project>

@@ -1,0 +1,130 @@
+.dt-re-flag {
+	display: inline-flex;
+	font-family: var(--moka-font-family-mono);
+}
+
+.dt-re-flags {
+	color: var(--moka-color-on-surface-variant);
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+}
+
+.dt-re-highlight ::deep pre {
+	max-height: 280px;
+	margin: 0;
+	padding: var(--moka-spacing-sm);
+	overflow: auto;
+	border-left: 3px solid var(--moka-color-outline);
+	border-radius: var(--moka-radius-sm);
+	background: var(--moka-color-surface-2);
+	color: var(--moka-color-on-surface-variant);
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+	line-height: 1.6;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.dt-re-highlight ::deep .dt-mark {
+	padding: 1px 0;
+	border-radius: 2px;
+	background: var(--moka-color-primary-glow-strong);
+	box-shadow: 0 0 0 1px var(--moka-color-primary-border);
+	color: var(--moka-color-on-surface);
+}
+
+.dt-re-highlight ::deep .dt-mark--odd {
+	background: color-mix(in srgb, var(--moka-color-info) 22%, transparent);
+	box-shadow: 0 0 0 1px color-mix(in srgb, var(--moka-color-info) 40%, transparent);
+}
+
+/* An empty match has no text to color, so it shows as a thin bar where it matched. */
+.dt-re-highlight ::deep .dt-mark--empty {
+	display: inline-block;
+	width: 2px;
+	height: 1.1em;
+	padding: 0;
+	vertical-align: text-bottom;
+	background: var(--moka-color-primary);
+}
+
+.dt-re-matches {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+}
+
+.dt-re-match {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	padding: 4px var(--moka-spacing-sm);
+	border-top: 1px solid var(--moka-color-outline-variant);
+}
+
+.dt-re-match:first-child {
+	border-top: 0;
+}
+
+.dt-re-match-head {
+	display: flex;
+	align-items: baseline;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.dt-re-match-number {
+	min-width: 3ch;
+	color: var(--moka-color-primary);
+	font-family: var(--moka-font-family-mono);
+	font-size: 10px;
+	font-weight: var(--moka-font-weight-semibold);
+}
+
+.dt-re-match-range {
+	flex-shrink: 0;
+	color: var(--moka-color-on-surface-tertiary);
+	font-family: var(--moka-font-family-mono);
+	font-size: 10px;
+}
+
+.dt-re-match-text {
+	min-width: 0;
+	color: var(--moka-color-on-surface);
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.dt-re-groups {
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	gap: 1px var(--moka-spacing-md);
+	padding-left: calc(3ch + var(--moka-spacing-sm));
+}
+
+.dt-re-group-name {
+	color: var(--moka-color-on-surface-tertiary);
+	font-family: var(--moka-font-family-mono);
+	font-size: 10px;
+}
+
+.dt-re-group-value {
+	min-width: 0;
+	color: var(--moka-color-on-surface);
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.dt-re-group-value--none {
+	color: var(--moka-color-on-surface-tertiary);
+	font-family: var(--moka-font-family);
+	font-style: italic;
+}

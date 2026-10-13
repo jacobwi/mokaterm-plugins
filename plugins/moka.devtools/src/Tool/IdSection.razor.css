@@ -1,0 +1,12 @@
+.dt-grow {
+	flex: 1;
+}
+
+.dt-id-count {
+	width: 84px;
+}
+
+.dt-id-count ::deep input {
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+}

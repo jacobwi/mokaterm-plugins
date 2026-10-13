@@ -1,0 +1,104 @@
+.dt-grow {
+	flex: 1;
+}
+
+.dt-hash-file {
+	min-width: 0;
+	max-width: 360px;
+	overflow: hidden;
+	color: var(--moka-color-on-surface);
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dt-hash-size {
+	color: var(--moka-color-on-surface-tertiary);
+	font-family: var(--moka-font-family-mono);
+	font-size: 10px;
+}
+
+.dt-hashes {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+	container-type: inline-size;
+}
+
+.dt-hash {
+	display: grid;
+	grid-template-columns: 76px 72px minmax(0, 1fr) auto;
+	align-items: center;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+	min-height: 30px;
+	padding: 3px var(--moka-spacing-sm);
+	border-top: 1px solid var(--moka-color-outline-variant);
+	transition: background var(--moka-transition-fast);
+}
+
+.dt-hash:first-child {
+	border-top: 0;
+}
+
+.dt-hash:hover {
+	background: var(--moka-color-surface-hover);
+}
+
+.dt-hash--match,
+.dt-hash--match:hover {
+	background: var(--moka-color-surface-2);
+	box-shadow: inset 2px 0 0 var(--moka-color-success), inset 0 0 20px color-mix(in srgb, var(--moka-color-success) 8%, transparent);
+}
+
+.dt-hash-name {
+	color: var(--moka-color-on-surface);
+	font-size: var(--moka-font-size-xs);
+	font-weight: var(--moka-font-weight-semibold);
+	white-space: nowrap;
+}
+
+.dt-hash-tags {
+	display: flex;
+	align-items: center;
+	min-width: 0;
+}
+
+.dt-hash-weak {
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 9px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	cursor: help;
+}
+
+.dt-hash-value {
+	min-width: 0;
+	color: var(--moka-color-on-surface);
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+	overflow-wrap: anywhere;
+	user-select: all;
+}
+
+.dt-hash-none {
+	grid-column: span 2;
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: var(--moka-font-size-xs);
+}
+
+/* Narrow: the tag column goes and the value takes the room. */
+@container (max-width: 520px) {
+	.dt-hash {
+		grid-template-columns: 76px minmax(0, 1fr) auto;
+	}
+
+	.dt-hash-tags {
+		display: none;
+	}
+}

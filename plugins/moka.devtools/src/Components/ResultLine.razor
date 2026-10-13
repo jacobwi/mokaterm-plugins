@@ -1,0 +1,26 @@
+@* One verdict: a chip and a sentence, with a colored edge for good, bad or a warning. *@
+<div class="dt-result dt-result--@ToneClass" role="status">
+	<StatusChip Text="@Chip" Color="@ChipColor" Glow="@(Tone != ResultTone.Plain)" />
+	<span class="dt-result-text">@ChildContent</span>
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Chip { get; set; } = "";
+
+	[Parameter]
+	public ResultTone Tone { get; set; }
+
+	[Parameter]
+	public RenderFragment? ChildContent { get; set; }
+
+	private string ToneClass => Tone.ToString().ToLowerInvariant();
+
+	private MokaColor ChipColor => Tone switch
+	{
+		ResultTone.Good => MokaColor.Success,
+		ResultTone.Bad => MokaColor.Error,
+		ResultTone.Warning => MokaColor.Warning,
+		_ => MokaColor.Surface,
+	};
+}

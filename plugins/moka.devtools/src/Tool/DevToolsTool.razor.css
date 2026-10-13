@@ -1,0 +1,97 @@
+/* The tool is wide, so the dialog has a fixed height and this fills it; each section scrolls its own parts. The root
+   names itself mt-tool-nav as well, which is what ToolNavigation's own queries follow. */
+.dt-tool {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 420px;
+	min-width: 0;
+	padding: var(--moka-spacing-md) var(--moka-spacing-lg);
+	container-type: inline-size;
+	container-name: dt-tool mt-tool-nav;
+}
+
+.dt-section {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+}
+
+/* A display of its own would otherwise show a hidden section. */
+.dt-section[hidden] {
+	display: none;
+}
+
+/* Shared by every section. */
+.dt-tool ::deep .dt-stack {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.dt-tool ::deep .dt-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.dt-tool ::deep .dt-row > .dt-grow {
+	flex: 1 1 200px;
+	min-width: 0;
+}
+
+.dt-tool ::deep .dt-pair {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	gap: var(--moka-spacing-sm);
+	align-items: start;
+	min-width: 0;
+}
+
+.dt-tool ::deep .dt-label {
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 10px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.dt-tool ::deep .dt-note {
+	color: var(--moka-color-on-surface-variant);
+	font-size: var(--moka-font-size-xs);
+}
+
+.dt-tool ::deep .dt-group {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+	padding: var(--moka-spacing-sm) var(--moka-spacing-md);
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+	background: var(--moka-color-surface);
+}
+
+.dt-tool ::deep .dt-results {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.dt-tool ::deep .dt-mono {
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+}
+
+.dt-tool ::deep .dt-field-mono input {
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+}

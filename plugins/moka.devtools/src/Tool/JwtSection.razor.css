@@ -1,0 +1,16 @@
+.dt-jwt-meta {
+	min-width: 0;
+	max-width: 260px;
+	overflow: hidden;
+	color: var(--moka-color-on-surface-variant);
+	font-family: var(--moka-font-family-mono);
+	font-size: 10px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+::deep .dt-key-text textarea {
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	word-break: break-all;
+}

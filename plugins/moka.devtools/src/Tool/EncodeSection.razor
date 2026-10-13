@@ -1,0 +1,94 @@
+@inherits DevToolViewBase
+
+<ToolPageFrame Title="Encode and decode" Summary="@Summary" Loaded="true">
+	<div class="dt-group">
+		<div class="dt-row">
+			<EnumSegmentedControl TEnum="CodecKind" Value="_kind" ValueChanged="OnKindChangedAsync" Options="Kinds" AriaLabel="Encoding" />
+			<EnumSegmentedControl TEnum="CodecDirection" Value="_direction" ValueChanged="OnDirectionChangedAsync" Options="Directions" AriaLabel="Direction" />
+		</div>
+		<div class="dt-row">
+			@switch (_kind)
+			{
+				case CodecKind.Base64:
+				case CodecKind.Base64Url:
+					@if (_direction == CodecDirection.Encode)
+					{
+						<MokaCheckbox Label="Padding (=)" Value="_padding" ValueChanged="@(value => SetAsync(() => _padding = value))" />
+					}
+					else
+					{
+						<span class="dt-note">Spaces and line breaks are skipped; padding is optional.</span>
+					}
+					break;
+				case CodecKind.Url:
+					<EnumSegmentedControl TEnum="UrlMode" Value="_urlMode" ValueChanged="@(value => SetAsync(() => _urlMode = value))" Options="UrlModes" AriaLabel="What is encoded" />
+					@if (_direction == CodecDirection.Decode)
+					{
+						<MokaCheckbox Label="+ is a space (form data)" Value="_plusIsSpace" ValueChanged="@(value => SetAsync(() => _plusIsSpace = value))" />
+					}
+					break;
+				case CodecKind.Hex:
+					@if (_direction == CodecDirection.Encode)
+					{
+						<EnumSegmentedControl TEnum="HexSeparator" Value="_separator" ValueChanged="@(value => SetAsync(() => _separator = value))" Options="Separators" AriaLabel="Between bytes" />
+						<MokaCheckbox Label="Upper case" Value="_upper" ValueChanged="@(value => SetAsync(() => _upper = value))" />
+					}
+					else
+					{
+						<span class="dt-note">Takes spaces, colons or dashes between bytes, and 0x or \x before them.</span>
+					}
+					break;
+				case CodecKind.Html:
+					@if (_direction == CodecDirection.Encode)
+					{
+						<MokaCheckbox Label="Encode everything outside ASCII" Value="_nonAscii" ValueChanged="@(value => SetAsync(() => _nonAscii = value))" />
+					}
+					else
+					{
+						<span class="dt-note">Reads numeric references and the named ones of HTML 4, and stops at a name it does not know.</span>
+					}
+					break;
+			}
+		</div>
+	</div>
+
+	<TextInput Label="@InputLabel"
+			   Value="_input"
+			   ValueChanged="OnInputChangedAsync"
+			   Placeholder="@InputPlaceholder"
+			   Rows="6"
+			   AllowFile
+			   AllowBytes="TakesBytes"
+			   FileWhat="a file to encode or decode" />
+
+	@if (_error is { } error)
+	{
+		<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+	}
+
+	@if (_output is { } output)
+	{
+		@if (output.Note is { } note)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Info" Dense>@note</MokaAlert>
+		}
+
+		<OutputBox Title="Output" Detail="@OutputDetail" Text="@OutputText" FileName="@OutputFileName" CopyName="Output" Wrap="@(_view != OutputView.Dump)">
+			<Actions>
+				@if (output.Bytes is not null)
+				{
+					<EnumSegmentedControl TEnum="OutputView" Value="_view" ValueChanged="@(value => _view = value)" Options="ViewsFor(output)" AriaLabel="Show the bytes as" />
+					<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokatermIcons.Download" OnClick="SaveBytesAsync">Save bytes</MokaButton>
+				}
+				@if (SwapText is not null)
+				{
+					<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="DevToolIcons.Swap" OnClick="SwapAsync" title="Put the output in the box and turn the direction around">Use as input</MokaButton>
+				}
+			</Actions>
+		</OutputBox>
+	}
+	else if (_error is null)
+	{
+		<span class="dt-note">The output follows the input as it changes.</span>
+	}
+</ToolPageFrame>

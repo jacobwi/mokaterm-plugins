@@ -26,6 +26,11 @@
 		<PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
 	</ItemGroup>
 
+	<!-- moka.devtools: YAML reading and writing for its JSON and YAML tools (MIT). -->
+	<ItemGroup>
+		<PackageVersion Include="YamlDotNet" Version="18.1.0" />
+	</ItemGroup>
+
 	<!-- Tests: the versions Mokaterm's own tests use (xunit v3 on Microsoft.Testing.Platform, see global.json). -->
 	<ItemGroup>
 		<PackageVersion Include="xunit.v3" Version="4.0.1" />

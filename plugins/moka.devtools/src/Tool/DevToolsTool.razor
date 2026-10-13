@@ -1,0 +1,31 @@
+@inherits AppToolBase
+
+@* The Developer Utilities tool: a side menu of sections, each kept alive while another shows, so switching back finds
+   what was typed. Everything is cleared when the tool closes. *@
+<div class="dt-tool" @ref="_root">
+	<CascadingValue Value="_script" IsFixed="true">
+		<ToolNavigation Entries="Entries" Current="@_current" CurrentChanged="Show" Label="Developer Utilities">
+			<div class="dt-section" hidden="@(_current != JwtId)">
+				<JwtSection />
+			</div>
+			<div class="dt-section" hidden="@(_current != EncodeId)">
+				<EncodeSection />
+			</div>
+			<div class="dt-section" hidden="@(_current != HashId)">
+				<HashSection />
+			</div>
+			<div class="dt-section" hidden="@(_current != IdsId)">
+				<IdSection />
+			</div>
+			<div class="dt-section" hidden="@(_current != TimeId)">
+				<TimeSection />
+			</div>
+			<div class="dt-section" hidden="@(_current != DataId)">
+				<DataSection />
+			</div>
+			<div class="dt-section" hidden="@(_current != RegexId)">
+				<RegexSection />
+			</div>
+		</ToolNavigation>
+	</CascadingValue>
+</div>

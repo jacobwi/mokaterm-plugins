@@ -1,0 +1,104 @@
+.dt-claims {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+	padding: var(--moka-spacing-sm) var(--moka-spacing-md);
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+	background: var(--moka-color-surface);
+}
+
+.dt-claims-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.dt-claims-title {
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 10px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.dt-claims-count {
+	color: var(--moka-color-on-surface-variant);
+	font-family: var(--moka-font-family-mono);
+	font-size: 10px;
+}
+
+.dt-claims-gap {
+	flex: 1;
+}
+
+.dt-claims-body {
+	max-height: 320px;
+	padding: var(--moka-spacing-sm);
+	overflow: auto;
+	border-left: 3px solid var(--moka-color-primary-border);
+	border-radius: var(--moka-radius-sm);
+	background: var(--moka-color-surface-2);
+	color: var(--moka-color-on-surface);
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+	line-height: 1.45;
+}
+
+.dt-claim {
+	display: flex;
+	align-items: flex-start;
+	gap: 4px;
+	min-width: 0;
+	padding-left: 4px;
+}
+
+.dt-claim-text {
+	min-width: 0;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	user-select: text;
+}
+
+.dt-claim-name {
+	color: var(--moka-color-on-surface-variant);
+}
+
+.dt-claim-mask {
+	color: var(--moka-color-on-surface-tertiary);
+	letter-spacing: 0.12em;
+}
+
+.dt-claim-button {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 18px;
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: var(--moka-radius-sm);
+	background: transparent;
+	color: var(--moka-color-on-surface-tertiary);
+	cursor: pointer;
+	transition: border-color var(--moka-transition-fast), color var(--moka-transition-fast);
+}
+
+.dt-claim-button:hover {
+	border-color: var(--moka-color-primary-border);
+	color: var(--moka-color-on-surface);
+}
+
+.dt-claim-button:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 3px var(--moka-color-primary-glow), inset 0 0 12px var(--moka-color-primary-glow);
+}
+
+.dt-claim-brace {
+	color: var(--moka-color-on-surface-variant);
+}

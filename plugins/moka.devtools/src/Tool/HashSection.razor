@@ -1,0 +1,115 @@
+@inherits DevToolViewBase
+
+<ToolPageFrame Title="Hashes" Summary="@Summary" Loaded="true">
+	<div class="dt-group">
+		<div class="dt-row">
+			<EnumSegmentedControl TEnum="HashSource" Value="_source" ValueChanged="OnSourceChangedAsync" Options="Sources" AriaLabel="What to hash" Disabled="_hashing" />
+			<MokaCheckbox Label="HMAC with a key" Value="_hmac" ValueChanged="OnHmacChangedAsync" Disabled="_hashing" />
+			<span class="dt-grow"></span>
+			<EnumSegmentedControl TEnum="HashFormat" Value="_format" ValueChanged="@(value => _format = value)" Options="Formats" AriaLabel="Show hashes as" />
+		</div>
+		@if (_hmac)
+		{
+			<div class="dt-row">
+				<div class="dt-grow">
+					<MokaPasswordField Class="dt-field-mono"
+									   Value="@_key"
+									   ValueChanged="OnKeyChangedAsync"
+									   Placeholder="The HMAC key"
+									   Size="MokaSize.Sm"
+									   Disabled="_hashing"
+									   spellcheck="false"
+									   autocomplete="off"
+									   aria-label="HMAC key" />
+				</div>
+				<EnumSegmentedControl TEnum="KeyFormat" Value="_keyFormat" ValueChanged="OnKeyFormatChangedAsync" Options="KeyFormats" AriaLabel="Key format" Disabled="_hashing" />
+			</div>
+		}
+	</div>
+
+	@if (_source == HashSource.Text)
+	{
+		<TextInput Label="Text" Value="_text" ValueChanged="OnTextChangedAsync" Placeholder="Type or paste text. It is hashed as UTF-8, exactly as it is here." Rows="4" Mono="false" />
+	}
+	else
+	{
+		<div class="dt-group">
+			<div class="dt-row">
+				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Sm" StartIcon="MokatermIcons.FolderOpen" Disabled="_hashing" OnClick="PickFileAsync">Choose a file</MokaButton>
+				@if (_fileName is { } name)
+				{
+					<span class="dt-hash-file" title="@name">@name</span>
+					<span class="dt-hash-size">@(_fileSize is { } size ? Size(size) : "")</span>
+				}
+				<span class="dt-grow"></span>
+				@if (_hashing)
+				{
+					<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="MokaIcons.Navigation.Close" OnClick="CancelFile">Cancel</MokaButton>
+				}
+			</div>
+			@if (_hashing)
+			{
+				<MokaProgress Value="@Percent" />
+				<span class="dt-note">@ProgressText</span>
+			}
+			<span class="dt-note">@FileNote</span>
+		</div>
+	}
+
+	@if (_error is { } error)
+	{
+		<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+	}
+
+	<div class="dt-group">
+		<MokaTextField Class="dt-field-mono"
+					   Value="@_expected"
+					   ValueChanged="OnExpectedChanged"
+					   Placeholder="Paste a hash to compare: hex in any case, Base64, sha256sum output or sha384-..."
+					   Size="MokaSize.Sm"
+					   spellcheck="false"
+					   autocomplete="off"
+					   aria-label="Expected hash" />
+		@if (Comparison is { } comparison)
+		{
+			<ResultLine Chip="@comparison.Chip" Tone="@comparison.Tone">@comparison.Text</ResultLine>
+		}
+	</div>
+
+	@if (_values is { } values)
+	{
+		<div class="dt-hashes" role="list" aria-label="Hashes">
+			@foreach (HashValue value in values)
+			{
+				bool matches = Matches(value);
+				<div class="@(matches ? "dt-hash dt-hash--match" : "dt-hash")" role="listitem" @key="value.Algorithm.Kind">
+					<span class="dt-hash-name">@(_valuesAreHmac && value.Bytes is not null ? "HMAC-" : "")@value.Algorithm.Name</span>
+					<span class="dt-hash-tags">
+						@if (matches)
+						{
+							<StatusChip Text="matches" Color="MokaColor.Success" />
+						}
+						else if (value.Algorithm.Weak && value.Bytes is not null)
+						{
+							<span class="dt-hash-weak" title="@(value.Algorithm.Kind == HashKind.Crc32 ? "A checksum: it finds accidents, not tampering." : "Broken for signatures and passwords; fine for spotting a changed file.")">@(value.Algorithm.Kind == HashKind.Crc32 ? "checksum" : "weak")</span>
+						}
+					</span>
+					@if (value.Bytes is { } bytes)
+					{
+						string shown = Format(bytes);
+						<span class="dt-hash-value">@shown</span>
+						<CopyButton Text="@shown" Label="@($"Copy {value.Algorithm.Name}")" />
+					}
+					else
+					{
+						<span class="dt-hash-none">@value.Unavailable</span>
+					}
+				</div>
+			}
+		</div>
+	}
+	else if (!_hashing)
+	{
+		<span class="dt-note">@(_source == HashSource.Text ? "The hashes follow the text as it changes." : "Choose a file to hash it with every algorithm in one pass.")</span>
+	}
+</ToolPageFrame>

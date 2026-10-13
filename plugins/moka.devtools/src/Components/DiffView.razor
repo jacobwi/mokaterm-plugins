@@ -1,0 +1,57 @@
+@* A line diff as rows: old and new line numbers, a mark, the line. Runs of unchanged lines between changes fold into one
+   row, and past MaxRows the rest is counted rather than drawn. *@
+<section class="dt-diff" aria-label="Differences">
+	<div class="dt-diff-head">
+		<span class="dt-diff-title">Differences</span>
+		<span class="dt-diff-removed">-@Diff.Removed.ToString("N0", CultureInfo.CurrentCulture)</span>
+		<span class="dt-diff-added">+@Diff.Added.ToString("N0", CultureInfo.CurrentCulture)</span>
+	</div>
+	<div class="dt-diff-body" role="table" aria-label="Changed lines">
+		@foreach (DiffLine line in Diff.Lines.Take(MaxRows))
+		{
+			@if (line.Kind == DiffKind.Skipped)
+			{
+				<div class="dt-diff-row dt-diff-row--skipped" role="row">
+					<span class="dt-diff-skip" role="cell">@Skipped(line.Count)</span>
+				</div>
+			}
+			else
+			{
+				<div class="@RowClass(line.Kind)" role="row">
+					<span class="dt-diff-number" role="cell">@(line.OldNumber > 0 ? line.OldNumber.ToString(CultureInfo.InvariantCulture) : "")</span>
+					<span class="dt-diff-number" role="cell">@(line.NewNumber > 0 ? line.NewNumber.ToString(CultureInfo.InvariantCulture) : "")</span>
+					<span class="dt-diff-mark" role="cell">@Mark(line.Kind)</span>
+					<span class="dt-diff-text" role="cell">@line.Text</span>
+				</div>
+			}
+		}
+	</div>
+	@if (Diff.Lines.Count > MaxRows)
+	{
+		<span class="dt-diff-more">@(Diff.Lines.Count - MaxRows) more rows are not drawn.</span>
+	}
+</section>
+
+@code {
+	/// <summary>Rows drawn at most: past this a page of rows costs more to lay out than anyone reads.</summary>
+	public const int MaxRows = 3000;
+
+	[Parameter, EditorRequired]
+	public DiffResult Diff { get; set; } = default!;
+
+	private static string RowClass(DiffKind kind) => kind switch
+	{
+		DiffKind.Added => "dt-diff-row dt-diff-row--added",
+		DiffKind.Removed => "dt-diff-row dt-diff-row--removed",
+		_ => "dt-diff-row",
+	};
+
+	private static string Mark(DiffKind kind) => kind switch
+	{
+		DiffKind.Added => "+",
+		DiffKind.Removed => "-",
+		_ => "",
+	};
+
+	private static string Skipped(int count) => count == 1 ? "1 unchanged line" : string.Create(CultureInfo.CurrentCulture, $"{count:N0} unchanged lines");
+}

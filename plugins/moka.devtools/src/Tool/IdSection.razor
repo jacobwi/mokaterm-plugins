@@ -1,0 +1,66 @@
+@inherits DevToolViewBase
+
+<ToolPageFrame Title="IDs" Summary="UUID v4 and v7, ULID" Loaded="true">
+	<div class="dt-group">
+		<span class="dt-label">Generate</span>
+		<div class="dt-row">
+			<EnumSegmentedControl TEnum="IdKind" Value="_kind" ValueChanged="@(value => _kind = value)" Options="Kinds" AriaLabel="Kind" />
+			<div class="dt-id-count">
+				<MokaTextField Value="@_countText"
+							   ValueChanged="@(value => _countText = value ?? "")"
+							   Size="MokaSize.Sm"
+							   inputmode="numeric"
+							   autocomplete="off"
+							   aria-label="How many" />
+			</div>
+			@if (_kind == IdKind.Ulid)
+			{
+				<MokaCheckbox Label="Lower case" Value="_lowerUlid" ValueChanged="@(value => _lowerUlid = value)" />
+			}
+			else
+			{
+				<MokaCheckbox Label="Upper case" Value="_upper" ValueChanged="@(value => _upper = value)" />
+				<MokaCheckbox Label="Dashes" Value="_hyphens" ValueChanged="@(value => _hyphens = value)" />
+			}
+			<span class="dt-grow"></span>
+			<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Sm" StartIcon="DevToolIcons.Run" OnClick="Generate">Generate</MokaButton>
+		</div>
+		<span class="dt-note">@KindHelp</span>
+		@if (_countError is { } countError)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@countError</MokaAlert>
+		}
+		@if (_generated is { } generated)
+		{
+			<OutputBox Title="@GeneratedTitle" Text="@generated" FileName="ids.txt" CopyName="@GeneratedTitle" />
+		}
+	</div>
+
+	<div class="dt-group">
+		<span class="dt-label">Inspect</span>
+		<MokaTextField Class="dt-field-mono"
+					   Value="@_inspectText"
+					   ValueChanged="OnInspectChanged"
+					   Placeholder="Paste a UUID (any version, with or without dashes or braces) or a ULID"
+					   Size="MokaSize.Sm"
+					   spellcheck="false"
+					   autocomplete="off"
+					   aria-label="UUID or ULID to inspect" />
+		@if (_inspectError is { } inspectError)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@inspectError</MokaAlert>
+		}
+		@if (_report is { } report)
+		{
+			<ChipRow>
+				<StatusChip Text="@report.Kind" Color="MokaColor.Surface" Glow="false" />
+				<span class="dt-note">@report.Summary</span>
+			</ChipRow>
+			<FactList Facts="ReportFacts(report)" />
+			@foreach (string note in report.Notes)
+			{
+				<span class="dt-note">@note</span>
+			}
+		}
+	</div>
+</ToolPageFrame>

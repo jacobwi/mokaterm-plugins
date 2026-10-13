@@ -1,0 +1,112 @@
+.dt-diff {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+	padding: var(--moka-spacing-sm) var(--moka-spacing-md);
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+	background: var(--moka-color-surface);
+}
+
+.dt-diff-head {
+	display: flex;
+	align-items: center;
+	gap: var(--moka-spacing-sm);
+}
+
+.dt-diff-title {
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 10px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.dt-diff-removed,
+.dt-diff-added {
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+}
+
+.dt-diff-removed {
+	color: var(--moka-color-error);
+}
+
+.dt-diff-added {
+	color: var(--moka-color-success);
+}
+
+.dt-diff-body {
+	max-height: 480px;
+	overflow: auto;
+	border-radius: var(--moka-radius-sm);
+	background: var(--moka-color-surface-2);
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+	line-height: 1.45;
+}
+
+.dt-diff-row {
+	display: grid;
+	grid-template-columns: 6ch 6ch 2ch minmax(0, 1fr);
+	min-width: 0;
+}
+
+.dt-diff-row--added {
+	background: color-mix(in srgb, var(--moka-color-success) 10%, transparent);
+}
+
+.dt-diff-row--removed {
+	background: color-mix(in srgb, var(--moka-color-error) 10%, transparent);
+}
+
+.dt-diff-row--skipped {
+	display: block;
+	border-top: 1px dashed var(--moka-color-outline-variant);
+	border-bottom: 1px dashed var(--moka-color-outline-variant);
+}
+
+.dt-diff-number {
+	padding-right: 1ch;
+	color: var(--moka-color-on-surface-tertiary);
+	text-align: right;
+	user-select: none;
+}
+
+.dt-diff-mark {
+	color: var(--moka-color-on-surface-variant);
+	user-select: none;
+}
+
+.dt-diff-row--added .dt-diff-mark {
+	color: var(--moka-color-success);
+}
+
+.dt-diff-row--removed .dt-diff-mark {
+	color: var(--moka-color-error);
+}
+
+.dt-diff-text {
+	min-width: 0;
+	padding-right: var(--moka-spacing-sm);
+	color: var(--moka-color-on-surface);
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.dt-diff-skip {
+	display: block;
+	padding: 2px var(--moka-spacing-sm);
+	color: var(--moka-color-on-surface-tertiary);
+	font-family: var(--moka-font-family);
+	font-size: 10px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.dt-diff-more {
+	color: var(--moka-color-on-surface-variant);
+	font-size: var(--moka-font-size-xs);
+}

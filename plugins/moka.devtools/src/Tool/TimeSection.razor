@@ -1,0 +1,101 @@
+@inherits DevToolViewBase
+
+<ToolPageFrame Title="Time" Summary="@Summary" Loaded="true" PrimaryText="Now" PrimaryIcon="DevToolIcons.Time" OnPrimary="SetNow">
+	<div class="dt-group">
+		<MokaTextField Class="dt-field-mono"
+					   Value="@_text"
+					   ValueChanged="OnTextChanged"
+					   Placeholder="1715000000, 1715000000000, 2024-05-06T12:53:20Z or Mon, 06 May 2024 12:53:20 GMT"
+					   Size="MokaSize.Sm"
+					   spellcheck="false"
+					   autocomplete="off"
+					   aria-label="Unix time or date" />
+		<div class="dt-row">
+			<EnumSegmentedControl TEnum="EpochChoice" Value="_unit" ValueChanged="OnUnitChanged" Options="Units" AriaLabel="Unit of a number" />
+			@if (_reading is { } reading)
+			{
+				<span class="dt-note">@ReadAs(reading)</span>
+			}
+		</div>
+	</div>
+
+	@if (_error is { } error)
+	{
+		<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+	}
+
+	@if (_reading is { } read)
+	{
+		@foreach (string note in read.Notes)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Info" Dense>@note</MokaAlert>
+		}
+
+		<div class="dt-group">
+			<FactList Facts="Facts(read.Instant)" />
+		</div>
+	}
+
+	<div class="dt-group">
+		<span class="dt-label">Time zones</span>
+		<div class="dt-row">
+			<div class="dt-grow">
+				<MokaSelect TValue="string"
+							Items="ZoneCatalog.Ids"
+							Value="_zonePick"
+							ValueChanged="AddPicked"
+							Searchable
+							Placeholder="Add a zone from this machine's list"
+							Size="MokaSize.Sm"
+							aria-label="Add a time zone" />
+			</div>
+			<div class="dt-grow" @onkeydown="OnZoneKey">
+				<MokaTextField Class="dt-field-mono"
+							   Value="@_zoneText"
+							   ValueChanged="@(value => _zoneText = value ?? "")"
+							   Placeholder="or type an IANA name: Asia/Kolkata"
+							   Size="MokaSize.Sm"
+							   spellcheck="false"
+							   autocomplete="off"
+							   aria-label="IANA time zone name" />
+			</div>
+			<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Sm" StartIcon="MokaIcons.Action.Add" Disabled="@(_zoneText.Trim().Length == 0)" OnClick="AddTyped">Add</MokaButton>
+		</div>
+		@if (_zoneError is { } zoneError)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@zoneError</MokaAlert>
+		}
+		@if (_zones.Count > 0)
+		{
+			<div class="dt-zones" role="list" aria-label="Time zones">
+				@foreach ((string id, TimeZoneInfo zone) in _zones)
+				{
+					<div class="dt-zone" role="listitem" @key="id">
+						<span class="dt-zone-id" title="@zone.DisplayName">@id</span>
+						@if (_reading is { } shown)
+						{
+							<span class="dt-zone-time">@TimeFormats.InZone(shown.Instant, zone)</span>
+							<span class="dt-zone-name">@TimeFormats.ZoneName(shown.Instant, zone)</span>
+						}
+						else
+						{
+							<span class="dt-zone-time">-</span>
+							<span class="dt-zone-name">@zone.StandardName</span>
+						}
+						<MokaButton Variant="MokaVariant.Text"
+									Color="MokaColor.Surface"
+									Size="MokaSize.Xs"
+									StartIcon="MokaIcons.Navigation.Close"
+									OnClick="() => Remove(id)"
+									title="@($"Remove {id}")"
+									aria-label="@($"Remove {id}")" />
+					</div>
+				}
+			</div>
+		}
+		else
+		{
+			<span class="dt-note">Add zones to see the same moment there, daylight saving included.</span>
+		}
+	</div>
+</ToolPageFrame>

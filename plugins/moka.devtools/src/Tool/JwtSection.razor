@@ -1,0 +1,151 @@
+@inherits DevToolViewBase
+
+<ToolPageFrame Title="JWT" Summary="@Summary" Loaded="true">
+	<div class="dt-group">
+		<div class="dt-row">
+			<div class="dt-grow">
+				<MokaPasswordField Class="dt-field-mono"
+								   Value="@_token"
+								   ValueChanged="OnTokenChangedAsync"
+								   Placeholder="Paste a token (eyJ...) or an Authorization header"
+								   Size="MokaSize.Sm"
+								   spellcheck="false"
+								   autocomplete="off"
+								   aria-label="Token" />
+			</div>
+			@if (_token.Length > 0)
+			{
+				<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="MokaIcons.Navigation.Close" OnClick="ClearAsync">Clear</MokaButton>
+			}
+		</div>
+		<span class="dt-note">Read here and sent nowhere. The token stays hidden while you type, and the claims until you show them.</span>
+	</div>
+
+	@if (_error is { } error)
+	{
+		<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+	}
+
+	@if (_jwt is { } jwt)
+	{
+		@foreach (string note in jwt.Notes)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Info" Dense>@note</MokaAlert>
+		}
+
+		<ChipRow>
+			@if (jwt.IsUnsigned)
+			{
+				<StatusChip Text="alg none" Color="MokaColor.Error" Title="Unsigned: anyone can write this token." />
+			}
+			else
+			{
+				<StatusChip Text="@(jwt.Algorithm ?? "no alg")" Color="@(jwt.Algorithm is null ? MokaColor.Warning : MokaColor.Surface)" Glow="false" />
+			}
+			<StatusChip Text="@Validity.Text" Color="@Validity.Color" Glow="@(Validity.Color != MokaColor.Success)" />
+			@if (jwt.Type is { } type)
+			{
+				<span class="dt-jwt-meta">typ @type</span>
+			}
+			@if (jwt.KeyId is { } kid)
+			{
+				<span class="dt-jwt-meta" title="@kid">kid @kid</span>
+			}
+		</ChipRow>
+
+		@if (jwt.IsUnsigned)
+		{
+			<ResultLine Chip="alg none" Tone="ResultTone.Bad">This token is not signed. Anyone can write one like it; never accept it.</ResultLine>
+		}
+
+		@if (TimeFacts.Count > 0)
+		{
+			<div class="dt-group">
+				<span class="dt-label">Times</span>
+				<FactList Facts="TimeFacts" />
+			</div>
+		}
+
+		<div class="dt-pair">
+			<OutputBox Title="Header" Text="@jwt.HeaderJson" CopyName="Header" />
+
+			@if (jwt.Claims.Count > 0)
+			{
+				<JwtClaimList Claims="jwt.Claims" PayloadJson="@jwt.PayloadJson" />
+			}
+			else if (jwt.PayloadJson is { } payloadJson)
+			{
+				<OutputBox Title="Payload" Text="@payloadJson" Secret CopyName="Payload" />
+			}
+			else if (jwt.PayloadText is { } payloadText)
+			{
+				<OutputBox Title="Payload" Detail="not JSON" Text="@payloadText" Secret CopyName="Payload" />
+			}
+		</div>
+
+		<div class="dt-group">
+			<span class="dt-label">Signature</span>
+			<FactList Facts="SignatureFacts" />
+		</div>
+
+		<div class="dt-group">
+			<div class="dt-row">
+				<span class="dt-label">Verify</span>
+				<span class="dt-grow"></span>
+				@if (Family is JwtFamily.Hmac or JwtFamily.PublicKey)
+				{
+					<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokatermIcons.ShieldCheck" Disabled="_verifying" OnClick="VerifyAsync">Verify</MokaButton>
+				}
+			</div>
+
+			@switch (Family)
+			{
+				case JwtFamily.Hmac:
+					<div class="dt-row">
+						<div class="dt-grow">
+							<MokaPasswordField Class="dt-field-mono"
+											   Value="@_secret"
+											   ValueChanged="OnSecretChanged"
+											   Placeholder="@($"The shared secret for {jwt.Algorithm}")"
+											   Size="MokaSize.Sm"
+											   spellcheck="false"
+											   autocomplete="off"
+											   aria-label="Secret" />
+						</div>
+						<EnumSegmentedControl TEnum="KeyFormat" Value="_secretFormat" ValueChanged="OnSecretFormatChanged" Options="SecretFormats" AriaLabel="Secret format" />
+					</div>
+					break;
+				case JwtFamily.PublicKey:
+					<MokaTextArea Class="dt-key-text"
+								  Value="@_publicKey"
+								  ValueChanged="OnPublicKeyChanged"
+								  Rows="4"
+								  Placeholder="@($"Paste the public key or certificate (PEM), or a JWK or JWK set, for {jwt.Algorithm}")"
+								  Size="MokaSize.Sm"
+								  spellcheck="false"
+								  autocomplete="off"
+								  aria-label="Public key" />
+					break;
+			}
+
+			@if (_verification is { } verification)
+			{
+				<ResultLine Chip="@VerdictText(verification.Verdict)" Tone="@VerdictTone(verification.Verdict)">@verification.Message</ResultLine>
+				@foreach (string note in verification.Notes)
+				{
+					<span class="dt-note">@note</span>
+				}
+			}
+			else
+			{
+				<ResultLine Chip="not checked" Tone="ResultTone.Warning">@NotCheckedText</ResultLine>
+			}
+		</div>
+	}
+	else if (_error is null)
+	{
+		<MokaEmptyState Icon="DevToolIcons.Jwt"
+						Title="No token yet"
+						Description="Paste a JWT to read its header and claims, see when it expires, and check its signature with a secret, a public key, a certificate or a JWK." />
+	}
+</ToolPageFrame>

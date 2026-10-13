@@ -1,0 +1,107 @@
+@inherits DevToolViewBase
+
+@* One result with Copy and, when it has a file name, Save. A secret stays hidden until asked for and is copied through
+   the host's secret copy. A long result shows its start; Copy and Save take all of it. *@
+<section class="dt-output" aria-label="@Title">
+	<div class="dt-output-head">
+		<span class="dt-output-title">@Title</span>
+		@if (Secret)
+		{
+			<span class="dt-output-tag">secret</span>
+		}
+		@if (Detail is { Length: > 0 } detail)
+		{
+			<span class="dt-output-detail" title="@detail">@detail</span>
+		}
+		<span class="dt-output-gap"></span>
+		@Actions
+		@if (Secret && Text is not null)
+		{
+			<MokaButton Variant="MokaVariant.Text"
+						Color="MokaColor.Surface"
+						Size="MokaSize.Xs"
+						StartIcon="@(_shown ? MokaIcons.Toggle.EyeOff : MokaIcons.Toggle.Eye)"
+						OnClick="ToggleShown">
+				@(_shown ? "Hide" : "Show")
+			</MokaButton>
+		}
+		@if (Text is { } text)
+		{
+			<MokaButton Variant="MokaVariant.Outlined"
+						Size="MokaSize.Xs"
+						StartIcon="MokaIcons.Content.Copy"
+						OnClick="() => CopyOutAsync(text)">
+				Copy
+			</MokaButton>
+			@if (FileName is { } name)
+			{
+				<MokaButton Variant="MokaVariant.Outlined"
+							Size="MokaSize.Xs"
+							StartIcon="MokatermIcons.Download"
+							OnClick="() => SaveTextAsync(name, text)">
+					Save
+				</MokaButton>
+			}
+		}
+	</div>
+
+	@if (Text is { } body)
+	{
+		@if (Secret && !_shown)
+		{
+			<div class="dt-output-hidden">Hidden. Copy it, or show it here.</div>
+		}
+		else
+		{
+			<pre class="@(Wrap ? "dt-output-text" : "dt-output-text dt-output-text--nowrap")">@Shown(body)</pre>
+			@if (body.Length > TextLimits.DisplayChars)
+			{
+				<span class="dt-output-cut">Showing the first @Size(TextLimits.DisplayChars) of @Size(body.Length). Copy and Save take all of it.</span>
+			}
+		}
+	}
+
+	@ChildContent
+</section>
+
+@code {
+	private bool _shown;
+
+	[Parameter, EditorRequired]
+	public string Title { get; set; } = "";
+
+	/// <summary>A short note beside the title, such as "UTF-8, 42 chars".</summary>
+	[Parameter]
+	public string? Detail { get; set; }
+
+	[Parameter]
+	public string? Text { get; set; }
+
+	/// <summary>The name Save offers; null shows no Save.</summary>
+	[Parameter]
+	public string? FileName { get; set; }
+
+	/// <summary>A token, a claim or a key: hidden until shown, copied as a secret.</summary>
+	[Parameter]
+	public bool Secret { get; set; }
+
+	/// <summary>What the copy notice calls it.</summary>
+	[Parameter]
+	public string? CopyName { get; set; }
+
+	/// <summary>Long lines wrap; off for dumps and diffs, whose columns must line up.</summary>
+	[Parameter]
+	public bool Wrap { get; set; } = true;
+
+	[Parameter]
+	public RenderFragment? Actions { get; set; }
+
+	[Parameter]
+	public RenderFragment? ChildContent { get; set; }
+
+	private static string Shown(string text) => text.Length > TextLimits.DisplayChars ? text[..TextLimits.DisplayChars] : text;
+
+	private void ToggleShown() => _shown = !_shown;
+
+	private Task CopyOutAsync(string text) => Secret ? CopySecretAsync(text, CopyName ?? Title) : CopyAsync(text, CopyName ?? Title);
+}

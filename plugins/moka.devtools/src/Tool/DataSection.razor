@@ -1,0 +1,106 @@
+@inherits DevToolViewBase
+
+<ToolPageFrame Title="JSON and YAML"
+			   Summary="@Summary"
+			   Loaded="true"
+			   PrimaryText="@PrimaryText"
+			   PrimaryIcon="DevToolIcons.Run"
+			   PrimaryDisabled="_busy"
+			   OnPrimary="RunPrimaryAsync">
+	<Chips>
+		<ViewTabs Tabs="Tabs" Active="@_tab" ActiveChanged="OnTabChanged" Label="JSON and YAML" />
+	</Chips>
+	<ChildContent>
+		@switch (_tab)
+		{
+			case FormatTab:
+				<div class="dt-group">
+					<div class="dt-row">
+						<EnumSegmentedControl TEnum="JsonIndent" Value="_indent" ValueChanged="@(value => _indent = value)" Options="Indents" AriaLabel="Indent" Disabled="_busy" />
+						<MokaCheckbox Label="Sort keys" Value="_sortKeys" ValueChanged="@(value => _sortKeys = value)" Disabled="_busy" />
+						<span class="dt-grow"></span>
+						<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" Disabled="_busy" OnClick="MinifyAsync">Minify</MokaButton>
+						<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" Disabled="_busy" OnClick="ValidateAsync">Validate</MokaButton>
+					</div>
+				</div>
+				<TextInput Label="JSON" Value="_formatInput" ValueChanged="@(value => { _formatInput = value; _result = null; })" Placeholder="Paste JSON, or open a file" Rows="10" AllowFile FileWhat="a JSON file" Disabled="_busy" />
+				break;
+			case ConvertTab:
+				<div class="dt-group">
+					<div class="dt-row">
+						<EnumSegmentedControl TEnum="ConvertDirection" Value="_direction" ValueChanged="OnDirectionChanged" Options="Directions" AriaLabel="Direction" Disabled="_busy" />
+						<MokaCheckbox Label="Sort keys" Value="_sortKeys" ValueChanged="@(value => _sortKeys = value)" Disabled="_busy" />
+						@if (_direction == ConvertDirection.YamlToJson)
+						{
+							<EnumSegmentedControl TEnum="JsonIndent" Value="_indent" ValueChanged="@(value => _indent = value)" Options="Indents" AriaLabel="Indent" Disabled="_busy" />
+						}
+						<span class="dt-grow"></span>
+						@if (_direction == ConvertDirection.YamlToJson)
+						{
+							<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" Disabled="_busy" OnClick="ValidateYamlAsync">Validate YAML</MokaButton>
+						}
+					</div>
+					<span class="dt-note">@ConvertHelp</span>
+				</div>
+				<TextInput Label="@(_direction == ConvertDirection.JsonToYaml ? "JSON" : "YAML")"
+						   Value="_convertInput"
+						   ValueChanged="@(value => { _convertInput = value; _result = null; })"
+						   Placeholder="@(_direction == ConvertDirection.JsonToYaml ? "Paste JSON, or open a file" : "Paste YAML, or open a file")"
+						   Rows="10"
+						   AllowFile
+						   FileWhat="a JSON or YAML file"
+						   Disabled="_busy" />
+				break;
+			default:
+				<div class="dt-group">
+					<div class="dt-row">
+						<MokaCheckbox Label="Format both as JSON first" Value="_diffAsJson" ValueChanged="@(value => _diffAsJson = value)" Disabled="_busy" />
+						<MokaCheckbox Label="Sort keys" Value="_sortKeys" ValueChanged="@(value => _sortKeys = value)" Disabled="@(_busy || !_diffAsJson)" />
+					</div>
+					<span class="dt-note">Line by line, with 3 lines of context around each change. Formatting first compares the data rather than its layout.</span>
+				</div>
+				<div class="dt-pair">
+					<TextInput Label="Before" Value="_before" ValueChanged="@(value => { _before = value; _result = null; })" Placeholder="The old text" Rows="10" AllowFile FileWhat="a text file" Disabled="_busy" />
+					<TextInput Label="After" Value="_after" ValueChanged="@(value => { _after = value; _result = null; })" Placeholder="The new text" Rows="10" AllowFile FileWhat="a text file" Disabled="_busy" />
+				</div>
+				break;
+		}
+
+		@if (_busy)
+		{
+			<div class="dt-row">
+				<div class="dt-grow">
+					<MokaProgress />
+				</div>
+				<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="MokaIcons.Navigation.Close" OnClick="Cancel">Cancel</MokaButton>
+			</div>
+		}
+
+		@if (_result is { } result)
+		{
+			@if (result.Verdict is { } verdict)
+			{
+				<ResultLine Chip="@(result.VerdictChip ?? "")" Tone="result.Tone">@verdict</ResultLine>
+			}
+
+			@foreach (string note in result.Notes)
+			{
+				<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@note</MokaAlert>
+			}
+
+			@if (result.Text is { } text)
+			{
+				<OutputBox Title="@result.Title" Detail="@Lines(text)" Text="@text" FileName="@result.FileName" CopyName="@result.Title">
+					<Actions>
+						<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="DevToolIcons.Swap" OnClick="() => UseAsInput(text)" title="Put the output in the box">Use as input</MokaButton>
+					</Actions>
+				</OutputBox>
+			}
+
+			@if (result.Diff is { } diff)
+			{
+				<DiffView Diff="diff" />
+			}
+		}
+	</ChildContent>
+</ToolPageFrame>

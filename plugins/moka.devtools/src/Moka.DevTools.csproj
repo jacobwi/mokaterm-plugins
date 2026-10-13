@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+	<!--
+		Developer utilities for Mokaterm: one app tool with a JWT decoder, encoders, hashes, IDs, time conversion, JSON and
+		YAML tools and a JavaScript regex tester. The logic lives in plain classes beside each section, which the views and
+		the tests go through; the regex runs in the page, in a worker the page can stop. Every build writes
+		bin/<configuration>/net10.0/moka.devtools-<version>.mokaplugin.
+	-->
+	<PropertyGroup>
+		<AssemblyName>Moka.DevTools</AssemblyName>
+		<RootNamespace>Moka.DevTools</RootNamespace>
+		<Version>1.0.0</Version>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<MokatermPluginId>moka.devtools</MokatermPluginId>
+		<MokatermPluginName>Developer Utilities</MokatermPluginName>
+		<MokatermPluginPublisher>Moka</MokatermPluginPublisher>
+		<MokatermPluginDescription>Decode and verify JWTs, encode and decode text, hash text and files, make and read UUIDs and ULIDs, convert times, format and convert JSON and YAML, and test JavaScript regexes.</MokatermPluginDescription>
+		<MokatermPluginHosts>desktop;web</MokatermPluginHosts>
+		<MokatermPluginPackOnBuild>true</MokatermPluginPackOnBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Mokaterm.UI.Common" />
+		<PackageReference Include="Mokaterm.Plugin.Sdk" PrivateAssets="all" />
+		<PackageReference Include="YamlDotNet" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="Moka.DevTools.Tests" />
+	</ItemGroup>
+
+</Project>

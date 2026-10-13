@@ -1,0 +1,75 @@
+.dt-grow {
+	flex: 1 1 220px;
+	min-width: 0;
+}
+
+.dt-zones {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+	container-type: inline-size;
+}
+
+.dt-zone {
+	display: grid;
+	grid-template-columns: minmax(120px, 1fr) minmax(0, 1.3fr) minmax(0, 1fr) auto;
+	align-items: center;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+	min-height: 30px;
+	padding: 2px var(--moka-spacing-sm);
+	border-top: 1px solid var(--moka-color-outline-variant);
+	transition: background var(--moka-transition-fast);
+}
+
+.dt-zone:first-child {
+	border-top: 0;
+}
+
+.dt-zone:hover {
+	background: var(--moka-color-surface-hover);
+}
+
+.dt-zone-id {
+	min-width: 0;
+	overflow: hidden;
+	color: var(--moka-color-on-surface);
+	font-size: var(--moka-font-size-xs);
+	font-weight: var(--moka-font-weight-semibold);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dt-zone-time {
+	min-width: 0;
+	color: var(--moka-color-on-surface);
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+	user-select: all;
+}
+
+.dt-zone-name {
+	min-width: 0;
+	overflow: hidden;
+	color: var(--moka-color-on-surface-variant);
+	font-size: var(--moka-font-size-xs);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+@container (max-width: 520px) {
+	.dt-zone {
+		grid-template-columns: minmax(0, 1fr) auto;
+	}
+
+	.dt-zone-time {
+		grid-column: 1;
+	}
+
+	.dt-zone-name {
+		display: none;
+	}
+}

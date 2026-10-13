@@ -1,0 +1,104 @@
+@inherits DevToolViewBase
+
+<ToolPageFrame Title="Regex" Summary="@Summary" Loaded="true">
+	<div class="dt-group">
+		<MokaTextField Class="dt-field-mono"
+					   Value="@_pattern"
+					   ValueChanged="OnPatternChangedAsync"
+					   Placeholder="A pattern without the slashes: ERROR (?<code>\d+)"
+					   Size="MokaSize.Sm"
+					   spellcheck="false"
+					   autocomplete="off"
+					   aria-label="Pattern" />
+		<div class="dt-row">
+			@foreach ((char flag, string meaning) in Flags)
+			{
+				<span class="dt-re-flag" title="@meaning">
+					<MokaCheckbox Label="@flag.ToString()" Value="@_flags.Contains(flag)" ValueChanged="@(value => OnFlagChangedAsync(flag, value))" />
+				</span>
+			}
+			<span class="dt-re-flags">/@FlagText</span>
+		</div>
+		<span class="dt-note">JavaScript's own engine, the one terminal triggers use. Each run gets @RegexRequest.DefaultTimeoutMs ms in a worker the page stops, so a pattern that backtracks without end cannot freeze the window.</span>
+	</div>
+
+	<TextInput Label="Sample text" Value="_sample" ValueChanged="OnSampleChangedAsync" Placeholder="The text to search" Rows="6" AllowFile FileWhat="a text file" />
+
+	@if (_result is { } result)
+	{
+		@switch (result.Status)
+		{
+			case RegexRunStatus.Ok:
+				<ResultLine Chip="@(result.Total == 0 ? "no match" : "matches")" Tone="@(result.Total == 0 ? ResultTone.Plain : ResultTone.Good)">@MatchText(result)</ResultLine>
+				break;
+			case RegexRunStatus.Syntax:
+				<ResultLine Chip="invalid" Tone="ResultTone.Bad">@result.Error</ResultLine>
+				break;
+			case RegexRunStatus.Timeout:
+				<ResultLine Chip="took too long" Tone="ResultTone.Bad">Stopped after @RegexRequest.DefaultTimeoutMs ms. On text like this the pattern backtracks for far longer, and it would freeze whatever runs it.</ResultLine>
+				break;
+			default:
+				<ResultLine Chip="not run" Tone="ResultTone.Warning">@result.Error</ResultLine>
+				break;
+		}
+
+		@if (result.Trigger is { Refused: true } refused)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Warning" Dense>Terminal triggers would refuse this pattern: @refused.Reason</MokaAlert>
+		}
+		else if (result.Trigger is { Refused: false } && FlagsTriggersIgnore.Length > 0)
+		{
+			<span class="dt-note">Terminal triggers would take this pattern, but run it with g and, when set, i; @FlagsTriggersIgnore would not carry over.</span>
+		}
+
+		@if (result.Status == RegexRunStatus.Ok && result.Matches is { Count: > 0 } matches)
+		{
+			<div class="dt-group">
+				<span class="dt-label">Highlighted</span>
+				<div class="dt-re-highlight">
+					<HighlightedText Segments="RegexHighlight.Segments(_ranText, matches, TextLimits.DisplayChars)" />
+				</div>
+				@if (_ranText.Length > TextLimits.DisplayChars)
+				{
+					<span class="dt-note">Showing the start of the text; the list below has every match.</span>
+				}
+			</div>
+
+			<div class="dt-re-matches" role="list" aria-label="Matches">
+				@for (int index = 0; index < Math.Min(matches.Count, MaxListed); index++)
+				{
+					RegexMatchSpan match = matches[index];
+					<div class="dt-re-match" role="listitem" @key="index">
+						<div class="dt-re-match-head">
+							<span class="dt-re-match-number">@(index + 1)</span>
+							<span class="dt-re-match-range">@Range(match.Index, match.End)</span>
+							<span class="dt-re-match-text">@Quote(match.Index, match.End)</span>
+						</div>
+						@if (match.Groups is { Count: > 0 } groups)
+						{
+							<div class="dt-re-groups">
+								@foreach (RegexGroupSpan group in groups)
+								{
+									<span class="dt-re-group-name">@(group.Name is { } name ? $"{group.Number} {name}" : group.Number.ToString(CultureInfo.InvariantCulture))</span>
+									<span class="@(group.Matched ? "dt-re-group-value" : "dt-re-group-value dt-re-group-value--none")">@(group.Matched ? Quote(group.Start, group.End) : "did not take part")</span>
+								}
+							</div>
+						}
+					</div>
+				}
+				@if (matches.Count > MaxListed)
+				{
+					<span class="dt-note">@(matches.Count - MaxListed) more matches are highlighted above but not listed.</span>
+				}
+			</div>
+		}
+	}
+	else if (_running)
+	{
+		<span class="dt-note">Running...</span>
+	}
+	else
+	{
+		<span class="dt-note">@(_pattern.Length == 0 ? "Type a pattern to test it." : "Type some sample text.")</span>
+	}
+</ToolPageFrame>
