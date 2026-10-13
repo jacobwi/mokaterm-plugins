@@ -13,4 +13,19 @@
 		<Project Path="plugins/moka.certificates/src/Moka.Certificates.csproj" />
 		<Project Path="plugins/moka.certificates/tests/Moka.Certificates.Tests.csproj" />
 	</Folder>
+	<Folder Name="/plugins/moka.devtools/">
+		<File Path="plugins/moka.devtools/listing.json" />
+		<Project Path="plugins/moka.devtools/src/Moka.DevTools.csproj" />
+		<Project Path="plugins/moka.devtools/tests/Moka.DevTools.Tests.csproj" />
+	</Folder>
+	<Folder Name="/plugins/moka.network/">
+		<File Path="plugins/moka.network/listing.json" />
+		<Project Path="plugins/moka.network/src/Moka.Network.csproj" />
+		<Project Path="plugins/moka.network/tests/Moka.Network.Tests.csproj" />
+	</Folder>
+	<Folder Name="/plugins/moka.passwords/">
+		<File Path="plugins/moka.passwords/listing.json" />
+		<Project Path="plugins/moka.passwords/src/Moka.Passwords.csproj" />
+		<Project Path="plugins/moka.passwords/tests/Moka.Passwords.Tests.csproj" />
+	</Folder>
 </Solution>
