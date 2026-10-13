@@ -1,0 +1,94 @@
+@inherits NetworkViewBase
+@using System.Net
+@using Moka.Network.Echo
+
+<ToolPageFrame Title="Traceroute"
+			   Summary="@Summary"
+			   Loaded="true"
+			   PrimaryText="@(Running ? "Stop" : "Trace")"
+			   PrimaryIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Trace)"
+			   PrimaryDisabled="@(Busy && !Running)"
+			   OnPrimary="PrimaryAsync">
+	<div class="mn-stack">
+		<div class="mn-group" @onkeydown="OnKeyAsync">
+			<div class="mn-fields">
+				<div class="mn-field mn-field--host">
+					<MokaTextField Label="Host" Value="@_host" ValueChanged="@(value => _host = value ?? "")" Placeholder="example.com or 192.0.2.10" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
+				</div>
+				<div class="mn-field">
+					<MokaTextField Label="Max hops" Value="@_maxHops" ValueChanged="@(value => _maxHops = value ?? "")" Placeholder="30" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
+				</div>
+				<div class="mn-field">
+					<MokaTextField Label="Wait (ms)" Value="@_timeout" ValueChanged="@(value => _timeout = value ?? "")" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
+				</div>
+			</div>
+			<div class="mn-row">
+				<EnumSegmentedControl TEnum="AddressChoice" Value="_choice" ValueChanged="@(value => _choice = value)" Options="AddressChoices.Options" AriaLabel="Address family" Disabled="Busy" />
+				<MokaCheckbox Label="Look up hop names" Value="_lookupNames" ValueChanged="@(value => _lookupNames = value)" />
+				<span class="mn-gap"></span>
+				<OriginNote />
+			</div>
+			<span class="mn-note">ICMP echo with a rising TTL, @TraceOptions.DefaultProbesPerHop probes per hop. Hop names come from the DNS tab's default resolver (@DnsResolvers.Label(Settings.Resolver)).</span>
+		</div>
+
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+
+		@if (_target is { } target)
+		{
+			<div class="mn-results">
+				<span class="mn-note mn-mono">@target</span>
+				@if (_hops.Count > 0)
+				{
+					<div class="mn-table mn-table--trace" role="table" aria-label="Hops">
+						<div class="mn-tr mn-th" role="row">
+							<span role="columnheader">Hop</span>
+							<span role="columnheader">Address</span>
+							@for (int probe = 1; probe <= TraceOptions.DefaultProbesPerHop; probe++)
+							{
+								<span class="mn-td--end mn-c-probe" role="columnheader">@probe</span>
+							}
+						</div>
+						@foreach (TraceHop hop in _hops)
+						{
+							<div class="@(hop.Reached ? "mn-tr mn-tr--reached" : "mn-tr")" role="row" @key="hop.Ttl">
+								<span class="mn-td mn-td--mono mn-td--dim" role="cell">@hop.Ttl</span>
+								<span class="mn-td mn-c-host" role="cell">
+									@if (hop.Addresses.Count == 0)
+									{
+										<span class="mn-td--dim">@(hop.AddressMissing ? "answered, address not given" : hop.Silent ? "no answer" : "")</span>
+									}
+									@foreach (IPAddress address in hop.Addresses)
+									{
+										<span class="mn-hop">
+											<span class="mn-td--mono">@address</span>
+											@if (_names.TryGetValue(address, out string? name))
+											{
+												<span class="mn-td--dim mn-hop-name" title="@name">@name</span>
+											}
+										</span>
+									}
+								</span>
+								@for (int index = 0; index < TraceOptions.DefaultProbesPerHop; index++)
+								{
+									TraceProbe? probe = index < hop.Probes.Count ? hop.Probes[index] : null;
+									<span class="@ProbeClass(probe)" role="cell" title="@ProbeTitle(probe)">@ProbeText(probe)</span>
+								}
+							</div>
+						}
+					</div>
+				}
+				@if (_end is { } end)
+				{
+					<div class="@EndClass(end)">@EndText(end)</div>
+				}
+				@if (_hops.Any(hop => hop.AddressMissing))
+				{
+					<span class="mn-note">Some answers did not say which router sent them, so those hops show no address rather than a guessed one. On Linux without permission to send ICMP itself, .NET runs the ping program, which can leave the router out.</span>
+				}
+			</div>
+		}
+	</div>
+</ToolPageFrame>

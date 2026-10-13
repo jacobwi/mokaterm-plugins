@@ -1,0 +1,147 @@
+@using Moka.Network.Subnets
+
+<ToolPageFrame Title="Subnets"
+			   Summary="@Summary"
+			   Loaded="true">
+	<div class="mn-stack">
+		<div class="mn-group">
+			<MokaTextField Label="Address and prefix"
+						   Value="@_input"
+						   ValueChanged="OnInputChanged"
+						   Placeholder="192.168.1.10/24 or 2001:db8::/48"
+						   ErrorText="@ShownProblem"
+						   HelperText="A prefix length, or for IPv4 a mask such as /255.255.255.0. An address alone is its own /32 or /128."
+						   Size="MokaSize.Sm"
+						   spellcheck="false"
+						   autocomplete="off" />
+		</div>
+
+		@if (_info is { } info)
+		{
+			AddressKind kind = AddressKinds.Classify(info.Address);
+			<dl class="mn-facts">
+				<dt>Prefix</dt>
+				<dd>
+					<span class="mn-fact">@info.Cidr</span>
+					<CopyButton Text="@info.Cidr" Label="Copy the prefix" />
+				</dd>
+				<dt>Kind</dt>
+				<dd class="mn-fact-block">
+					<span class="mn-fact-line">
+						<StatusChip Text="@kind.Name" Color="@(kind.IsPublic ? MokaColor.Info : MokaColor.Surface)" Glow="false" />
+						@if (kind.RangePrefix > 0)
+						{
+							<span class="mn-fact mn-fact--dim">@kind.Range</span>
+						}
+					</span>
+					@if (kind.Note is { } note)
+					{
+						<span class="mn-note">@note</span>
+					}
+					@if (kind.RangePrefix > info.PrefixLength)
+					{
+						<span class="mn-note">This prefix is wider than that range, so part of it lies outside.</span>
+					}
+				</dd>
+				<dt>Mask</dt>
+				<dd class="mn-fact-block">
+					<span class="mn-fact">@info.Mask</span>
+					@if (!info.IsIPv6)
+					{
+						<span class="mn-fact mn-fact--dim">@SubnetMath.Binary(info.Mask)</span>
+					}
+				</dd>
+				@if (info.Wildcard is { } wildcard)
+				{
+					<dt>Wildcard</dt>
+					<dd><span class="mn-fact">@wildcard</span></dd>
+				}
+				<dt>Network</dt>
+				<dd>
+					<span class="mn-fact">@info.Network</span>
+					<CopyButton Text="@info.Network.ToString()" Label="Copy the network address" />
+				</dd>
+				<dt>Broadcast</dt>
+				<dd>
+					@if (info.Broadcast is { } broadcast)
+					{
+						<span class="mn-fact">@broadcast</span>
+					}
+					else
+					{
+						<span class="mn-note">@(info.IsIPv6 ? "None: IPv6 has no broadcast address." : "None: every address is a host's.")</span>
+					}
+				</dd>
+				<dt>First host</dt>
+				<dd><span class="mn-fact">@info.FirstHost</span></dd>
+				<dt>Last host</dt>
+				<dd><span class="mn-fact">@info.LastHost</span></dd>
+				<dt>Hosts</dt>
+				<dd><span class="mn-fact">@CountText(info.HostCount, info)</span></dd>
+				<dt>Addresses</dt>
+				<dd><span class="mn-fact">@CountText(info.AddressCount, info)</span></dd>
+				@if (info.IsIPv6)
+				{
+					<dt>Written out</dt>
+					<dd><span class="mn-fact mn-fact--dim">@SubnetMath.Expanded(info.Network)</span></dd>
+				}
+			</dl>
+
+			<div class="mn-group">
+				<span class="mn-label">Does an address fall inside</span>
+				<MokaTextField Value="@_inside"
+							   ValueChanged="@(value => _inside = value ?? "")"
+							   Placeholder="@(info.IsIPv6 ? "2001:db8::42" : "192.168.1.200")"
+							   Size="MokaSize.Sm"
+							   spellcheck="false"
+							   autocomplete="off"
+							   aria-label="Address to test" />
+				@if (InsideResult(info) is { } inside)
+				{
+					<div class="@(inside.Inside ? "mn-result-line mn-result-line--good" : inside.Problem ? "mn-result-line" : "mn-result-line mn-result-line--bad")">@inside.Text</div>
+				}
+			</div>
+
+			<div class="mn-group">
+				<span class="mn-label">Split into smaller subnets</span>
+				<MokaTextField Value="@_split"
+							   ValueChanged="@(value => _split = value ?? "")"
+							   Placeholder="4, or a prefix such as /26"
+							   Size="MokaSize.Sm"
+							   spellcheck="false"
+							   autocomplete="off"
+							   aria-label="How many subnets, or their prefix length" />
+				@if (_split.Trim().Length > 0)
+				{
+					@if (SubnetMath.TryParseSplit(_split, info, out int prefix, out string? splitProblem))
+					{
+						IReadOnlyList<SubnetInfo> parts = SubnetMath.Split(info, prefix, SubnetMath.MaxSplitRows, out System.Numerics.BigInteger total);
+						<span class="mn-note">@SplitSummary(info, prefix, total, parts.Count)</span>
+						<div class="mn-table mn-table--split mn-table--scroll" role="table" aria-label="Subnets">
+							<div class="mn-tr mn-th" role="row">
+								<span role="columnheader">#</span>
+								<span role="columnheader">Subnet</span>
+								<span role="columnheader">Hosts</span>
+								<span class="mn-td--end" role="columnheader">Count</span>
+							</div>
+							@for (int index = 0; index < parts.Count; index++)
+							{
+								SubnetInfo part = parts[index];
+								<div class="mn-tr" role="row" @key="index">
+									<span class="mn-td mn-td--mono mn-td--dim" role="cell">@(index + 1)</span>
+									<span class="mn-td mn-td--mono" role="cell">@part.Cidr</span>
+									<span class="mn-td mn-td--mono mn-td--dim" role="cell">@part.FirstHost - @part.LastHost</span>
+									<span class="mn-td mn-td--mono mn-td--end" role="cell">@CountText(part.HostCount, part)</span>
+								</div>
+							}
+						</div>
+					}
+					else
+					{
+						<div class="mn-result-line">@splitProblem</div>
+					}
+				}
+			</div>
+		}
+	</div>
+</ToolPageFrame>

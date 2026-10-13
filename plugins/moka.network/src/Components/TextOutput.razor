@@ -1,0 +1,43 @@
+@* Text a server sent or a result put together: a micro-label title, a detail, a copy button, and the text in a box that
+   scrolls on its own. The text is already plain; this only draws it. *@
+<section class="mn-output" aria-label="@Title">
+	<div class="mn-output-head">
+		<span class="mn-output-title">@Title</span>
+		@if (Detail is { Length: > 0 } detail)
+		{
+			<span class="mn-output-detail" title="@detail">@detail</span>
+		}
+		<span class="mn-output-gap"></span>
+		@Actions
+		@if (Text.Length > 0)
+		{
+			<CopyButton Text="@Text" Label="@($"Copy {Title}")" />
+		}
+	</div>
+	@if (Text.Length > 0)
+	{
+		<pre class="@(Tall ? "mn-output-text mn-output-text--tall" : "mn-output-text")" tabindex="0">@Text</pre>
+	}
+	@ChildContent
+</section>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Title { get; set; } = "";
+
+	[Parameter]
+	public string? Detail { get; set; }
+
+	[Parameter]
+	public string Text { get; set; } = "";
+
+	/// <summary>A long answer, such as whois, gets a taller box.</summary>
+	[Parameter]
+	public bool Tall { get; set; }
+
+	[Parameter]
+	public RenderFragment? Actions { get; set; }
+
+	[Parameter]
+	public RenderFragment? ChildContent { get; set; }
+}

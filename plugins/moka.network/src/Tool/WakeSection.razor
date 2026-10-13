@@ -1,0 +1,46 @@
+@inherits NetworkViewBase
+@using Moka.Network.Wake
+
+<ToolPageFrame Title="Wake-on-LAN"
+			   Summary="@Summary"
+			   Loaded="true"
+			   PrimaryText="Send"
+			   PrimaryIcon="NetworkIcons.Send"
+			   PrimaryDisabled="Busy"
+			   OnPrimary="SendAsync">
+	<div class="mn-stack">
+		<div class="mn-group" @onkeydown="OnKeyAsync">
+			<div class="mn-fields">
+				<div class="mn-field mn-field--host">
+					<MokaTextField Label="MAC address" Value="@_mac" ValueChanged="@(value => _mac = value ?? "")" Placeholder="00:11:22:33:44:55" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
+				</div>
+				<div class="mn-field mn-field--host">
+					<MokaTextField Label="Send to" Value="@_target" ValueChanged="@(value => _target = value ?? "")" Placeholder="255.255.255.255, 192.168.1.255 or 192.168.1.0/24" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
+				</div>
+			</div>
+			<div class="mn-row">
+				<span class="mn-label">UDP port</span>
+				<EnumSegmentedControl TEnum="WakePort" Value="_port" ValueChanged="@(value => _port = value)" Options="Ports" AriaLabel="UDP port" Disabled="Busy" />
+				<span class="mn-gap"></span>
+				<OriginNote />
+			</div>
+			<span class="mn-note">The magic packet goes out on the network @Origin is on. Routers do not pass a broadcast to other networks unless set up to, so a machine elsewhere needs its subnet's broadcast and a router that forwards it.</span>
+		</div>
+
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+
+		@if (_sent is { } sent)
+		{
+			<div class="mn-results">
+				<div class="mn-result-line mn-result-line--good">
+					<span>Sent @sent.Bytes bytes to <span class="mn-mono">@sent.Endpoint</span> over UDP at <span class="mn-mono">@sent.At.ToString("HH:mm:ss", CultureInfo.CurrentCulture)</span>: six bytes of FF, then <span class="mn-mono">@sent.Mac</span> sixteen times.</span>
+				</div>
+				<span class="mn-note">A sleeping machine does not answer, so there is nothing to confirm here. Whether it woke shows when it comes up.</span>
+				<TextOutput Title="Packet" Detail="@($"{sent.Bytes} bytes")" Text="@sent.Hex" />
+			</div>
+		}
+	</div>
+</ToolPageFrame>

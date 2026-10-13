@@ -1,0 +1,62 @@
+@inherits NetworkViewBase
+@using Moka.Network.Whois
+
+<ToolPageFrame Title="Whois"
+			   Summary="@Summary"
+			   Loaded="true"
+			   PrimaryText="@(Running ? "Stop" : "Look up")"
+			   PrimaryIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Whois)"
+			   PrimaryDisabled="@(Busy && !Running)"
+			   OnPrimary="PrimaryAsync">
+	<div class="mn-stack">
+		<div class="mn-group" @onkeydown="OnKeyAsync">
+			<MokaTextField Label="Domain or address"
+						   Value="@_query"
+						   ValueChanged="@(value => _query = value ?? "")"
+						   Placeholder="example.com or 192.0.2.10"
+						   Size="MokaSize.Sm"
+						   spellcheck="false"
+						   autocomplete="off" />
+			<div class="mn-row">
+				<OriginNote />
+				<span class="mn-note">Asks @WhoisClient.RootServer on TCP port 43, then follows up to @WhoisClient.MaxReferrals referrals. @Settings.WhoisTimeoutSeconds s per server, @(WhoisClient.MaxTotalBytes / 1024) KiB in all.</span>
+			</div>
+		</div>
+
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+
+		@if (_answers.Count > 0)
+		{
+			<div class="mn-results">
+				<div class="mn-row">
+					<span class="mn-note mn-mono">@string.Join(" > ", _answers.Select(answer => answer.Server))</span>
+					<span class="mn-gap"></span>
+					<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokaIcons.Content.Copy" OnClick="CopyAllAsync">Copy all</MokaButton>
+				</div>
+				@if (_note is { } note)
+				{
+					<MokaAlert Severity="MokaToastSeverity.Info" Dense>@note</MokaAlert>
+				}
+				@foreach (WhoisAnswer answer in _answers)
+				{
+					@if (answer.Error is { } failure)
+					{
+						<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@answer.Server: @failure</MokaAlert>
+					}
+					else
+					{
+						<TextOutput Title="@answer.Server" Detail="@Detail(answer)" Text="@answer.Text" Tall>
+							@if (answer.Text.Length == 0)
+							{
+								<span class="mn-note">The server closed the connection without saying anything.</span>
+							}
+						</TextOutput>
+					}
+				}
+			</div>
+		}
+	</div>
+</ToolPageFrame>

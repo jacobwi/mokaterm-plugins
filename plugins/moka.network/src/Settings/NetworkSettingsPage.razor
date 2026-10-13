@@ -1,0 +1,66 @@
+@inherits SettingsSectionBase<NetworkSettings>
+
+@{
+	NetworkSettings settings = Settings.Clamped();
+}
+
+@* Built from the same fields as Mokaterm's own settings pages, and found by the settings search through each row's
+   label and description. *@
+<SettingsPage Title="Network Toolkit" OnReset="ResetAsync">
+	<SettingsSection Title="DNS lookup">
+		<SettingsRow Label="Resolver" Description="Who the DNS tab asks first. The tab can switch for one lookup without changing this.">
+			<EnumSegmentedControl TEnum="DnsResolverKind"
+								  Value="settings.Resolver"
+								  ValueChanged="value => SaveAsync(s => s with { Resolver = value })"
+								  Options="Resolvers"
+								  AriaLabel="Default resolver" />
+		</SettingsRow>
+		<SettingsRow Label="Custom resolver" Description="The address the Custom choice asks, with a port when it is not 53. An address, not a name.">
+			<TextSetting Value="@settings.CustomResolver"
+						 ValueChanged="value => SaveAsync(s => s with { CustomResolver = value })"
+						 Validate="DnsServerAddress.Problem"
+						 AllowEmpty
+						 Placeholder="192.168.1.1 or [2001:db8::53]:5353"
+						 AriaLabel="Custom resolver address" />
+		</SettingsRow>
+		<SettingsRow Label="DNS time limit" Description="How long one server gets to answer before the next is asked. A cut reply asked again over TCP gets the same again.">
+			<NumberSetting TValue="int"
+						   Value="settings.DnsTimeoutSeconds"
+						   ValueChanged="value => SaveAsync(s => s with { DnsTimeoutSeconds = value })"
+						   Min="NetworkSettings.MinDnsTimeoutSeconds"
+						   Max="NetworkSettings.MaxDnsTimeoutSeconds"
+						   Suffix="s"
+						   AriaLabel="DNS time limit in seconds" />
+		</SettingsRow>
+	</SettingsSection>
+
+	<SettingsSection Title="Probes">
+		<SettingsRow Label="Reply wait" Description="How long ping and traceroute wait for each reply before counting it lost. Either tab can change it for one run.">
+			<NumberSetting TValue="int"
+						   Value="settings.PingTimeoutMilliseconds"
+						   ValueChanged="value => SaveAsync(s => s with { PingTimeoutMilliseconds = value })"
+						   Min="NetworkSettings.MinPingTimeoutMilliseconds"
+						   Max="NetworkSettings.MaxPingTimeoutMilliseconds"
+						   Suffix="ms"
+						   AriaLabel="Ping reply wait in milliseconds" />
+		</SettingsRow>
+		<SettingsRow Label="Port check time limit" Description="How long the port check waits for each connection before it counts the port as timed out.">
+			<NumberSetting TValue="int"
+						   Value="settings.ConnectTimeoutSeconds"
+						   ValueChanged="value => SaveAsync(s => s with { ConnectTimeoutSeconds = value })"
+						   Min="NetworkSettings.MinConnectTimeoutSeconds"
+						   Max="NetworkSettings.MaxConnectTimeoutSeconds"
+						   Suffix="s"
+						   AriaLabel="Port check time limit in seconds" />
+		</SettingsRow>
+		<SettingsRow Label="Whois time limit" Description="How long each whois server gets, from connecting to its last byte.">
+			<NumberSetting TValue="int"
+						   Value="settings.WhoisTimeoutSeconds"
+						   ValueChanged="value => SaveAsync(s => s with { WhoisTimeoutSeconds = value })"
+						   Min="NetworkSettings.MinWhoisTimeoutSeconds"
+						   Max="NetworkSettings.MaxWhoisTimeoutSeconds"
+						   Suffix="s"
+						   AriaLabel="Whois time limit in seconds" />
+		</SettingsRow>
+	</SettingsSection>
+</SettingsPage>

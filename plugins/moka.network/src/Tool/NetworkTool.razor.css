@@ -1,0 +1,274 @@
+/* The tool is wide, so the dialog or window has a fixed height and this fills it; each tab scrolls its own parts. The
+   root names itself mt-tool-nav as well, which is what ToolNavigation's own queries follow. */
+.mn-tool {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 360px;
+	min-width: 0;
+	padding: var(--moka-spacing-md) var(--moka-spacing-lg);
+	container-type: inline-size;
+	container-name: mn-tool mt-tool-nav;
+}
+
+.mn-section {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+}
+
+/* A display of its own would otherwise show a hidden tab. */
+.mn-section[hidden] {
+	display: none;
+}
+
+/* Shared by every tab. */
+.mn-tool ::deep .mn-form {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+	gap: var(--moka-spacing-sm);
+	align-items: end;
+}
+
+.mn-tool ::deep .mn-fields {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.mn-tool ::deep .mn-field {
+	flex: 1 1 110px;
+	min-width: 96px;
+}
+
+.mn-tool ::deep .mn-field--host {
+	flex: 4 1 240px;
+}
+
+.mn-tool ::deep .mn-field--fixed {
+	flex: 0 0 auto;
+}
+
+.mn-tool ::deep .mn-stack {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.mn-tool ::deep .mn-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.mn-tool ::deep .mn-row > .mn-grow {
+	flex: 1 1 220px;
+	min-width: 0;
+}
+
+.mn-tool ::deep .mn-gap {
+	flex: 1;
+}
+
+.mn-tool ::deep .mn-label {
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 10px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.mn-tool ::deep .mn-note {
+	color: var(--moka-color-on-surface-variant);
+	font-size: var(--moka-font-size-xs);
+}
+
+.mn-tool ::deep .mn-mono {
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+}
+
+.mn-tool ::deep .mn-group {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+	padding: var(--moka-spacing-sm) var(--moka-spacing-md);
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+	background: var(--moka-color-surface);
+}
+
+.mn-tool ::deep .mn-results {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+/* Stat tiles: a micro label over a mono value. */
+.mn-tool ::deep .mn-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+	gap: 1px;
+	overflow: hidden;
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+	background: var(--moka-color-outline-variant);
+}
+
+.mn-tool ::deep .mn-stat {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	padding: 6px var(--moka-spacing-sm);
+	background: var(--moka-color-surface);
+}
+
+.mn-tool ::deep .mn-stat-value {
+	overflow: hidden;
+	color: var(--moka-color-on-surface);
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-md, 15px);
+	font-weight: var(--moka-font-weight-semibold);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.mn-tool ::deep .mn-stat-value--bad {
+	color: var(--moka-color-error);
+}
+
+/* Result tables: one grid row per line, the columns set by each tab through --mn-columns. */
+.mn-tool ::deep .mn-table {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+	background: var(--moka-color-surface);
+}
+
+.mn-tool ::deep .mn-table--scroll {
+	max-height: 420px;
+	overflow-y: auto;
+}
+
+/* Newest at the bottom and kept in view while rows arrive: the rows are written newest first and laid out reversed,
+   which is also what anchors a scrolled box to its end. */
+.mn-tool ::deep .mn-table--live {
+	flex-direction: column-reverse;
+}
+
+.mn-tool ::deep .mn-tr {
+	display: grid;
+	grid-template-columns: var(--mn-columns);
+	align-items: center;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+	min-height: 28px;
+	padding: 3px var(--moka-spacing-sm);
+	border-top: 1px solid var(--moka-color-outline-variant);
+	font-size: var(--moka-font-size-sm);
+	transition: background var(--moka-transition-fast);
+}
+
+.mn-tool ::deep .mn-table:not(.mn-table--live) > .mn-tr:first-child,
+.mn-tool ::deep .mn-table--live > .mn-tr:last-child {
+	border-top: 0;
+}
+
+.mn-tool ::deep .mn-tr:hover {
+	background: var(--moka-color-surface-hover);
+}
+
+.mn-tool ::deep .mn-th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	min-height: 24px;
+	background: var(--moka-color-surface-2);
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 9px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.mn-tool ::deep .mn-th:hover {
+	background: var(--moka-color-surface-2);
+}
+
+.mn-tool ::deep .mn-td {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.mn-tool ::deep .mn-td--mono {
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+}
+
+.mn-tool ::deep .mn-td--dim {
+	color: var(--moka-color-on-surface-variant);
+}
+
+.mn-tool ::deep .mn-td--end {
+	text-align: right;
+	white-space: nowrap;
+}
+
+.mn-tool ::deep .mn-td--bad {
+	color: var(--moka-color-error);
+}
+
+.mn-tool ::deep .mn-td--warn {
+	color: var(--moka-color-warning);
+}
+
+.mn-tool ::deep .mn-result-line {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--moka-spacing-sm);
+	padding: 6px var(--moka-spacing-sm);
+	border-left: 3px solid var(--moka-color-outline);
+	border-radius: var(--moka-radius-sm);
+	background: var(--moka-color-surface-2);
+	font-size: var(--moka-font-size-sm);
+	overflow-wrap: anywhere;
+}
+
+.mn-tool ::deep .mn-result-line--good {
+	border-left-color: var(--moka-color-success);
+	box-shadow: inset 0 0 20px color-mix(in srgb, var(--moka-color-success) 6%, transparent);
+}
+
+.mn-tool ::deep .mn-result-line--bad {
+	border-left-color: var(--moka-color-error);
+	box-shadow: inset 0 0 20px var(--moka-color-primary-glow);
+}
+
+.mn-tool ::deep .mn-result-line--warn {
+	border-left-color: var(--moka-color-warning);
+}
+
+@container mn-tool (max-width: 559px) {
+	.mn-tool {
+		padding: var(--moka-spacing-sm);
+	}
+
+	.mn-tool ::deep .mn-field--host {
+		flex-basis: 100%;
+	}
+}

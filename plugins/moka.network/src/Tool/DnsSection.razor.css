@@ -1,0 +1,44 @@
+.mn-table--dns {
+	--mn-columns: minmax(110px, 1.1fr) 64px 52px minmax(0, 2fr);
+}
+
+.mn-table--dns .mn-tr {
+	grid-template-areas: "name ttl type data";
+}
+
+.mn-c-name {
+	grid-area: name;
+}
+
+.mn-c-ttl {
+	grid-area: ttl;
+}
+
+.mn-c-type {
+	grid-area: type;
+}
+
+.mn-c-data {
+	grid-area: data;
+}
+
+/* A narrow page puts the data under the name, where it can use the whole width. */
+@container mt-page (max-width: 559px) {
+	.mn-table--dns {
+		--mn-columns: 52px minmax(0, 1fr) auto;
+	}
+
+	/* Doubled classes: the tool's shared row rules reach in through ::deep with the weight of two classes and an attribute. */
+	.mn-table.mn-table--dns .mn-tr {
+		grid-template-areas:
+			"type name ttl"
+			"data data data";
+		row-gap: 2px;
+		padding-top: 5px;
+		padding-bottom: 5px;
+	}
+
+	.mn-table.mn-table--dns .mn-tr.mn-th {
+		display: none;
+	}
+}

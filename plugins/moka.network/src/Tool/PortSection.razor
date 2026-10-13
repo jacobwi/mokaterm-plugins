@@ -1,0 +1,94 @@
+@inherits NetworkViewBase
+@using Moka.Network.Ports
+
+<ToolPageFrame Title="Port check"
+			   Summary="@Summary"
+			   Loaded="true"
+			   PrimaryText="@(Running ? "Stop" : "Check")"
+			   PrimaryIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Port)"
+			   PrimaryDisabled="@(Busy && !Running)"
+			   OnPrimary="PrimaryAsync">
+	<div class="mn-stack">
+		<div class="mn-group" @onkeydown="OnKeyAsync">
+			<div class="mn-fields">
+				<div class="mn-field mn-field--host">
+					<MokaTextField Label="Host" Value="@_host" ValueChanged="@(value => _host = value ?? "")" Placeholder="example.com or 192.0.2.10" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
+				</div>
+				<div class="mn-field mn-field--ports">
+					<MokaTextField Label="Ports" Value="@_ports" ValueChanged="@(value => _ports = value ?? "")" Placeholder="22, 443, rdp" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
+				</div>
+			</div>
+			<div class="mn-row">
+				<EnumSegmentedControl TEnum="AddressChoice" Value="_choice" ValueChanged="@(value => _choice = value)" Options="AddressChoices.Options" AriaLabel="Address family" Disabled="Busy" />
+				<MokaCheckbox Label="Read what the server says first" Value="_greeting" ValueChanged="@(value => _greeting = value)" />
+				<span class="mn-gap"></span>
+				<OriginNote />
+			</div>
+			<span class="mn-note">Up to @PortList.MaxPorts ports, no ranges. Each gets one TCP connection, closed at once; nothing is sent. @Settings.ConnectTimeoutSeconds s per port.</span>
+		</div>
+
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+
+		@if (_target is { } target)
+		{
+			<div class="mn-results">
+				<span class="mn-note mn-mono">@target</span>
+				@if (_rows.Count > 0)
+				{
+					<div class="mn-table mn-table--ports" role="table" aria-label="Ports">
+						<div class="mn-tr mn-th" role="row">
+							<span role="columnheader">Port</span>
+							<span role="columnheader">State</span>
+							<span role="columnheader">Endpoint</span>
+							<span class="mn-td--end" role="columnheader">Time</span>
+						</div>
+						@foreach (PortRow row in _rows)
+						{
+							<div class="mn-tr" role="row" @key="row.Port">
+								<span class="mn-td mn-td--mono" role="cell">
+									@row.Port
+									@if (PortList.ServiceName(row.Port) is { } service)
+									{
+										<span class="mn-td--dim mn-service">@service</span>
+									}
+								</span>
+								<span class="mn-td" role="cell">
+									@if (row.Result is { } result)
+									{
+										<StatusChip Text="@StateText(result.State)" Color="StateColor(result.State)" Glow="@(result.State == PortState.Open)" Title="@result.Detail" />
+									}
+									else
+									{
+										<StatusChip Text="checking" Color="MokaColor.Surface" Glow="false" />
+									}
+								</span>
+								<span class="mn-td mn-td--mono mn-td--dim" role="cell">@(row.Result is { } shown ? Endpoint(shown) : "")</span>
+								<span class="mn-td mn-td--mono mn-td--end" role="cell">@(row.Result is { State: PortState.Open or PortState.Refused } timed ? Milliseconds(timed.Elapsed) : "")</span>
+								@if (row.Result is { Detail: { } detail } && row.Result.State != PortState.TimedOut)
+								{
+									<span class="mn-td mn-td--dim mn-port-extra" role="cell">@detail</span>
+								}
+								@if (row.Result is { State: PortState.Open } open && _greetingAsked)
+								{
+									<span class="mn-port-extra" role="cell">
+										@if (open.Greeting is { Length: > 0 } greeting)
+										{
+											<pre class="mn-greeting">@greeting</pre>
+										}
+										else
+										{
+											<span class="mn-td--dim">Nothing within @PortCheck.GreetingWait.TotalSeconds.ToString(CultureInfo.CurrentCulture) s. Many servers, web servers among them, wait for the client to speak first.</span>
+										}
+									</span>
+								}
+							</div>
+						}
+					</div>
+				}
+			</div>
+		}
+	</div>
+</ToolPageFrame>

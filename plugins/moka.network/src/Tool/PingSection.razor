@@ -1,0 +1,87 @@
+@inherits NetworkViewBase
+@using Moka.Network.Echo
+
+<ToolPageFrame Title="Ping"
+			   Summary="@Summary"
+			   Loaded="true"
+			   PrimaryText="@(Running ? "Stop" : "Start")"
+			   PrimaryIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Start)"
+			   PrimaryDisabled="@(Busy && !Running)"
+			   OnPrimary="PrimaryAsync">
+	<div class="mn-stack">
+		<div class="mn-group" @onkeydown="OnKeyAsync">
+			<div class="mn-fields">
+				<div class="mn-field mn-field--host">
+					<MokaTextField Label="Host" Value="@_host" ValueChanged="@(value => _host = value ?? "")" Placeholder="example.com or 192.0.2.10" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
+				</div>
+				<div class="mn-field">
+					<MokaTextField Label="Count" Value="@_count" ValueChanged="@(value => _count = value ?? "")" Placeholder="4" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" Disabled="_continuous" />
+				</div>
+				<div class="mn-field">
+					<MokaTextField Label="Every (s)" Value="@_interval" ValueChanged="@(value => _interval = value ?? "")" Placeholder="1" Size="MokaSize.Sm" inputmode="decimal" autocomplete="off" />
+				</div>
+				<div class="mn-field">
+					<MokaTextField Label="Wait (ms)" Value="@_timeout" ValueChanged="@(value => _timeout = value ?? "")" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
+				</div>
+				<div class="mn-field">
+					<MokaTextField Label="Size (bytes)" Value="@_size" ValueChanged="@(value => _size = value ?? "")" Placeholder="32" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
+				</div>
+			</div>
+			<div class="mn-row">
+				<EnumSegmentedControl TEnum="AddressChoice" Value="_choice" ValueChanged="@(value => _choice = value)" Options="AddressChoices.Options" AriaLabel="Address family" Disabled="Busy" />
+				<MokaCheckbox Label="Until stopped" Value="_continuous" ValueChanged="@(value => _continuous = value)" />
+				<span class="mn-gap"></span>
+				<OriginNote />
+			</div>
+		</div>
+
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+
+		@if (_target is { } target)
+		{
+			<div class="mn-results">
+				<span class="mn-note mn-mono">@target</span>
+				@if (_stats.Sent > 0)
+				{
+					<div class="mn-stats" aria-label="Summary">
+						<div class="mn-stat"><span class="mn-label">Sent</span><span class="mn-stat-value">@Count(_stats.Sent)</span></div>
+						<div class="mn-stat"><span class="mn-label">Received</span><span class="mn-stat-value">@Count(_stats.Received)</span></div>
+						<div class="mn-stat"><span class="mn-label">Loss</span><span class="@(_stats.Lost > 0 ? "mn-stat-value mn-stat-value--bad" : "mn-stat-value")">@LossText</span></div>
+						<div class="mn-stat"><span class="mn-label">Min</span><span class="mn-stat-value">@Rtt(_stats.Minimum)</span></div>
+						<div class="mn-stat"><span class="mn-label">Avg</span><span class="mn-stat-value">@Rtt(_stats.Average)</span></div>
+						<div class="mn-stat"><span class="mn-label">Max</span><span class="mn-stat-value">@Rtt(_stats.Maximum)</span></div>
+						<div class="mn-stat" title="The mean difference between one reply's round trip and the next."><span class="mn-label">Jitter</span><span class="mn-stat-value">@Rtt(_stats.Jitter)</span></div>
+					</div>
+				}
+				@if (_dropped > 0)
+				{
+					<span class="mn-note">The oldest @Count(_dropped) replies are counted above but no longer listed.</span>
+				}
+				@if (_rows.Count > 0)
+				{
+					<div class="mn-table mn-table--ping mn-table--scroll mn-table--live" role="table" aria-label="Replies">
+						@for (int index = _rows.Count - 1; index >= 0; index--)
+						{
+							PingRow row = _rows[index];
+							<div class="mn-tr" role="row" @key="row.Sequence">
+								<span class="mn-td mn-td--mono mn-td--dim" role="cell">@row.Sequence</span>
+								<span class="mn-td mn-td--mono" role="cell">@(row.Reply.From?.ToString() ?? "")</span>
+								<span class="@ResultClass(row.Reply)" role="cell">@ResultText(row.Reply)</span>
+								<span class="mn-td mn-td--mono mn-td--end" role="cell">@(row.Reply.Status == EchoStatus.Reply && row.Reply.Milliseconds is { } ms ? Milliseconds(ms) : "")</span>
+							</div>
+						}
+						<div class="mn-tr mn-th" role="row">
+							<span role="columnheader">#</span>
+							<span role="columnheader">From</span>
+							<span role="columnheader">Result</span>
+							<span class="mn-td--end" role="columnheader">Time</span>
+						</div>
+					</div>
+				}
+			</div>
+		}
+	</div>
+</ToolPageFrame>

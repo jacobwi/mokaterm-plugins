@@ -1,0 +1,81 @@
+.mn-facts {
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	gap: 6px var(--moka-spacing-lg);
+	margin: 0;
+	padding: var(--moka-spacing-sm) var(--moka-spacing-md);
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+	background: var(--moka-color-surface);
+}
+
+.mn-facts dt {
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 10px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	line-height: 22px;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.mn-facts dd {
+	display: flex;
+	align-items: center;
+	gap: var(--moka-spacing-xs);
+	min-width: 0;
+	margin: 0;
+}
+
+.mn-facts dd.mn-fact-block {
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 2px;
+}
+
+.mn-fact-line {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--moka-spacing-sm);
+}
+
+.mn-fact {
+	min-width: 0;
+	color: var(--moka-color-on-surface);
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-sm);
+	letter-spacing: 0.02em;
+	line-height: 22px;
+	overflow-wrap: anywhere;
+	user-select: text;
+}
+
+.mn-fact--dim {
+	color: var(--moka-color-on-surface-variant);
+	font-size: var(--moka-font-size-xs);
+}
+
+.mn-table--split {
+	--mn-columns: 44px minmax(120px, 1.2fr) minmax(0, 2fr) minmax(64px, auto);
+}
+
+/* A narrow page puts each label above its value. */
+@container mt-page (max-width: 419px) {
+	.mn-facts {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0;
+	}
+
+	.mn-facts dd {
+		margin-bottom: var(--moka-spacing-xs);
+	}
+
+	.mn-table--split {
+		--mn-columns: 32px minmax(0, 1fr) auto;
+	}
+
+	.mn-table--split .mn-tr > :nth-child(3) {
+		display: none;
+	}
+}

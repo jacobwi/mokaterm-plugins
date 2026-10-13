@@ -1,0 +1,19 @@
+@using Mokaterm.Abstractions.Platform
+
+@* Where a probe starts, so a result is read as what that machine sees: on the web host the server makes every
+   connection, not the browser. *@
+<span class="mn-origin" title="@Explanation">
+	<MokaStatusDot Size="MokaSize.Xs" Color="@(IsDesktop ? MokaColor.Success : MokaColor.Info)" Glow />
+	<span>@(IsDesktop ? "Runs from this computer" : "Runs from the Mokaterm server")</span>
+</span>
+
+@code {
+	[Inject]
+	private IAppEnvironment Environment { get; set; } = default!;
+
+	private bool IsDesktop => Environment.Kind == HostKind.Desktop;
+
+	private string Explanation => IsDesktop
+		? "Probes leave from this computer, through its own network and firewall."
+		: "Probes leave from the server Mokaterm runs on, through its network and firewall, not from your browser.";
+}

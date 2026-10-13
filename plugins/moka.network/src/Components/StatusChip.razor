@@ -1,0 +1,28 @@
+@* An uppercase state with a glowing dot: OPEN, REFUSED, NOERROR, REACHED. *@
+<span class="mn-chip mn-chip--@ColorClass" title="@Title">
+	<MokaStatusDot Size="MokaSize.Xs" Color="Color" Glow="Glow" />
+	<span class="mn-chip-text">@Text</span>
+</span>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Text { get; set; } = "";
+
+	[Parameter]
+	public MokaColor Color { get; set; } = MokaColor.Success;
+
+	[Parameter]
+	public bool Glow { get; set; } = true;
+
+	[Parameter]
+	public string? Title { get; set; }
+
+	private string ColorClass => Color switch
+	{
+		MokaColor.Error => "error",
+		MokaColor.Warning => "warning",
+		MokaColor.Info => "info",
+		MokaColor.Surface => "plain",
+		_ => "success",
+	};
+}

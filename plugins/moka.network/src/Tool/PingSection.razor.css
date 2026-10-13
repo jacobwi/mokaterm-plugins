@@ -1,0 +1,14 @@
+.mn-table--ping {
+	--mn-columns: 56px minmax(110px, 1.4fr) minmax(0, 1.6fr) 80px;
+}
+
+@container mt-page (max-width: 479px) {
+	.mn-table--ping {
+		--mn-columns: 44px minmax(0, 1fr) 72px;
+	}
+
+	/* The address is the same on every line, and the target line above already names it. */
+	.mn-table--ping .mn-tr > :nth-child(2) {
+		display: none;
+	}
+}

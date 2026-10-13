@@ -1,0 +1,30 @@
+@inherits AppToolBase
+
+@* The Network Toolkit: a side menu of tabs, each kept alive while another shows, so switching back finds what was
+   typed and what a run found, and a ping left running keeps going. Closing the tool disposes every tab, which stops
+   whatever still runs. *@
+<div class="mn-tool">
+	<ToolNavigation Entries="Entries" Current="@_current" CurrentChanged="Show" Label="Network Toolkit">
+		<div class="mn-section" hidden="@(_current != DnsId)">
+			<DnsSection />
+		</div>
+		<div class="mn-section" hidden="@(_current != PingId)">
+			<PingSection />
+		</div>
+		<div class="mn-section" hidden="@(_current != PortId)">
+			<PortSection />
+		</div>
+		<div class="mn-section" hidden="@(_current != TraceId)">
+			<TraceSection />
+		</div>
+		<div class="mn-section" hidden="@(_current != WhoisId)">
+			<WhoisSection />
+		</div>
+		<div class="mn-section" hidden="@(_current != WakeId)">
+			<WakeSection />
+		</div>
+		<div class="mn-section" hidden="@(_current != SubnetId)">
+			<SubnetSection />
+		</div>
+	</ToolNavigation>
+</div>

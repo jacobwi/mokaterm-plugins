@@ -1,0 +1,37 @@
+.mn-table--trace {
+	--mn-columns: 40px minmax(0, 1fr) repeat(3, 68px);
+}
+
+.mn-c-host {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	min-width: 0;
+}
+
+.mn-hop {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0 var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.mn-hop-name {
+	min-width: 0;
+	overflow: hidden;
+	font-size: var(--moka-font-size-xs);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* The hop where the destination answered. */
+.mn-table.mn-table--trace .mn-tr.mn-tr--reached {
+	box-shadow: inset 2px 0 0 var(--moka-color-success), inset 0 0 20px color-mix(in srgb, var(--moka-color-success) 6%, transparent);
+}
+
+@container mt-page (max-width: 479px) {
+	.mn-table--trace {
+		--mn-columns: 28px minmax(0, 1fr) repeat(3, 52px);
+	}
+}

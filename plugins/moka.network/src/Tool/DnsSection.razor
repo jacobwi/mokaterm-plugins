@@ -1,0 +1,137 @@
+@inherits NetworkViewBase
+
+<ToolPageFrame Title="DNS lookup"
+			   Summary="@Summary"
+			   Loaded="true"
+			   PrimaryText="@(Running ? "Stop" : "Look up")"
+			   PrimaryIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Dns)"
+			   PrimaryDisabled="@(Busy && !Running)"
+			   OnPrimary="PrimaryAsync">
+	<div class="mn-stack">
+		<div class="mn-group" @onkeydown="OnKeyAsync">
+			<div class="mn-fields">
+				<div class="mn-field mn-field--host">
+					<MokaTextField Label="Name or address"
+								   Value="@_name"
+								   ValueChanged="@(value => _name = value ?? "")"
+								   Placeholder="example.com, _sip._tcp.example.com or 192.0.2.10"
+								   Size="MokaSize.Sm"
+								   spellcheck="false"
+								   autocomplete="off"
+								   data-autofocus />
+				</div>
+				<div class="mn-field">
+					<MokaSelect TValue="DnsRecordType"
+								Label="Type"
+								Items="DnsNames.Offered"
+								Value="_type"
+								ValueChanged="@(value => _type = value)"
+								ValueSelector="@(type => type.ToString())"
+								Size="MokaSize.Sm"
+								aria-label="Record type" />
+				</div>
+			</div>
+			<div class="mn-row">
+				<span class="mn-label">Resolver</span>
+				<EnumSegmentedControl TEnum="DnsResolverKind" Value="_resolver" ValueChanged="@(value => _resolver = value)" Options="Resolvers" AriaLabel="Resolver" Disabled="Busy" />
+				@if (_resolver == DnsResolverKind.Custom)
+				{
+					<div class="mn-grow">
+						<MokaTextField Value="@_custom"
+									   ValueChanged="@(value => _custom = value ?? "")"
+									   Placeholder="192.168.1.1 or [2001:db8::53]:5353"
+									   Size="MokaSize.Sm"
+									   spellcheck="false"
+									   autocomplete="off"
+									   aria-label="Custom resolver address" />
+					</div>
+				}
+			</div>
+			<div class="mn-row">
+				<OriginNote />
+				<span class="mn-note">An address is looked up as its PTR record. Asked over UDP, again over TCP when the answer is cut. @Settings.DnsTimeoutSeconds s per server.</span>
+			</div>
+		</div>
+
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+
+		@if (_result is { } result)
+		{
+			DnsMessage message = result.Exchange.Message;
+			<div class="mn-results">
+				<ChipRow>
+					<StatusChip Text="@message.ResponseCodeName" Color="CodeColor(message.ResponseCode)" Glow="@(message.ResponseCode != 0)" />
+					@if (message.Header.AuthenticData)
+					{
+						<StatusChip Text="DNSSEC validated" Color="MokaColor.Success" Glow="false" Title="The resolver set AD: it checked the answer's signatures." />
+					}
+					@if (message.Header.Authoritative)
+					{
+						<StatusChip Text="authoritative" Color="MokaColor.Info" Glow="false" Title="AA: the answer comes from a server for the zone, not a cache." />
+					}
+					@if (result.Exchange.OverTcp)
+					{
+						<StatusChip Text="TCP" Color="MokaColor.Surface" Glow="false" Title="The UDP answer was cut, so the question went again over TCP." />
+					}
+					<span class="mn-mono">@ServerLine(result)</span>
+				</ChipRow>
+
+				@if (_note is { } note)
+				{
+					<span class="mn-note">@note</span>
+				}
+				@foreach (string failure in result.EarlierFailures)
+				{
+					<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@failure</MokaAlert>
+				}
+				@if (DnsNames.ResponseCodeMeaning(message.ResponseCode) is { } meaning)
+				{
+					<div class="mn-result-line @(message.ResponseCode == 3 ? "mn-result-line--warn" : "mn-result-line--bad")">@meaning</div>
+				}
+				else if (message.Answers.Count == 0)
+				{
+					<div class="mn-result-line mn-result-line--warn">The name exists, but has no @DnsNames.TypeName(_askedType) records.</div>
+				}
+				@if (result.Exchange.IgnoredReplies > 0)
+				{
+					<span class="mn-note">@result.Exchange.IgnoredReplies stray replies with another id or question were passed over.</span>
+				}
+
+				@RecordTable("Answer", message.Answers)
+				@RecordTable("Authority", message.Authority)
+				@RecordTable("Additional", message.Additional)
+
+				<TextOutput Title="As text" Detail="@($"{message.Size} bytes")" Text="@AsText(result)" />
+			</div>
+		}
+	</div>
+</ToolPageFrame>
+
+@code {
+	private RenderFragment RecordTable(string title, IReadOnlyList<DnsRecord> records) => @<text>
+		@if (records.Count > 0)
+		{
+			<span class="mn-label">@title (@records.Count)</span>
+			<div class="mn-table mn-table--dns" role="table" aria-label="@title">
+				<div class="mn-tr mn-th" role="row">
+					<span class="mn-c-name" role="columnheader">Name</span>
+					<span class="mn-c-ttl mn-td--end" role="columnheader">TTL</span>
+					<span class="mn-c-type" role="columnheader">Type</span>
+					<span class="mn-c-data" role="columnheader">Data</span>
+				</div>
+				@foreach (DnsRecord record in records)
+				{
+					<div class="mn-tr" role="row">
+						<span class="mn-td mn-td--mono mn-td--dim mn-c-name" role="cell">@record.Name</span>
+						<span class="mn-td mn-td--mono mn-td--dim mn-td--end mn-c-ttl" role="cell" title="@TtlTitle(record.Ttl)">@TtlText(record.Ttl)</span>
+						<span class="mn-td mn-td--mono mn-c-type" role="cell">@record.TypeName</span>
+						<span class="@(record.Malformed ? "mn-td mn-td--mono mn-td--warn mn-c-data" : "mn-td mn-td--mono mn-c-data")" role="cell" title="@(record.Malformed ? "This record's data does not have the shape its type calls for." : null)">@record.Data</span>
+					</div>
+				}
+			</div>
+		}
+	</text>;
+}
