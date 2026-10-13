@@ -1,0 +1,119 @@
+.mp-strength {
+	--mp-level: var(--moka-color-error);
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+	padding: var(--moka-spacing-sm) var(--moka-spacing-md);
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+	background: var(--moka-color-surface);
+}
+
+.mp-strength--fair {
+	--mp-level: var(--moka-color-warning);
+}
+
+.mp-strength--strong,
+.mp-strength--very-strong {
+	--mp-level: var(--moka-color-success);
+}
+
+.mp-strength--very-strong {
+	box-shadow: inset 0 0 20px color-mix(in srgb, var(--moka-color-success) 6%, transparent);
+}
+
+.mp-strength-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--moka-spacing-sm);
+}
+
+.mp-strength-title {
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 10px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.mp-strength-level {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--mp-level);
+	font-size: 10px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.mp-strength-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--mp-level);
+	box-shadow: 0 0 8px var(--mp-level);
+}
+
+.mp-strength-figures {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0 6px;
+	min-width: 0;
+}
+
+.mp-strength-bits {
+	color: var(--moka-color-on-surface);
+	font-family: var(--moka-font-family-mono);
+	font-size: 20px;
+	font-weight: var(--moka-font-weight-semibold);
+	line-height: 1.2;
+}
+
+.mp-strength-unit {
+	color: var(--moka-color-on-surface-tertiary);
+	font-family: var(--moka-font-family-mono);
+	font-size: 11px;
+}
+
+.mp-strength-time {
+	flex: 1 1 220px;
+	min-width: 0;
+	margin-left: 6px;
+	color: var(--moka-color-on-surface-variant);
+	font-size: 11px;
+}
+
+.mp-strength-bar {
+	position: relative;
+	height: 4px;
+	overflow: hidden;
+	border-radius: 2px;
+	background: var(--moka-color-surface-3);
+}
+
+.mp-strength-fill {
+	display: block;
+	height: 100%;
+	background: var(--mp-level);
+	box-shadow: 0 0 8px var(--mp-level);
+	transition: width var(--moka-transition-slow), background var(--moka-transition-slow);
+}
+
+.mp-strength-tick {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 1px;
+	background: var(--moka-color-surface);
+}
+
+.mp-strength-note {
+	color: var(--moka-color-on-surface-variant);
+	font-size: var(--moka-font-size-xs);
+	line-height: 1.45;
+}

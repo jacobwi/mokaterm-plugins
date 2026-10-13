@@ -1,0 +1,25 @@
+.mp-value {
+	min-width: 0;
+	color: var(--moka-color-on-surface);
+	font-family: var(--moka-font-family-mono);
+	font-size: 13px;
+	letter-spacing: 0.02em;
+	line-height: 1.5;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	user-select: text;
+}
+
+.mp-value--hidden {
+	color: var(--moka-color-on-surface-tertiary);
+	letter-spacing: 0.12em;
+	user-select: none;
+}
+
+.mp-ch-digit {
+	color: var(--moka-color-info);
+}
+
+.mp-ch-symbol {
+	color: var(--moka-color-primary);
+}

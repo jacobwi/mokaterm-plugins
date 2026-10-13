@@ -1,0 +1,65 @@
+@* The passphrase options: words, the separator and the extras. Every change goes straight back up. *@
+<div class="mp-group">
+	<span class="mp-label">Words</span>
+	<NumberSetting TValue="int"
+				   Value="Options.Words"
+				   ValueChanged="value => ChangeAsync(Options with { Words = value })"
+				   Min="PasswordSettings.MinWords"
+				   Max="PasswordSettings.MaxWords"
+				   Suffix="@($"words, {PasswordSettings.MinWords} to {PasswordSettings.MaxWords}")"
+				   AriaLabel="Words in a passphrase" />
+</div>
+
+<div class="mp-group">
+	<span class="mp-label">Separator</span>
+	<EnumSegmentedControl TEnum="PassphraseSeparator"
+						  Value="Options.Separator"
+						  ValueChanged="value => ChangeAsync(Options with { Separator = value })"
+						  Options="SeparatorOptions.All"
+						  AriaLabel="Separator" />
+	@if (Options.Separator == PassphraseSeparator.Custom)
+	{
+		<div class="mp-symbols">
+			<TextSetting Value="@Options.CustomSeparator"
+						 ValueChanged="value => ChangeAsync(Options with { CustomSeparator = value })"
+						 Validate="PassphraseOptions.CustomSeparatorProblem"
+						 EmptyError="Type a separator."
+						 Placeholder="+"
+						 Width="120px"
+						 AriaLabel="Custom separator" />
+		</div>
+	}
+</div>
+
+<div class="mp-group">
+	<span class="mp-label">Extras</span>
+	<MokaCheckbox Label="Capitalize words"
+				  Value="Options.Capitalize"
+				  ValueChanged="value => ChangeAsync(Options with { Capitalize = value })" />
+	<MokaCheckbox Label="Add a digit after a random word"
+				  Value="Options.AddDigit"
+				  ValueChanged="value => ChangeAsync(Options with { AddDigit = value })" />
+	<MokaCheckbox Label="Add a symbol after a random word"
+				  Value="Options.AddSymbol"
+				  ValueChanged="value => ChangeAsync(Options with { AddSymbol = value })" />
+	@if (Options.AddSymbol)
+	{
+		<div class="mp-symbols">
+			<TextSetting Value="@Options.SymbolSet"
+						 ValueChanged="value => ChangeAsync(Options with { SymbolSet = value })"
+						 Validate="CharacterSets.SymbolSetProblem"
+						 EmptyError="Type at least one symbol."
+						 AriaLabel="Symbols to draw from" />
+		</div>
+	}
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public PassphraseOptions Options { get; set; } = new();
+
+	[Parameter]
+	public EventCallback<PassphraseOptions> OptionsChanged { get; set; }
+
+	private Task ChangeAsync(PassphraseOptions options) => OptionsChanged.InvokeAsync(options);
+}

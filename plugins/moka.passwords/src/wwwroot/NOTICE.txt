@@ -1,0 +1,11 @@
+Password Generator for Mokaterm
+Copyright (c) Moka 2026, released under the MIT License.
+
+Passphrase words: EFF large word list
+https://www.eff.org/dice
+https://www.eff.org/files/2016/07/18/eff_large_wordlist.txt
+
+The word list is the work of the Electronic Frontier Foundation and is used under the Creative Commons Attribution 3.0
+United States license (CC BY 3.0 US): https://creativecommons.org/licenses/by/3.0/us/
+
+Changes: the dice numbers were removed, leaving the 7776 words in their original order, one per line.

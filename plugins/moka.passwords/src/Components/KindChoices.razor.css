@@ -1,0 +1,7 @@
+.mp-kinds {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--moka-spacing-xs) var(--moka-spacing-md);
+	min-width: 0;
+}

@@ -1,0 +1,55 @@
+@using System.Globalization
+@using Moka.Passwords.Strength
+
+@* The strength of the generator's settings: bits, a label, a bar with the label thresholds marked, and how long trying
+   every value would take. *@
+<section class="@($"mp-strength mp-strength--{LevelClass}")" aria-label="Strength">
+	<div class="mp-strength-head">
+		<span class="mp-strength-title">Strength</span>
+		<span class="mp-strength-level"><span class="mp-strength-dot" aria-hidden="true"></span>@Report.Label</span>
+	</div>
+	<div class="mp-strength-figures">
+		<span class="mp-strength-bits">@Report.BitsText</span>
+		<span class="mp-strength-unit">bits</span>
+		<span class="mp-strength-time">@Report.TimeToTryAll to try every one at @StrengthScale.RateText</span>
+	</div>
+	<div class="mp-strength-bar"
+		 role="meter"
+		 aria-label="Strength in bits"
+		 aria-valuemin="0"
+		 aria-valuemax="@Invariant(StrengthScale.FullBarBits)"
+		 aria-valuenow="@Invariant(Math.Min(Report.Bits, StrengthScale.FullBarBits))"
+		 aria-valuetext="@($"{Report.BitsText} bits, {Report.Label}")">
+		<span class="mp-strength-fill" style="@($"width:{Invariant(Report.BarPercent)}%")"></span>
+		@foreach (double threshold in Thresholds)
+		{
+			<span class="mp-strength-tick" style="@($"left:{Invariant(StrengthScale.BarPercent(threshold))}%")" aria-hidden="true"></span>
+		}
+	</div>
+	@foreach (string note in Notes)
+	{
+		<span class="mp-strength-note">@note</span>
+	}
+	<span class="mp-strength-note">This rates the generator's settings, so it holds for every value they make. It says nothing about a password someone typed.</span>
+</section>
+
+@code {
+	private static readonly double[] Thresholds = [StrengthScale.FairFrom, StrengthScale.StrongFrom, StrengthScale.VeryStrongFrom];
+
+	[Parameter, EditorRequired]
+	public StrengthReport Report { get; set; } = StrengthReport.For(0);
+
+	/// <summary>What else bears on the figure, such as an upper bound or a PIN's lock-out.</summary>
+	[Parameter]
+	public IReadOnlyList<string> Notes { get; set; } = [];
+
+	private string LevelClass => Report.Level switch
+	{
+		StrengthLevel.VeryStrong => "very-strong",
+		StrengthLevel.Strong => "strong",
+		StrengthLevel.Fair => "fair",
+		_ => "weak",
+	};
+
+	private static string Invariant(double value) => value.ToString("0.#", CultureInfo.InvariantCulture);
+}

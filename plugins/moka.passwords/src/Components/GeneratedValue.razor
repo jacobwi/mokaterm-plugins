@@ -1,0 +1,42 @@
+@* One generated value in monospace, digits and symbols tinted so a character is easier to read back. A value of one
+   kind (a PIN) stays plain, since tinting all of it tells nothing. Hidden, it is a fixed row of dots that does not give
+   away the length. *@
+@if (Hidden)
+{
+	<span class="mp-value mp-value--hidden" role="img" aria-label="Hidden">••••••••••••</span>
+}
+else if (Value.Select(CssOf).Distinct().Count() < 2)
+{
+	<span class="mp-value">@Value</span>
+}
+else
+{
+	<span class="mp-value">@foreach ((string text, string? css) in Runs(Value))
+		{
+			<span class="@css">@text</span>
+		}</span>
+}
+
+@code {
+	[Parameter, EditorRequired]
+	public string Value { get; set; } = "";
+
+	[Parameter]
+	public bool Hidden { get; set; }
+
+	// Letters stay plain; each change of kind starts a new run.
+	private static IEnumerable<(string Text, string? Css)> Runs(string value)
+	{
+		int start = 0;
+		for (int index = 1; index <= value.Length; index++)
+		{
+			if (index == value.Length || CssOf(value[index]) != CssOf(value[start]))
+			{
+				yield return (value[start..index], CssOf(value[start]));
+				start = index;
+			}
+		}
+	}
+
+	private static string? CssOf(char c) => char.IsAsciiDigit(c) ? "mp-ch-digit" : char.IsAsciiLetter(c) ? null : "mp-ch-symbol";
+}

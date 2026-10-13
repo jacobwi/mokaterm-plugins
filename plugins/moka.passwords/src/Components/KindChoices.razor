@@ -1,0 +1,32 @@
+@* The four kinds of character as check boxes. The last one chosen cannot be cleared, so a password always has something
+   to be drawn from. *@
+<div class="mp-kinds" role="group" aria-label="Characters">
+	@foreach ((CharacterKind kind, string text) in Kinds)
+	{
+		bool on = Options.Has(kind);
+		<MokaCheckbox @key="kind"
+					  Label="@text"
+					  Value="on"
+					  ValueChanged="value => OptionsChanged.InvokeAsync(Options.With(kind, value))"
+					  Disabled="@(Disabled || (on && Options.KindCount == 1))" />
+	}
+</div>
+
+@code {
+	private static readonly IReadOnlyList<(CharacterKind Kind, string Text)> Kinds =
+	[
+		(CharacterKind.Lowercase, "a-z"),
+		(CharacterKind.Uppercase, "A-Z"),
+		(CharacterKind.Digit, "0-9"),
+		(CharacterKind.Symbol, "Symbols"),
+	];
+
+	[Parameter, EditorRequired]
+	public PasswordOptions Options { get; set; } = new();
+
+	[Parameter]
+	public EventCallback<PasswordOptions> OptionsChanged { get; set; }
+
+	[Parameter]
+	public bool Disabled { get; set; }
+}
