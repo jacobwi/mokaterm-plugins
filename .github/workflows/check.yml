@@ -1,0 +1,86 @@
+name: Check
+
+# Builds and checks what a pull request changes. It runs with a read-only token and no secrets, forks included, because
+# it builds code from the pull request and from community repositories; nothing here publishes anything.
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  check:
+    name: Build and check
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: mokaterm-plugins
+
+    steps:
+      # The gallery and Mokaterm side by side, the way they sit on a workstation, so ../Mokaterm finds the checkout.
+      - name: Check out the gallery
+        uses: actions/checkout@v5
+        with:
+          path: mokaterm-plugins
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Find the Mokaterm to build against
+        id: mokaterm
+        run: python3 -B build/gallery.py mokaterm-ref >> "$GITHUB_OUTPUT"
+
+      - name: Check out Mokaterm
+        uses: actions/checkout@v5
+        with:
+          repository: jacobwi/Mokaterm
+          ref: ${{ steps.mokaterm.outputs.ref }}
+          path: Mokaterm
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test the gallery scripts
+        run: python3 -B -m unittest discover -s build/tests
+
+      - name: Validate the listings
+        run: python3 -B build/gallery.py validate --releases "github:$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Make the Mokaterm packages available
+        run: python3 -B build/mokaterm_feed.py
+
+      - name: Build the load check
+        run: python3 -B build/gallery.py toolchain
+
+      # Two fixtures made from Mokaterm's sample plugin go through build, check, release, index, sign and verify, with
+      # a folder standing in for GitHub Releases and a throwaway key, so a change to the scripts is proven before main.
+      - name: Run the whole gallery once
+        run: python3 -B build/e2e_local.py
+
+      # Ours whose folder changed and community entries added or changed; everything when the build itself changed.
+      - name: Build, test and check what changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            python3 -B build/gallery.py check --base "origin/$BASE_REF" --releases "github:$GITHUB_REPOSITORY"
+          else
+            python3 -B build/gallery.py check --all --releases "github:$GITHUB_REPOSITORY"
+          fi

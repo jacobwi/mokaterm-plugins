@@ -1,0 +1,20 @@
+<Project>
+
+	<!--
+		Imported into every plugin build the gallery runs, through CustomAfterMicrosoftCommonTargets, so nothing in the
+		plugin's repository has to change: whatever version of the Mokaterm packages a project names, it builds against the
+		ones the gallery lists for (MokatermGalleryVersion, from mokaterm.json through build/mokaterm_feed.py). The import
+		comes after the project and its Directory.*.props, so these updates win over a literal version, a floating one and a
+		central PackageVersion alike. A plugin listed for Mokaterm 0.2 is then built with exactly the packages the app it
+		runs in was released with.
+	-->
+	<ItemGroup Condition="'$(MokatermGalleryVersion)' != '' and '$(ManagePackageVersionsCentrally)' == 'true'">
+		<PackageVersion Update="Mokaterm.Abstractions;Mokaterm.UI.Common;Mokaterm.Plugin.Sdk" Version="$(MokatermGalleryVersion)" />
+		<PackageReference Update="Mokaterm.Abstractions;Mokaterm.UI.Common;Mokaterm.Plugin.Sdk" VersionOverride="" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(MokatermGalleryVersion)' != '' and '$(ManagePackageVersionsCentrally)' != 'true'">
+		<PackageReference Update="Mokaterm.Abstractions;Mokaterm.UI.Common;Mokaterm.Plugin.Sdk" Version="$(MokatermGalleryVersion)" />
+	</ItemGroup>
+
+</Project>

@@ -1,0 +1,174 @@
+@inherits SystemPageBase
+@using Moka.Certificates.ServerFiles
+
+@* A System view page: the frame and detail panel come from UI.Common and the rows use the view's own list styles
+   (mta-table, mta-row), so it reads like the pages around it. A certificate's details are the tool's own component. *@
+<ToolPageFrame Title="Certificates"
+			   Summary="@Summary"
+			   Search="@_filter"
+			   SearchChanged="OnFilterChanged"
+			   SearchPlaceholder="Filter by name, issuer or path"
+			   PrimaryText="@(HasCertbot ? "Test renewal" : null)"
+			   PrimaryIcon="MokatermIcons.Reconnect"
+			   PrimaryDisabled="@(Busy || Context.RootChangeBlocked is not null)"
+			   PrimaryTitle="@(Context.RootChangeBlocked ?? "certbot renew --dry-run for every certificate")"
+			   OnPrimary="TestAllAsync"
+			   Loading="Loading"
+			   Loaded="Loaded"
+			   Error="@LoadError"
+			   OnRefresh="ReloadAsync"
+			   ListPage
+			   Chips="@(_files.Count > 0 ? CountChips : null)"
+			   Detail="@(Selected is null ? null : DetailPanel)">
+	<div class="mc-page">
+		@if (RootHint is { } hint)
+		{
+			<div class="mc-page-root">
+				<MokaAlert Severity="MokaToastSeverity.Info" Dense>@hint</MokaAlert>
+				@if (!Context.RootModeOn)
+				{
+					<div>
+						<MokaButton Variant="MokaVariant.Outlined"
+									Size="MokaSize.Xs"
+									StartIcon="MokatermIcons.Root"
+									Disabled="@(Context.RootChangeBlocked is not null)"
+									title="@Context.RootChangeBlocked"
+									OnClick="EnableRootAsync">
+							Root mode
+						</MokaButton>
+					</div>
+				}
+			</div>
+		}
+
+		@foreach (string skipped in _discovery.Skipped)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@skipped</MokaAlert>
+		}
+
+		@if (_files.Count == 0)
+		{
+			<MokaEmptyState Icon="CertificateIcons.Certificate" Title="No certificates found" Description="@LookedIn" />
+		}
+		else if (_shown.Count == 0)
+		{
+			<MokaEmptyState Icon="CertificateIcons.Certificate" Title="Nothing matches" Description="No certificate's names, issuer or path match the filter." />
+		}
+		else
+		{
+			<div class="mta-table" style="--mta-cols: 14px minmax(0, 2fr) minmax(0, 1fr) 96px 110px; --mta-cols-narrow: 14px minmax(0, 1fr) 96px">
+				<div class="mta-row mta-row--head">
+					<span></span>
+					<span>Certificate</span>
+					<span class="mta-wide">Issuer</span>
+					<span>Expires</span>
+					<span class="mta-wide">Used by</span>
+				</div>
+				@foreach (ServerCertificateFile file in _shown)
+				{
+					<div class="@(file.Path == _selected ? "mta-row mta-row--clickable mta-row--selected" : "mta-row mta-row--clickable")"
+						 @key="file.Path"
+						 role="button"
+						 tabindex="0"
+						 aria-pressed="@(file.Path == _selected ? "true" : "false")"
+						 @onclick="@(() => Select(file))"
+						 @onkeydown="@(args => OnRowKey(args, file))">
+						<MokaStatusDot Size="MokaSize.Xs" Color="@DotOf(file)" Glow="@GlowOf(file)" />
+						<span class="mta-cell" title="@file.Path">
+							<span class="mc-page-title">@TitleOf(file)</span>
+							<span class="mc-page-path">@file.Path</span>
+						</span>
+						<span class="mta-cell mta-dim mta-wide" title="@file.Leaf?.Issuer">@(file.Leaf?.IssuerTitle ?? "-")</span>
+						<span class="mta-cell mta-mono">@ExpiresOf(file)</span>
+						<span class="mta-cell mta-dim mta-wide">@UsedBy(file)</span>
+					</div>
+				}
+			</div>
+		}
+	</div>
+</ToolPageFrame>
+
+@code {
+	private RenderFragment CountChips => @<text>
+		@foreach ((string label, int count, bool alert) in Counts)
+		{
+			<span class="mta-chip" style="cursor:default">@label <span class="@(alert && count > 0 ? "mta-chip-count mta-chip-count--alert" : "mta-chip-count")">@count</span></span>
+		}
+	</text>;
+
+	private RenderFragment DetailPanel => @<text>
+		@if (Selected is { } file)
+		{
+			<ToolDetailPanel Title="@TitleOf(file)"
+							 Subtitle="@file.Path"
+							 DotColor="@DotOf(file)"
+							 DotGlow="@GlowOf(file)"
+							 OnClose="CloseDetail">
+				<Actions>
+					@if (file.Lineage is { } lineage && HasCertbot)
+					{
+						<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" Disabled="@(Busy || Context.RootChangeBlocked is not null)" title="@Context.RootChangeBlocked" OnClick="@(() => TestOneAsync(lineage.Name))">Test renewal</MokaButton>
+						<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" Disabled="@(Busy || Context.RootChangeBlocked is not null)" title="@Context.RootChangeBlocked" OnClick="@(() => RenewAsync(lineage.Name))">Renew</MokaButton>
+					}
+					@if (UsedByNginx(file) && Context.Server.HasCommand(ServerCertificateCommands.Nginx))
+					{
+						<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" Disabled="@(Busy || Context.RootChangeBlocked is not null)" title="@Context.RootChangeBlocked" OnClick="ReloadNginxAsync">Reload nginx</MokaButton>
+					}
+					@if (UsedByApache(file) && ServerCertificateCommands.ReloadApache(Context.Server) is not null)
+					{
+						<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" Disabled="@(Busy || Context.RootChangeBlocked is not null)" title="@Context.RootChangeBlocked" OnClick="ReloadApacheAsync">Reload Apache</MokaButton>
+					}
+				</Actions>
+				<ChildContent>
+					@if (file.Problem is { } problem)
+					{
+						<MokaAlert Severity="@(file.Status == ServerFileStatus.Unreadable ? MokaToastSeverity.Info : MokaToastSeverity.Warning)" Dense>@problem</MokaAlert>
+					}
+
+					<MokaText Element="span" Size="MokaSize.Xs" Weight="MokaFontWeight.Semibold" Class="mta-label">Used by</MokaText>
+					<ul class="mc-page-uses">
+						@foreach (CertificateUse use in file.Uses)
+						{
+							<li><span class="mc-page-use-source">@use.Source</span> <span class="mta-mono">@use.Detail</span></li>
+						}
+					</ul>
+
+					@if (file.Lineage is { Expires: not null } certbot)
+					{
+						<span class="mta-dim mta-mono">certbot: @certbot.Name, @(certbot.State ?? "no state"), @(certbot.KeyType ?? "key type not listed")@(certbot.IsTestCertificate ? ", a staging certificate" : "")</span>
+					}
+
+					@if (file.Certificates.Count > 1)
+					{
+						<MokaText Element="span" Size="MokaSize.Xs" Weight="MokaFontWeight.Semibold" Class="mta-label">In this file</MokaText>
+						<div class="mta-table" style="--mta-cols: 14px minmax(0, 1fr) auto">
+							@for (int index = 0; index < file.Certificates.Count; index++)
+							{
+								int position = index;
+								CertificateInfo certificate = file.Certificates[position];
+								<div class="@(position == _certificateIndex ? "mta-row mta-row--clickable mta-row--selected" : "mta-row mta-row--clickable")"
+									 @key="position"
+									 role="button"
+									 tabindex="0"
+									 @onclick="@(() => _certificateIndex = position)">
+									<MokaStatusDot Size="MokaSize.Xs" Color="@StatusChip.ColorOf(certificate.Expiry)" Glow="@(certificate.Expiry != ExpiryState.Valid)" />
+									<span class="mta-cell">@certificate.Title</span>
+									<span class="mta-cell mta-dim mta-mono">@(position == 0 ? "server" : certificate.IsSelfSigned == true ? "root" : "chain")</span>
+								</div>
+							}
+						</div>
+						@if (file.Chain is { } chain)
+						{
+							<span class="@(chain.InOrder ? "mta-dim" : "mc-page-bad")">@chain.Summary</span>
+						}
+					}
+
+					@if (ShownCertificate(file) is { } info)
+					{
+						<CertificateDetails Info="info" />
+					}
+				</ChildContent>
+			</ToolDetailPanel>
+		}
+	</text>;
+}

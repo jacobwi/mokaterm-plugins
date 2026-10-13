@@ -1,0 +1,19 @@
+.mc-details {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+	container-type: inline-size;
+}
+
+.mc-details-matches {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 6px var(--moka-spacing-sm);
+	border-left: 2px solid var(--moka-color-primary-border);
+	border-radius: var(--moka-radius-sm);
+	background: var(--moka-color-surface-2);
+	color: var(--moka-color-on-surface);
+	font-size: var(--moka-font-size-xs);
+}

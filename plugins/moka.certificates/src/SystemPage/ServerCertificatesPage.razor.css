@@ -1,0 +1,55 @@
+.mc-page {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.mc-page-root {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-xs);
+}
+
+.mc-page-title {
+	display: block;
+	overflow: hidden;
+	color: var(--moka-color-on-surface);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.mc-page-path {
+	display: block;
+	overflow: hidden;
+	color: var(--moka-color-on-surface-tertiary);
+	font-family: var(--moka-font-family-mono);
+	font-size: 10px;
+	letter-spacing: 0.02em;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.mc-page-uses {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: var(--moka-font-size-xs);
+	overflow-wrap: anywhere;
+}
+
+.mc-page-use-source {
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 10px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.mc-page-bad {
+	color: var(--moka-color-error);
+	font-size: var(--moka-font-size-xs);
+}

@@ -1,0 +1,101 @@
+@inherits CertificateViewBase
+
+<ToolPageFrame Title="Encrypt and decrypt"
+			   Summary="@ModeSummary"
+			   Loaded="true"
+			   PrimaryText="@(Decrypting ? "Decrypt" : "Encrypt")"
+			   PrimaryIcon="CertificateIcons.Encrypt"
+			   PrimaryDisabled="_busy"
+			   OnPrimary="RunAsync">
+	<div class="mc-group">
+		<EnumSegmentedControl TEnum="EncryptMode" Value="_mode" ValueChanged="OnModeChanged" Options="Modes" AriaLabel="Encrypt or decrypt" Disabled="_busy" />
+		<span class="mc-note">@ModeHelp</span>
+	</div>
+
+	<div class="mc-group">
+		@if (Decrypting)
+		{
+			<InputBox Label="@(_mode == EncryptMode.OaepDecrypt ? "Ciphertext" : "Encrypted message")"
+					  Value="_data"
+					  ValueChanged="@(value => { _data = value; _result = null; })"
+					  Placeholder="@(_mode == EncryptMode.OaepDecrypt ? "Paste the ciphertext as base64 or hex, or open its file" : "Paste a CMS PEM block or base64, or open a .p7m file")"
+					  Rows="4"
+					  FileWhat="the encrypted data"
+					  KeepFilesAsBytes="@(_mode == EncryptMode.OaepDecrypt)" />
+			<InputBox Label="@(_mode == EncryptMode.OaepDecrypt ? "Private key (or a PFX)" : "Your certificate and private key, or a PFX")"
+					  Value="_key"
+					  ValueChanged="@(value => { _key = value; _result = null; })"
+					  Placeholder="Paste as PEM, or open a key or PFX file"
+					  Rows="4"
+					  FileWhat="a key or PFX" />
+			<MokaPasswordField Value="@_password" ValueChanged="@(value => _password = value ?? "")" Placeholder="The key's or PFX's password, if it has one" Size="MokaSize.Sm" autocomplete="off" aria-label="Key password" />
+		}
+		else
+		{
+			<InputBox Label="Data"
+					  Value="_data"
+					  ValueChanged="@(value => { _data = value; _result = null; })"
+					  Placeholder="@(_mode == EncryptMode.OaepEncrypt ? "A few bytes, such as a password or a key: RSA-OAEP takes no more than the key allows" : "Type or paste the text, or open the file")"
+					  Rows="4"
+					  FileWhat="the data"
+					  KeepFilesAsBytes />
+			<InputBox Label="@(_mode == EncryptMode.OaepEncrypt ? "Recipient's certificate or public key" : "Recipients' certificates")"
+					  Value="_key"
+					  ValueChanged="@(value => { _key = value; _result = null; })"
+					  Placeholder="@(_mode == EncryptMode.OaepEncrypt ? "Paste an RSA certificate or public key" : "Paste one or more RSA certificates as PEM; each can open the message")"
+					  Rows="4" />
+			@if (_mode == EncryptMode.OaepEncrypt && OaepLimit is { } limit)
+			{
+				<span class="mc-note">@limit</span>
+			}
+		}
+	</div>
+
+	<div class="mc-group">
+		<div class="mc-row">
+			@if (_mode is EncryptMode.OaepEncrypt or EncryptMode.OaepDecrypt)
+			{
+				<EnumSegmentedControl TEnum="OaepHash" Value="_oaepHash" ValueChanged="@(value => _oaepHash = value)" Options="OaepHashes" AriaLabel="OAEP hash" Disabled="_busy" />
+			}
+			@if (_mode == EncryptMode.OaepEncrypt)
+			{
+				<EnumSegmentedControl TEnum="BinaryEncoding" Value="_encoding" ValueChanged="@(value => _encoding = value)" Options="Encodings" AriaLabel="Output encoding" Disabled="_busy" />
+			}
+			@if (_mode == EncryptMode.CmsEncrypt)
+			{
+				<MokaCheckbox Label="RSA PKCS#1 v1.5 key transport, for old mail clients" Value="_pkcs1" ValueChanged="@(value => _pkcs1 = value)" />
+			}
+		</div>
+		@if (_mode == EncryptMode.CmsEncrypt)
+		{
+			<span class="mc-note">The content is encrypted with AES-256-CBC and its key wrapped for each recipient with RSA-OAEP (SHA-256). Recipients need RSA certificates.</span>
+		}
+	</div>
+
+	@if (_error is { } error)
+	{
+		<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+	}
+
+	@if (_result is { } result)
+	{
+		<div class="mc-results">
+			@if (result.Summary is { } summary)
+			{
+				<div class="mc-result-line mc-result-line--good">
+					<StatusChip Text="@(Decrypting ? "decrypted" : "encrypted")" Color="MokaColor.Success" Glow="false" />
+					<span>@summary</span>
+				</div>
+			}
+
+			@if (result.Text is { } text)
+			{
+				<OutputBox Title="@result.TextTitle" Text="@text" FileName="@result.TextFileName" Bytes="@result.Bytes" BytesFileName="@result.BytesFileName" BytesLabel="@result.BytesLabel" CopyName="@result.TextTitle" Secret="Decrypting" />
+			}
+			else if (result.Bytes is { } bytes)
+			{
+				<OutputBox Title="@result.TextTitle" Detail="@SignSection.BytesNote(bytes)" Bytes="@bytes" BytesFileName="@result.BytesFileName" BytesLabel="Save" />
+			}
+		</div>
+	}
+</ToolPageFrame>

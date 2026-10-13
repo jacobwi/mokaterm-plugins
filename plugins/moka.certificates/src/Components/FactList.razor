@@ -1,0 +1,28 @@
+@* Labeled facts as a two-column grid: uppercase micro-labels, values beside them, data in mono with a copy button. *@
+<dl class="mc-facts">
+	@foreach (Fact fact in Facts)
+	{
+		<dt>@fact.Label</dt>
+		<dd>
+			@if (fact.Values.Count == 0)
+			{
+				<span class="mc-facts-none">none</span>
+			}
+			@foreach (string value in fact.Values)
+			{
+				<span class="@(fact.Mono ? "mc-facts-value mc-facts-mono" : "mc-facts-value")">
+					<span class="mc-facts-text">@value</span>
+					@if (fact.Copyable)
+					{
+						<CopyButton Text="@value" Label="@($"Copy {fact.Label}")" />
+					}
+				</span>
+			}
+		</dd>
+	}
+</dl>
+
+@code {
+	[Parameter, EditorRequired]
+	public IReadOnlyList<Fact> Facts { get; set; } = [];
+}

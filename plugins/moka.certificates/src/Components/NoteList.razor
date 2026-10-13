@@ -1,0 +1,17 @@
+@* The reader's notes and an operation's own, as alerts by their weight. *@
+@foreach (ReadNote note in Notes)
+{
+	<MokaAlert Severity="SeverityOf(note.Level)" Dense>@note.Message</MokaAlert>
+}
+
+@code {
+	[Parameter, EditorRequired]
+	public IReadOnlyList<ReadNote> Notes { get; set; } = [];
+
+	private static MokaToastSeverity SeverityOf(NoteLevel level) => level switch
+	{
+		NoteLevel.Error => MokaToastSeverity.Error,
+		NoteLevel.Warning => MokaToastSeverity.Warning,
+		_ => MokaToastSeverity.Info,
+	};
+}

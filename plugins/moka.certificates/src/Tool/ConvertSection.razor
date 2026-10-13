@@ -1,0 +1,115 @@
+@inherits CertificateViewBase
+
+<ToolPageFrame Title="Convert"
+			   Summary="@KindLabel(_kind)"
+			   Loaded="true"
+			   PrimaryText="Convert"
+			   PrimaryIcon="CertificateIcons.Convert"
+			   PrimaryDisabled="@(_busy || _input.IsEmpty)"
+			   OnPrimary="ConvertAsync">
+	<div class="mc-group">
+		<div class="mc-row">
+			<div class="mc-grow">
+				<MokaSelect TValue="ConvertKind"
+							Label="Conversion"
+							Items="KindList"
+							Value="_kind"
+							ValueChanged="OnKindChanged"
+							ValueSelector="KindLabel"
+							Size="MokaSize.Sm" />
+			</div>
+		</div>
+		<span class="mc-note">@KindHelp</span>
+	</div>
+
+	<div class="mc-group">
+		<InputBox Label="@InputLabel"
+				  Value="_input"
+				  ValueChanged="OnInputChanged"
+				  Placeholder="@InputPlaceholder"
+				  Rows="7"
+				  FileWhat="a certificate, key or PFX" />
+
+		@if (TakesPassword)
+		{
+			<MokaPasswordField Value="@_password"
+							   ValueChanged="@(value => _password = value ?? "")"
+							   Placeholder="@PasswordPlaceholder"
+							   Size="MokaSize.Sm"
+							   autocomplete="off"
+							   aria-label="Password of what is converted" />
+		}
+	</div>
+
+	@switch (_kind)
+	{
+		case ConvertKind.PfxToPem:
+			<div class="mc-group">
+				<span class="mc-label">Key in the PEM</span>
+				<EnumSegmentedControl TEnum="PrivateKeyFormat" Value="_format" ValueChanged="@(value => _format = value)" Options="Formats" AriaLabel="Key format" />
+				<MokaPasswordField Value="@_newPassword" ValueChanged="@(value => _newPassword = value ?? "")" Placeholder="Encrypt the key with this password (optional)" Size="MokaSize.Sm" autocomplete="new-password" aria-label="New key password" />
+			</div>
+			break;
+		case ConvertKind.PemToPfx:
+			<div class="mc-group">
+				<span class="mc-label">The PFX</span>
+				<div class="mc-form mc-form--two">
+					<MokaPasswordField Value="@_newPassword" ValueChanged="@(value => _newPassword = value ?? "")" Placeholder="PFX password" Size="MokaSize.Sm" autocomplete="new-password" aria-label="PFX password" />
+					<MokaTextField Value="@_friendlyName" ValueChanged="@(value => _friendlyName = value ?? "")" Placeholder="Friendly name (optional)" Size="MokaSize.Sm" autocomplete="off" aria-label="Friendly name" />
+				</div>
+				<EnumSegmentedControl TEnum="PfxEncryption" Value="_pfxEncryption" ValueChanged="@(value => _pfxEncryption = value)" Options="PfxChoices" AriaLabel="PFX encryption" />
+				<span class="mc-note">AES-256 opens on Windows 10 1709 and Server 2019 and later, and everywhere else. Pick 3DES only for older Windows or old Java.</span>
+			</div>
+			break;
+		case ConvertKind.KeyFormat:
+			<div class="mc-group">
+				<span class="mc-label">Write the key as</span>
+				<EnumSegmentedControl TEnum="PrivateKeyFormat" Value="_format" ValueChanged="@(value => _format = value)" Options="Formats" AriaLabel="Key format" />
+			</div>
+			break;
+		case ConvertKind.EncryptKey:
+			<div class="mc-group">
+				<span class="mc-label">New password</span>
+				<div class="mc-form mc-form--two">
+					<MokaPasswordField Value="@_newPassword" ValueChanged="@(value => _newPassword = value ?? "")" Placeholder="Password" Size="MokaSize.Sm" autocomplete="new-password" aria-label="New password" />
+					<MokaPasswordField Value="@_newPasswordAgain" ValueChanged="@(value => _newPasswordAgain = value ?? "")" Placeholder="Again" ErrorText="@Mismatch" Size="MokaSize.Sm" autocomplete="new-password" aria-label="New password again" />
+				</div>
+				<span class="mc-note">PKCS#8 with AES-256-CBC and PBKDF2 (HMAC-SHA256, @CertificateConverter.KeyEncryptionRounds.ToString("N0", CultureInfo.CurrentCulture) rounds), which OpenSSL and every current tool read.</span>
+			</div>
+			break;
+	}
+
+	@if (_error is { } error)
+	{
+		<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+	}
+
+	@if (_outputs.Count > 0 || _notes.Count > 0)
+	{
+		<div class="mc-results">
+			@foreach (string note in _notes)
+			{
+				<MokaAlert Severity="MokaToastSeverity.Info" Dense>@note</MokaAlert>
+			}
+			@foreach (ConvertedOutput output in _outputs)
+			{
+				<OutputBox Title="@output.Title"
+						   Detail="@output.Detail"
+						   Text="@output.Text"
+						   FileName="@output.FileName"
+						   Bytes="@output.Bytes"
+						   BytesFileName="@output.BytesFileName"
+						   BytesLabel="@(output.Text is null ? "Save" : "Save DER")"
+						   Secret="output.Secret"
+						   CopyName="@output.Title">
+					<Actions>
+						@if (!output.Secret && output.Text is { } text && text.Contains("-----BEGIN", StringComparison.Ordinal))
+						{
+							<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="CertificateIcons.Inspect" OnClick="@(() => OnInspect.InvokeAsync(text))">Inspect</MokaButton>
+						}
+					</Actions>
+				</OutputBox>
+			}
+		</div>
+	}
+</ToolPageFrame>

@@ -1,0 +1,28 @@
+@* Every extension in words: its name, CRITICAL when it is, and what it says. *@
+@if (Extensions.Count > 0)
+{
+	<div class="mc-ext">
+		<span class="mc-ext-title">Extensions</span>
+		@foreach (ExtensionInfo extension in Extensions)
+		{
+			<div class="mc-ext-item">
+				<div class="mc-ext-head">
+					<span class="mc-ext-name" title="@extension.Oid">@extension.Name</span>
+					@if (extension.Critical)
+					{
+						<span class="mc-ext-critical">critical</span>
+					}
+				</div>
+				@foreach (string line in extension.Lines)
+				{
+					<span class="mc-ext-line">@line</span>
+				}
+			</div>
+		}
+	</div>
+}
+
+@code {
+	[Parameter, EditorRequired]
+	public IReadOnlyList<ExtensionInfo> Extensions { get; set; } = [];
+}

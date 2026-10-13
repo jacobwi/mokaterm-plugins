@@ -1,0 +1,137 @@
+@inherits CertificateViewBase
+@using Moka.Certificates.Tls
+
+<ToolPageFrame Title="Check a server"
+			   Summary="@Summary"
+			   Loaded="true"
+			   Loading="_busy"
+			   PrimaryText="@(Unavailable(Environment) is null ? "Check" : null)"
+			   PrimaryIcon="CertificateIcons.Server"
+			   PrimaryDisabled="_busy"
+			   OnPrimary="CheckAsync"
+			   ListPage
+			   Detail="@(SelectedCertificate is null ? null : DetailPanel)">
+	@if (Unavailable(Environment) is { } reason)
+	{
+		<MokaEmptyState Icon="CertificateIcons.Server" Title="Only in the desktop app" Description="@reason" />
+	}
+	else
+	{
+		<div class="mc-stack">
+			<div class="mc-group" @onkeydown="OnKeyAsync">
+				<div class="mc-form">
+					<MokaTextField Label="Host" Value="@_host" ValueChanged="@(value => _host = value ?? "")" Placeholder="example.com or https://example.com:8443" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
+					<MokaTextField Label="Port" Value="@_port" ValueChanged="@(value => _port = value ?? "")" Placeholder="443" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
+					<MokaTextField Label="SNI name" Value="@_serverName" ValueChanged="@(value => _serverName = value ?? "")" Placeholder="the host" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
+				</div>
+				<span class="mc-note">One TLS handshake from this machine, then the connection closes: nothing is sent after it, no client certificate, no retry. Revocation is not checked. Gives up after @Settings.ServerCheckTimeoutSeconds s.</span>
+			</div>
+
+			@if (_error is { } error)
+			{
+				<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+			}
+
+			@if (_report is { } report)
+			{
+				<ChipRow>
+					<StatusChip Text="@(report.Trusted ? "trusted" : "not trusted")" Color="@(report.Trusted ? MokaColor.Success : MokaColor.Error)" />
+					<StatusChip Text="@NameChip(report)" Color="@(report.NameMatch == HostNameResult.Matches ? MokaColor.Success : MokaColor.Error)" Glow="@(report.NameMatch != HostNameResult.Matches)" Title="@($"Checked against {report.NameChecked}")" />
+					<StatusChip Text="@CertificateReport.ExpiryName(report.Leaf.Expiry)" Color="StatusChip.ColorOf(report.Leaf.Expiry)" Glow="@(report.Leaf.Expiry != ExpiryState.Valid)" />
+					<span class="mc-mono">@report.Protocol</span>
+					<span class="mc-mono">@report.Cipher</span>
+				</ChipRow>
+				<span class="mc-note mc-mono">@EndpointLine(report)</span>
+
+				@foreach (string problem in report.Problems)
+				{
+					<MokaAlert Severity="MokaToastSeverity.Error" Dense>@problem</MokaAlert>
+				}
+				@foreach (string warning in report.Warnings)
+				{
+					<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@warning</MokaAlert>
+				}
+				@if (report.Problems.Count == 0 && report.Warnings.Count == 0)
+				{
+					<div class="mc-result-line mc-result-line--good">
+						<span>The certificate is for @report.NameChecked, in date, and its chain is trusted on this machine.</span>
+					</div>
+				}
+
+				<span class="mc-label">Sent by the server</span>
+				<div class="mc-list" role="list">
+					@for (int index = 0; index < report.Sent.Count; index++)
+					{
+						int position = index;
+						CertificateInfo certificate = report.Sent[position];
+						<button type="button"
+								class="@(IsSelected(SentList, position) ? "mc-item mc-item--selected" : "mc-item")"
+								@key="@($"sent-{position}")"
+								@onclick="@(() => Select(SentList, position))">
+							<MokaStatusDot Size="MokaSize.Xs" Color="StatusChip.ColorOf(certificate.Expiry)" Glow="@(certificate.Expiry != ExpiryState.Valid)" />
+							<span class="mc-item-kind">@(position == 0 ? "server" : certificate.IsSelfSigned == true ? "root" : "chain")</span>
+							<span class="mc-item-main">
+								<span class="mc-item-title">@certificate.Title</span>
+								<span class="mc-item-sub">Issued by @certificate.IssuerTitle</span>
+							</span>
+							<span class="mc-item-end">@DaysText(certificate)</span>
+						</button>
+					}
+				</div>
+				@if (report.SentOrder is { } order)
+				{
+					<span class="mc-note">@order.Summary</span>
+				}
+
+				@if (report.Chain.Count > 0)
+				{
+					<span class="mc-label">Chain on this machine</span>
+					<div class="mc-list" role="list">
+						@for (int index = 0; index < report.Chain.Count; index++)
+						{
+							int position = index;
+							CertificateInfo certificate = report.Chain[position];
+							<button type="button"
+									class="@(IsSelected(BuiltList, position) ? "mc-item mc-item--selected" : "mc-item")"
+									@key="@($"built-{position}")"
+									@onclick="@(() => Select(BuiltList, position))">
+								<MokaStatusDot Size="MokaSize.Xs" Color="StatusChip.ColorOf(certificate.Expiry)" Glow="@(certificate.Expiry != ExpiryState.Valid)" />
+								<span class="mc-item-kind">@(position == report.Chain.Count - 1 && certificate.IsSelfIssued ? "root" : position == 0 ? "server" : "intermediate")</span>
+								<span class="mc-item-main">
+									<span class="mc-item-title">@certificate.Title</span>
+									<span class="mc-item-sub">Issued by @certificate.IssuerTitle</span>
+								</span>
+								<span class="mc-item-end">@DaysText(certificate)</span>
+							</button>
+						}
+					</div>
+				}
+
+				<OutputBox Title="Chain as sent" Detail="@($"{report.Sent.Count} certificates")" Text="@report.SentPem" FileName="@FileNameFrom(report.NameChecked, "-chain.pem")" CopyName="Chain">
+					<Actions>
+						<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="CertificateIcons.Inspect" OnClick="@(() => OnInspect.InvokeAsync(report.SentPem))">Inspect</MokaButton>
+					</Actions>
+				</OutputBox>
+				@if (report.Chain.Count > 0)
+				{
+					<OutputBox Title="Chain on this machine" Detail="@($"{report.Chain.Count} certificates, root included")" Text="@report.ChainPem" FileName="@FileNameFrom(report.NameChecked, "-fullchain-root.pem")" CopyName="Chain" />
+				}
+			}
+		</div>
+	}
+</ToolPageFrame>
+
+@code {
+	private RenderFragment DetailPanel => @<text>
+		@if (SelectedCertificate is { } certificate)
+		{
+			<ToolDetailPanel Title="@certificate.Title"
+							 Subtitle="@($"Issued by {certificate.IssuerTitle}")"
+							 DotColor="StatusChip.ColorOf(certificate.Expiry)"
+							 DotGlow="@(certificate.Expiry != ExpiryState.Valid)"
+							 OnClose="CloseDetail">
+				<CertificateDetails Info="certificate" />
+			</ToolDetailPanel>
+		}
+	</text>;
+}

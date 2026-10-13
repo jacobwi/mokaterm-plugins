@@ -1,0 +1,111 @@
+@inherits CertificateViewBase
+
+@* One result: text (PEM, base64, a dump) with copy and save, or a binary file with save. A secret stays hidden until
+   asked for and is copied through the host's secret copy. *@
+<section class="mc-output" aria-label="@Title">
+	<div class="mc-output-head">
+		<span class="mc-output-title">@Title</span>
+		@if (Secret)
+		{
+			<span class="mc-output-tag">secret</span>
+		}
+		@if (Detail is { Length: > 0 } detail)
+		{
+			<span class="mc-output-detail" title="@detail">@detail</span>
+		}
+		<span class="mc-output-gap"></span>
+		@if (Secret && Text is not null)
+		{
+			<MokaButton Variant="MokaVariant.Text"
+						Color="MokaColor.Surface"
+						Size="MokaSize.Xs"
+						StartIcon="@(_shown ? MokaIcons.Toggle.EyeOff : MokaIcons.Toggle.Eye)"
+						OnClick="ToggleShown">
+				@(_shown ? "Hide" : "Show")
+			</MokaButton>
+		}
+		@if (Text is { } text)
+		{
+			<MokaButton Variant="MokaVariant.Outlined"
+						Size="MokaSize.Xs"
+						StartIcon="MokaIcons.Content.Copy"
+						OnClick="() => CopyAsync(text)">
+				Copy
+			</MokaButton>
+			@if (FileName is { } name)
+			{
+				<MokaButton Variant="MokaVariant.Outlined"
+							Size="MokaSize.Xs"
+							StartIcon="MokatermIcons.Download"
+							OnClick="() => SaveTextAsync(name, text)">
+					Save
+				</MokaButton>
+			}
+		}
+		@if (Bytes is { } bytes && BytesFileName is { } bytesName)
+		{
+			<MokaButton Variant="MokaVariant.Outlined"
+						Size="MokaSize.Xs"
+						StartIcon="MokatermIcons.Download"
+						OnClick="() => SaveAsync(bytesName, bytes)">
+				@BytesLabel
+			</MokaButton>
+		}
+		@Actions
+	</div>
+
+	@if (Text is { } body)
+	{
+		@if (Secret && !_shown)
+		{
+			<div class="mc-output-hidden">Hidden. Copy it, save it, or show it here.</div>
+		}
+		else
+		{
+			<pre class="mc-output-text">@body</pre>
+		}
+	}
+</section>
+
+@code {
+	private bool _shown;
+
+	[Parameter, EditorRequired]
+	public string Title { get; set; } = "";
+
+	/// <summary>A short note beside the title, such as "3 certificates" or "RSA 2048".</summary>
+	[Parameter]
+	public string? Detail { get; set; }
+
+	[Parameter]
+	public string? Text { get; set; }
+
+	/// <summary>The name "Save" offers for the text; null shows no Save.</summary>
+	[Parameter]
+	public string? FileName { get; set; }
+
+	/// <summary>A binary form to save, such as DER or PFX.</summary>
+	[Parameter]
+	public byte[]? Bytes { get; set; }
+
+	[Parameter]
+	public string? BytesFileName { get; set; }
+
+	[Parameter]
+	public string BytesLabel { get; set; } = "Save DER";
+
+	/// <summary>A private key or a password: hidden until shown, copied as a secret.</summary>
+	[Parameter]
+	public bool Secret { get; set; }
+
+	/// <summary>What the copy notice calls it: "Private key", "Certificate".</summary>
+	[Parameter]
+	public string? CopyName { get; set; }
+
+	[Parameter]
+	public RenderFragment? Actions { get; set; }
+
+	private void ToggleShown() => _shown = !_shown;
+
+	private Task CopyAsync(string text) => Secret ? CopySecretAsync(text, CopyName ?? Title) : CopyAsync(text, CopyName ?? Title);
+}

@@ -1,0 +1,69 @@
+.mc-input {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.mc-input-head {
+	display: flex;
+	align-items: center;
+	gap: var(--moka-spacing-xs);
+	min-height: 24px;
+}
+
+.mc-input-label {
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 10px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.mc-input-gap {
+	flex: 1;
+}
+
+/* PEM, base64 and hex are read in mono, and a long line wraps rather than scrolling sideways. */
+.mc-input ::deep .mc-input-text textarea {
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+	line-height: 1.45;
+	word-break: break-all;
+}
+
+.mc-input-file {
+	display: flex;
+	align-items: center;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+	padding: 8px var(--moka-spacing-md);
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+	background: var(--moka-color-surface);
+	box-shadow: inset 0 0 12px var(--moka-color-primary-glow-faint);
+}
+
+.mc-input-file-name {
+	min-width: 0;
+	overflow: hidden;
+	color: var(--moka-color-on-surface);
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.mc-input-file-size {
+	flex-shrink: 0;
+	margin-left: auto;
+	color: var(--moka-color-on-surface-tertiary);
+	font-family: var(--moka-font-family-mono);
+	font-size: 10px;
+}
+
+.mc-input-hint {
+	color: var(--moka-color-on-surface-variant);
+	font-size: var(--moka-font-size-xs);
+}

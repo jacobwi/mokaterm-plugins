@@ -1,0 +1,75 @@
+@inherits CertificateViewBase
+
+@* Everything about one certificate, the same in the Inspect view, a server's chain and the System page. *@
+<div class="mc-details">
+	<ChipRow>
+		<StatusChip Text="@CertificateReport.ExpiryName(Info.Expiry)" Color="StatusChip.ColorOf(Info.Expiry)" Glow="@(Info.Expiry != ExpiryState.Valid)" />
+		<span class="mc-details-when">@CertificateReport.ExpiryText(Info)</span>
+		@if (Info.IsCertificateAuthority)
+		{
+			<StatusChip Text="CA" Color="MokaColor.Info" Glow="false" />
+		}
+		@if (Info.IsSelfSigned == true)
+		{
+			<StatusChip Text="self-signed" Color="MokaColor.Surface" Glow="false" />
+		}
+		@if (!Info.Key.Usable)
+		{
+			<StatusChip Text="@Info.Key.Algorithm" Color="MokaColor.Warning" Glow="false" Title="@Info.Key.Limitation" />
+		}
+	</ChipRow>
+
+	@if (ShowExports)
+	{
+		<ActionRow>
+			<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokaIcons.Content.Copy" OnClick="CopyPemAsync">Copy PEM</MokaButton>
+			<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokatermIcons.Download" OnClick="SavePemAsync">Save PEM</MokaButton>
+			<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokatermIcons.Download" OnClick="SaveDerAsync">Save DER</MokaButton>
+			<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" OnClick="CopyTextAsync">Copy as text</MokaButton>
+			<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" OnClick="SaveJsonAsync">Save JSON</MokaButton>
+			<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" OnClick="CopyPublicKeyAsync">Copy public key</MokaButton>
+		</ActionRow>
+	}
+
+	<FactList Facts="Facts" />
+	<ExtensionList Extensions="Info.Extensions" />
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public CertificateInfo Info { get; set; } = default!;
+
+	[Parameter]
+	public bool ShowExports { get; set; } = true;
+
+	private IReadOnlyList<Fact> Facts =>
+	[
+		new("Subject", Info.Subject.Length > 0 ? Info.Subject : "(empty)", mono: true),
+		new("Issuer", Info.Issuer, mono: true),
+		new("Serial", Info.SerialNumber, mono: true, copyable: true),
+		new("Valid from", CertificateReport.Date(Info.NotBefore), mono: true),
+		new("Valid until", CertificateReport.Date(Info.NotAfter), mono: true),
+		new("Names", [.. Info.AlternativeNames.Select(name => name.ToString())], Mono: true),
+		new("Key", Info.Key.Description),
+		new("Signature", Info.SignatureAlgorithm),
+		new("Self-signed", Info.IsSelfSigned switch { true => "Yes", false => Info.IsSelfIssued ? "Self-issued, but its signature does not verify" : "No", null => "Self-issued; the signature could not be checked here" }),
+		new("SHA-256", Info.Sha256, mono: true, copyable: true),
+		new("SHA-1", Info.Sha1, mono: true, copyable: true),
+		new("Key SHA-256", Info.Key.SpkiSha256, mono: true, copyable: true),
+		new("Key pin", Info.Key.Pin, mono: true, copyable: true),
+	];
+
+	private string Name(string extension) => FileNameFrom(Info.Title, extension);
+
+	private Task CopyPemAsync() => CopyAsync(CertificateConverter.ToPem("CERTIFICATE", Info.Der), "Certificate");
+
+	private Task SavePemAsync() => SaveTextAsync(Name(".pem"), CertificateConverter.ToPem("CERTIFICATE", Info.Der));
+
+	private Task SaveDerAsync() => SaveAsync(Name(".cer"), Info.Der);
+
+	private Task CopyTextAsync() => CopyAsync(CertificateReport.Text(Info), "Certificate details");
+
+	private Task SaveJsonAsync() => SaveTextAsync(Name(".json"), CertificateReport.Json(Info));
+
+	private Task CopyPublicKeyAsync() => CopyAsync(CertificateConverter.PublicKeyPemOf(Info), "Public key");
+}

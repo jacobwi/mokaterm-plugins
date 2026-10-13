@@ -1,0 +1,55 @@
+.mc-ext {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-width: 0;
+}
+
+.mc-ext-title {
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 10px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.mc-ext-item {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	padding: 6px var(--moka-spacing-sm);
+	border-left: 2px solid var(--moka-color-outline-variant);
+	background: var(--moka-color-surface-2);
+	border-radius: var(--moka-radius-sm);
+}
+
+.mc-ext-head {
+	display: flex;
+	align-items: center;
+	gap: var(--moka-spacing-sm);
+}
+
+.mc-ext-name {
+	color: var(--moka-color-on-surface);
+	font-size: var(--moka-font-size-xs);
+	font-weight: var(--moka-font-weight-semibold);
+}
+
+.mc-ext-critical {
+	color: var(--moka-color-primary);
+	font-size: 9px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.mc-ext-line {
+	min-width: 0;
+	color: var(--moka-color-on-surface-variant);
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+}

@@ -1,0 +1,65 @@
+@inherits CertificateViewBase
+
+@* A private or public key, described by its public half. A private key itself is never shown here: Convert writes it out. *@
+<div class="mc-details">
+	<ChipRow>
+		<StatusChip Text="@(Private ? "private key" : "public key")" Color="@(Private ? MokaColor.Primary : MokaColor.Surface)" Glow="Private" />
+		@if (!Info.Usable)
+		{
+			<StatusChip Text="not usable here" Color="MokaColor.Warning" Glow="false" Title="@Info.Limitation" />
+		}
+	</ChipRow>
+
+	@if (PublicKeyPem is { } pem)
+	{
+		<ActionRow>
+			<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokaIcons.Content.Copy" OnClick="() => CopyAsync(pem, Public)">Copy public key</MokaButton>
+			<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokatermIcons.Download" OnClick="@(() => SaveTextAsync("public-key.pem", pem))">Save public key</MokaButton>
+			<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" OnClick="@(() => SaveTextAsync("key.json", CertificateReport.Json(Info)))">Save JSON</MokaButton>
+		</ActionRow>
+	}
+
+	<FactList Facts="Facts" />
+
+	@if (Matches.Count > 0)
+	{
+		<div class="mc-details-matches">
+			@foreach (string match in Matches)
+			{
+				<span>@match</span>
+			}
+		</div>
+	}
+
+	@if (Info.Limitation is { } limitation)
+	{
+		<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@limitation</MokaAlert>
+	}
+</div>
+
+@code {
+	private const string Public = "Public key";
+
+	[Parameter, EditorRequired]
+	public KeyInfo Info { get; set; } = default!;
+
+	[Parameter]
+	public bool Private { get; set; }
+
+	[Parameter]
+	public string? Format { get; set; }
+
+	[Parameter]
+	public string? PublicKeyPem { get; set; }
+
+	[Parameter]
+	public IReadOnlyList<string> Matches { get; set; } = [];
+
+	private IReadOnlyList<Fact> Facts =>
+	[
+		new("Key", Info.Description),
+		new("Stored as", Format ?? "unknown"),
+		new("Key SHA-256", Info.SpkiSha256, mono: true, copyable: true),
+		new("Key pin", Info.Pin, mono: true, copyable: true),
+	];
+}

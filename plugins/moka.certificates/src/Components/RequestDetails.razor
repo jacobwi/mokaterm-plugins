@@ -1,0 +1,61 @@
+@inherits CertificateViewBase
+
+@* A signing request: who it is for, which names it asks for, its key, and whether its own signature holds. *@
+<div class="mc-details">
+	<ChipRow>
+		<StatusChip Text="@SignatureChip" Color="@SignatureColor" Glow="@(Info.SignatureValid != true)" Title="@CertificateReport.SignatureText(Info.SignatureValid)" />
+		<span class="mc-details-when">@CertificateReport.SignatureText(Info.SignatureValid)</span>
+	</ChipRow>
+
+	<ActionRow>
+		<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokaIcons.Content.Copy" OnClick="CopyPemAsync">Copy PEM</MokaButton>
+		<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokatermIcons.Download" OnClick="SavePemAsync">Save PEM</MokaButton>
+		<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokatermIcons.Download" OnClick="SaveDerAsync">Save DER</MokaButton>
+		<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" OnClick="CopyTextAsync">Copy as text</MokaButton>
+		<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" OnClick="SaveJsonAsync">Save JSON</MokaButton>
+	</ActionRow>
+
+	<FactList Facts="Facts" />
+	<ExtensionList Extensions="Info.Extensions" />
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public RequestInfo Info { get; set; } = default!;
+
+	private string SignatureChip => Info.SignatureValid switch
+	{
+		true => "signature ok",
+		false => "bad signature",
+		null => "not checked",
+	};
+
+	private MokaColor SignatureColor => Info.SignatureValid switch
+	{
+		true => MokaColor.Success,
+		false => MokaColor.Error,
+		null => MokaColor.Warning,
+	};
+
+	private IReadOnlyList<Fact> Facts =>
+	[
+		new("Subject", Info.Subject.Length > 0 ? Info.Subject : "(empty)", mono: true),
+		new("Names", [.. Info.AlternativeNames.Select(name => name.ToString())], Mono: true),
+		new("Key", Info.Key.Description),
+		new("Signature", Info.SignatureAlgorithm),
+		new("SHA-256", Info.Sha256, mono: true, copyable: true),
+		new("Key SHA-256", Info.Key.SpkiSha256, mono: true, copyable: true),
+	];
+
+	private string Name(string extension) => FileNameFrom(Info.Title, extension);
+
+	private Task CopyPemAsync() => CopyAsync(CertificateConverter.RequestPem(Info.Der), "Signing request");
+
+	private Task SavePemAsync() => SaveTextAsync(Name(".csr"), CertificateConverter.RequestPem(Info.Der));
+
+	private Task SaveDerAsync() => SaveAsync(Name(".csr.der"), Info.Der);
+
+	private Task CopyTextAsync() => CopyAsync(CertificateReport.Text(Info), "Request details");
+
+	private Task SaveJsonAsync() => SaveTextAsync(Name(".json"), CertificateReport.Json(Info));
+}

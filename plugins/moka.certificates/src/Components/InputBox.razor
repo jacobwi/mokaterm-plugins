@@ -1,0 +1,114 @@
+@inherits CertificateViewBase
+
+@* A paste area with "Open file": text stays in the box to edit; a binary file (DER, PFX) shows as a chip instead. *@
+<div class="mc-input">
+	<div class="mc-input-head">
+		<span class="mc-input-label">@Label</span>
+		<span class="mc-input-gap"></span>
+		@if (AllowFile)
+		{
+			<MokaButton Variant="MokaVariant.Text"
+						Color="MokaColor.Surface"
+						Size="MokaSize.Xs"
+						StartIcon="MokatermIcons.FolderOpen"
+						Disabled="Disabled"
+						OnClick="OpenAsync">
+				Open file
+			</MokaButton>
+		}
+		@if (!Value.IsEmpty)
+		{
+			<MokaButton Variant="MokaVariant.Text"
+						Color="MokaColor.Surface"
+						Size="MokaSize.Xs"
+						StartIcon="MokaIcons.Navigation.Close"
+						Disabled="Disabled"
+						OnClick="ClearAsync">
+				Clear
+			</MokaButton>
+		}
+	</div>
+
+	@if (Value.Bytes is { } bytes)
+	{
+		<div class="mc-input-file">
+			<MokaIcon Icon="CertificateIcons.File" Size="MokaSize.Xs" />
+			<span class="mc-input-file-name" title="@Value.FileName">@Value.FileName</span>
+			<span class="mc-input-file-size">@Size(bytes.Length)</span>
+		</div>
+	}
+	else
+	{
+		<MokaTextArea Class="mc-input-text"
+					  Value="@Value.Text"
+					  ValueChanged="OnTextChangedAsync"
+					  Rows="Rows"
+					  Placeholder="@Placeholder"
+					  DebounceDelay="250"
+					  Disabled="Disabled"
+					  Size="MokaSize.Sm"
+					  spellcheck="false"
+					  autocomplete="off"
+					  aria-label="@Label" />
+	}
+
+	@if (Hint is { Length: > 0 } hint)
+	{
+		<span class="mc-input-hint">@hint</span>
+	}
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Label { get; set; } = "";
+
+	[Parameter]
+	public InputContent Value { get; set; } = InputContent.Empty;
+
+	[Parameter]
+	public EventCallback<InputContent> ValueChanged { get; set; }
+
+	[Parameter]
+	public string? Placeholder { get; set; }
+
+	[Parameter]
+	public string? Hint { get; set; }
+
+	[Parameter]
+	public int Rows { get; set; } = 6;
+
+	[Parameter]
+	public bool AllowFile { get; set; } = true;
+
+	/// <summary>What the file should be, for the message when it is too large: "a certificate or a key".</summary>
+	[Parameter]
+	public string FileWhat { get; set; } = "a certificate or a key";
+
+	/// <summary>Keeps any opened file as bytes, for data to sign or encrypt, instead of reading text files into the box.</summary>
+	[Parameter]
+	public bool KeepFilesAsBytes { get; set; }
+
+	[Parameter]
+	public bool Disabled { get; set; }
+
+	private static string Size(int bytes) => bytes < 1024
+		? string.Create(CultureInfo.CurrentCulture, $"{bytes} bytes")
+		: string.Create(CultureInfo.CurrentCulture, $"{bytes / 1024.0:0.#} KB");
+
+	private Task OnTextChangedAsync(string? text) => ValueChanged.InvokeAsync(new InputContent { Text = text ?? "" });
+
+	private Task ClearAsync() => ValueChanged.InvokeAsync(InputContent.Empty);
+
+	private async Task OpenAsync()
+	{
+		if (await OpenFileAsync(FileWhat) is not { } file)
+		{
+			return;
+		}
+
+		string? text = KeepFilesAsBytes ? null : CryptoInput.TryReadText(file.Bytes);
+		await ValueChanged.InvokeAsync(text is null
+			? new InputContent { Bytes = file.Bytes, FileName = file.Name }
+			: new InputContent { Text = text, FileName = file.Name });
+	}
+}

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+		Loads a built .mokaplugin through Mokaterm's own plugin loader, so the gallery only lists packages the app really
+		runs. Mokaterm.Core is not a published package, so both references come from a Mokaterm checkout at the version
+		mokaterm.json names; build/gallery.py toolchain passes MokatermSource. Only their public API is used, the same one a
+		host uses.
+	-->
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<RootNamespace>Mokaterm.Gallery.LoadCheck</RootNamespace>
+		<MokatermSource Condition="'$(MokatermSource)' == ''">$(MSBuildThisFileDirectory)../../../Mokaterm</MokatermSource>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="$(MokatermSource)/src/Mokaterm.Core/Mokaterm.Core.csproj" />
+		<ProjectReference Include="$(MokatermSource)/src/UI/Mokaterm.UI.Common/Mokaterm.UI.Common.csproj" />
+	</ItemGroup>
+
+</Project>

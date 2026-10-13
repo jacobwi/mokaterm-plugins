@@ -1,0 +1,146 @@
+@inherits CertificateViewBase
+
+<ToolPageFrame Title="Sign and verify"
+			   Summary="@ModeSummary"
+			   Loaded="true"
+			   PrimaryText="@PrimaryText"
+			   PrimaryIcon="CertificateIcons.Sign"
+			   PrimaryDisabled="_busy"
+			   OnPrimary="RunAsync">
+	<div class="mc-group">
+		<EnumSegmentedControl TEnum="SignMode" Value="_mode" ValueChanged="OnModeChanged" Options="Modes" AriaLabel="Sign or verify" Disabled="_busy" />
+		<span class="mc-note">@ModeHelp</span>
+	</div>
+
+	@if (_mode != SignMode.CmsVerify)
+	{
+		<div class="mc-group">
+			<InputBox Label="Data"
+					  Value="_data"
+					  ValueChanged="@(value => { _data = value; _result = null; })"
+					  Placeholder="Type or paste the text, or open the file. Text is signed as UTF-8, exactly as it is here."
+					  Rows="4"
+					  FileWhat="the data"
+					  KeepFilesAsBytes />
+		</div>
+	}
+
+	@switch (_mode)
+	{
+		case SignMode.Sign:
+		case SignMode.CmsSign:
+			<div class="mc-group">
+				<InputBox Label="@(_mode == SignMode.Sign ? "Private key (or a PFX)" : "Signer: certificate and private key, or a PFX")"
+						  Value="_key"
+						  ValueChanged="@(value => { _key = value; _result = null; })"
+						  Placeholder="@(_mode == SignMode.Sign ? "Paste a private key as PEM, or open a key or PFX file" : "Paste the certificate, its key and any chain as PEM, or open a PFX")"
+						  Rows="4"
+						  FileWhat="a key or PFX" />
+				<MokaPasswordField Value="@_password" ValueChanged="@(value => _password = value ?? "")" Placeholder="The key's or PFX's password, if it has one" Size="MokaSize.Sm" autocomplete="off" aria-label="Key password" />
+			</div>
+			break;
+		case SignMode.Verify:
+			<div class="mc-group">
+				<InputBox Label="Signature"
+						  Value="_signature"
+						  ValueChanged="@(value => { _signature = value; _result = null; })"
+						  Placeholder="Paste the signature as base64 or hex, or open the signature file"
+						  Rows="3"
+						  FileWhat="a signature"
+						  KeepFilesAsBytes />
+				<InputBox Label="Certificate or public key"
+						  Value="_key"
+						  ValueChanged="@(value => { _key = value; _result = null; })"
+						  Placeholder="Paste the signer's certificate or public key"
+						  Rows="3" />
+			</div>
+			break;
+		case SignMode.CmsVerify:
+			<div class="mc-group">
+				<InputBox Label="CMS signature"
+						  Value="_signature"
+						  ValueChanged="@(value => { _signature = value; _result = null; })"
+						  Placeholder="Paste a CMS or PKCS7 PEM block or base64, or open a .p7s or .p7m file"
+						  Rows="4"
+						  FileWhat="a CMS signature" />
+				<InputBox Label="Signed content (for a detached signature)"
+						  Value="_data"
+						  ValueChanged="@(value => { _data = value; _result = null; })"
+						  Placeholder="Leave empty when the content is inside the signature"
+						  Rows="3"
+						  FileWhat="the signed content"
+						  KeepFilesAsBytes />
+				<InputBox Label="Expected signer (optional)"
+						  Value="_key"
+						  ValueChanged="@(value => { _key = value; _result = null; })"
+						  Placeholder="Paste the certificate the signer must be; it is also used when the signature does not include one"
+						  Rows="3" />
+			</div>
+			break;
+	}
+
+	<div class="mc-group">
+		<div class="mc-row">
+			@if (_mode != SignMode.CmsVerify)
+			{
+				<EnumSegmentedControl TEnum="SignatureHash" Value="_hash" ValueChanged="@(value => _hash = value)" Options="Hashes" AriaLabel="Hash" Disabled="_busy" />
+			}
+			@if (_mode is SignMode.Sign or SignMode.Verify)
+			{
+				<EnumSegmentedControl TEnum="RsaSignatureScheme" Value="_scheme" ValueChanged="@(value => _scheme = value)" Options="Schemes" AriaLabel="RSA padding" Disabled="_busy" />
+			}
+			@if (_mode == SignMode.Sign)
+			{
+				<EnumSegmentedControl TEnum="BinaryEncoding" Value="_encoding" ValueChanged="@(value => _encoding = value)" Options="Encodings" AriaLabel="Signature encoding" Disabled="_busy" />
+			}
+			@if (_mode == SignMode.CmsSign)
+			{
+				<MokaCheckbox Label="Detached (the signature travels beside the content)" Value="_detached" ValueChanged="@(value => _detached = value)" />
+			}
+		</div>
+		@if (_mode is SignMode.Sign or SignMode.Verify)
+		{
+			<span class="mc-note">The RSA padding is ignored for ECDSA keys, whose signatures are DER like OpenSSL's; verifying also takes the raw form JOSE uses.</span>
+		}
+	</div>
+
+	@if (_error is { } error)
+	{
+		<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+	}
+
+	@if (_result is { } result)
+	{
+		<div class="mc-results">
+			@if (result.Verdict is { } verdict)
+			{
+				<div class="@(verdict ? "mc-result-line mc-result-line--good" : "mc-result-line mc-result-line--bad")">
+					<StatusChip Text="@(verdict ? "valid" : "not valid")" Color="@(verdict ? MokaColor.Success : MokaColor.Error)" />
+					<span>@result.Summary</span>
+				</div>
+			}
+
+			@foreach (CmsSignerResult signer in result.Signers)
+			{
+				<div class="@(signer.Valid ? "mc-result-line mc-result-line--good" : "mc-result-line mc-result-line--bad")">
+					<StatusChip Text="@(signer.Valid ? "signature ok" : "bad signature")" Color="@(signer.Valid ? MokaColor.Success : MokaColor.Error)" Glow="!signer.Valid" />
+					<span class="mc-mono">@signer.Signer</span>
+					<span class="mc-note">@SignerNote(signer)</span>
+					@if (signer.Problem is { } problem)
+					{
+						<span class="mc-note">@problem</span>
+					}
+				</div>
+			}
+
+			@if (result.Text is { } text)
+			{
+				<OutputBox Title="@result.TextTitle" Text="@text" FileName="@result.TextFileName" Bytes="@result.Bytes" BytesFileName="@result.BytesFileName" BytesLabel="@result.BytesLabel" CopyName="@result.TextTitle" />
+			}
+			else if (result.Bytes is { } bytes)
+			{
+				<OutputBox Title="@result.TextTitle" Detail="@BytesNote(bytes)" Bytes="@bytes" BytesFileName="@result.BytesFileName" BytesLabel="Save" />
+			}
+		</div>
+	}
+</ToolPageFrame>

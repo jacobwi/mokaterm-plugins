@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jacobwi/mokaterm-plugins/blob/main/gallery/schema.json",
+  "title": "Mokaterm gallery entry",
+  "description": "gallery/<id>.json: a community plugin, built from source at one commit. build/gallery_schema.py reads this file to check entries, plugins/<id>/listing.json ($defs/listing) and gallery/withdrawn.json ($defs/withdrawn), so the rules live here and nowhere else.",
+  "type": "object",
+  "required": ["id", "source", "commit", "project", "license", "categories"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional, for editors: ./schema.json."
+    },
+    "id": {
+      "description": "The plugin id, as MokatermPluginId and plugin.json say, and the file's name without .json. Community ids have a dot in them (publisher.plugin) and never start with moka. or mokaterm., which are ours.",
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^(?!moka[.-]|mokaterm[.-])[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$"
+    },
+    "source": {
+      "description": "The public GitHub repository the plugin is built from, as https://github.com/owner/name, with no .git and no slash at the end.",
+      "type": "string",
+      "maxLength": 200,
+      "pattern": "^https://github\\.com/[A-Za-z0-9](-?[A-Za-z0-9])*/[A-Za-z0-9._-]+(?<!\\.git)$"
+    },
+    "commit": {
+      "description": "The full commit to build, 40 lower-case hex characters.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "tag": {
+      "description": "Optional: the tag on that commit, for people reading the entry. The check makes sure it points at the commit.",
+      "type": "string",
+      "maxLength": 100,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$"
+    },
+    "project": {
+      "description": "The plugin's .csproj inside the repository, with forward slashes.",
+      "type": "string",
+      "maxLength": 260,
+      "pattern": "^([A-Za-z0-9_][A-Za-z0-9._ -]*/)*[A-Za-z0-9_][A-Za-z0-9._ -]*\\.csproj$"
+    },
+    "license": {
+      "$ref": "#/$defs/license"
+    },
+    "categories": {
+      "$ref": "#/$defs/categories"
+    }
+  },
+  "$defs": {
+    "license": {
+      "description": "An SPDX license identifier or a simple expression of them (MIT, Apache-2.0, MIT OR Apache-2.0).",
+      "type": "string",
+      "maxLength": 100,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9.+-]*( (AND|OR|WITH) [A-Za-z0-9][A-Za-z0-9.+-]*)*$"
+    },
+    "categories": {
+      "description": "Where the Browse tab lists the plugin.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "uniqueItems": true,
+      "items": {
+        "enum": ["protocols", "server-tools", "docker", "utilities", "security", "themes"]
+      }
+    },
+    "listing": {
+      "title": "plugins/<id>/listing.json",
+      "description": "What plugin.json does not say about one of our own plugins.",
+      "type": "object",
+      "required": ["categories", "license"],
+      "additionalProperties": false,
+      "properties": {
+        "$schema": {
+          "type": "string"
+        },
+        "categories": {
+          "$ref": "#/$defs/categories"
+        },
+        "license": {
+          "$ref": "#/$defs/license"
+        }
+      }
+    },
+    "withdrawn": {
+      "title": "gallery/withdrawn.json",
+      "description": "Versions the app must not offer any more, ours and community ones alike, each with the sentence the app shows.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "version", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[a-z0-9]+([.-][a-z0-9]+)*$"
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1000,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          }
+        }
+      }
+    }
+  }
+}

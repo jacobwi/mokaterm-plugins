@@ -1,0 +1,224 @@
+@inherits CertificateViewBase
+
+<ToolPageFrame Title="Generate"
+			   Summary="@Summary"
+			   Loaded="true"
+			   PrimaryText="Generate"
+			   PrimaryIcon="CertificateIcons.Generate"
+			   PrimaryDisabled="_busy"
+			   OnPrimary="GenerateAsync">
+	<div class="mc-group">
+		<span class="mc-label">What to make</span>
+		<EnumSegmentedControl TEnum="GenerateKind" Value="_kind" ValueChanged="OnKindChanged" Options="Kinds" AriaLabel="What to make" Disabled="_busy" />
+		<span class="mc-note">@KindHelp</span>
+	</div>
+
+	@if (_kind == GenerateKind.SignedByCa)
+	{
+		<div class="mc-group">
+			<InputBox Label="The CA: its certificate and private key, or a PFX"
+					  Value="_ca"
+					  ValueChanged="OnCaChanged"
+					  Placeholder="Paste the CA certificate and its key as PEM, or open the CA's PFX"
+					  Rows="4"
+					  FileWhat="a CA certificate and key" />
+			<MokaPasswordField Value="@_caPassword"
+							   ValueChanged="@(value => _caPassword = value ?? "")"
+							   Placeholder="The CA key's or PFX's password, if it has one"
+							   Size="MokaSize.Sm"
+							   autocomplete="off"
+							   aria-label="CA password" />
+			<InputBox Label="Signing request (optional)"
+					  Value="_request"
+					  ValueChanged="OnRequestChanged"
+					  Placeholder="Paste a CSR to certify its key; leave empty to make a new key"
+					  Rows="3"
+					  FileWhat="a signing request"
+					  Hint="With a request, its key is certified and its names are used unless you type names below. Its own extensions are never copied." />
+		</div>
+	}
+
+	@if (NeedsNewKey)
+	{
+		<div class="mc-group">
+			<span class="mc-label">Key</span>
+			<div class="mc-row">
+				<EnumSegmentedControl TEnum="KeyAlgorithm" Value="_algorithm" ValueChanged="@(value => _algorithm = value)" Options="Algorithms" AriaLabel="Key algorithm" Disabled="_busy" />
+				@if (_algorithm == KeyAlgorithm.Rsa)
+				{
+					<EnumSegmentedControl TEnum="RsaKeySize" Value="_rsaSize" ValueChanged="@(value => _rsaSize = value)" Options="RsaSizes" AriaLabel="RSA key size" Disabled="_busy" />
+				}
+				else
+				{
+					<EnumSegmentedControl TEnum="EllipticCurve" Value="_curve" ValueChanged="@(value => _curve = value)" Options="Curves" AriaLabel="Curve" Disabled="_busy" />
+				}
+			</div>
+			<span class="mc-note">Ed25519 is not offered in this version: most CAs and TLS stacks still expect RSA or ECDSA.</span>
+		</div>
+	}
+
+	@if (_kind != GenerateKind.KeyPair)
+	{
+		<div class="mc-group">
+			<span class="mc-label">Subject</span>
+			<div class="mc-form">
+				<MokaTextField Label="Common name" Value="@_subject.CommonName" ValueChanged="@(value => SetSubject(_subject with { CommonName = value ?? "" }))" Placeholder="example.com" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
+				<MokaTextField Label="Organization" Value="@_subject.Organization" ValueChanged="@(value => SetSubject(_subject with { Organization = value ?? "" }))" Size="MokaSize.Sm" autocomplete="off" />
+				<MokaTextField Label="Unit" Value="@_subject.OrganizationalUnit" ValueChanged="@(value => SetSubject(_subject with { OrganizationalUnit = value ?? "" }))" Size="MokaSize.Sm" autocomplete="off" />
+				<MokaTextField Label="City" Value="@_subject.Locality" ValueChanged="@(value => SetSubject(_subject with { Locality = value ?? "" }))" Size="MokaSize.Sm" autocomplete="off" />
+				<MokaTextField Label="State" Value="@_subject.State" ValueChanged="@(value => SetSubject(_subject with { State = value ?? "" }))" Size="MokaSize.Sm" autocomplete="off" />
+				<MokaTextField Label="Country" Value="@_subject.Country" ValueChanged="@(value => SetSubject(_subject with { Country = value ?? "" }))" Placeholder="US" Size="MokaSize.Sm" MaxLength="2" autocomplete="off" />
+				<MokaTextField Label="Email" Value="@_subject.Email" ValueChanged="@(value => SetSubject(_subject with { Email = value ?? "" }))" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
+			</div>
+
+			<MokaTextArea Class="mc-names"
+						  Label="Names (subject alternative names)"
+						  Value="@_namesText"
+						  ValueChanged="OnNamesChanged"
+						  Rows="3"
+						  Placeholder="example.com, *.example.com, 192.0.2.10, admin@example.com, https://example.com/, one per line or comma separated"
+						  HelperText="@NamesHelp"
+						  Size="MokaSize.Sm"
+						  spellcheck="false" />
+			@if (_names.Count > 0)
+			{
+				<ChipRow>
+					@foreach (GeneralNameInfo name in _names)
+					{
+						<span class="mc-name"><span class="mc-name-tag">@name.Tag</span>@name.Value</span>
+					}
+				</ChipRow>
+			}
+		</div>
+
+		<div class="mc-group">
+			<span class="mc-label">Use</span>
+			@if (_kind == GenerateKind.Authority)
+			{
+				<div class="mc-row">
+					<span class="mc-note">A CA signs certificates and revocation lists.</span>
+					<MokaTextField Label="Path length (optional)" Value="@_pathLength" ValueChanged="@(value => _pathLength = value ?? "")" Placeholder="no limit" Size="MokaSize.Sm" Style="width:150px" inputmode="numeric" autocomplete="off" />
+				</div>
+			}
+			else
+			{
+				<div class="mc-row">
+					<MokaCheckbox Label="TLS server" Value="@Has(UsagePresets.TlsServer)" ValueChanged="@(value => SetUsage(UsagePresets.TlsServer, value))" />
+					<MokaCheckbox Label="TLS client" Value="@Has(UsagePresets.TlsClient)" ValueChanged="@(value => SetUsage(UsagePresets.TlsClient, value))" />
+					<MokaCheckbox Label="Code signing" Value="@Has(UsagePresets.CodeSigning)" ValueChanged="@(value => SetUsage(UsagePresets.CodeSigning, value))" />
+					<MokaCheckbox Label="Email" Value="@Has(UsagePresets.Email)" ValueChanged="@(value => SetUsage(UsagePresets.Email, value))" />
+				</div>
+			}
+
+			<div class="mc-row">
+				@if (_kind != GenerateKind.Request)
+				{
+					<span class="mc-label">Valid for</span>
+					<NumberSetting TValue="int"
+								   Value="_validityDays"
+								   ValueChanged="@(value => _validityDays = value)"
+								   Min="CertificateSpec.MinValidityDays"
+								   Max="CertificateSpec.MaxValidityDays"
+								   Suffix="days"
+								   Width="110px"
+								   AriaLabel="Validity in days" />
+				}
+				<EnumSegmentedControl TEnum="SignatureHash" Value="_hash" ValueChanged="@(value => _hash = value)" Options="Hashes" AriaLabel="Signature hash" Disabled="_busy" />
+			</div>
+		</div>
+	}
+
+	@if (NeedsNewKey)
+	{
+		<div class="mc-group">
+			<span class="mc-label">Protect the new key (optional)</span>
+			<MokaPasswordField Value="@_keyPassword"
+							   ValueChanged="@(value => _keyPassword = value ?? "")"
+							   Placeholder="A password encrypts the key with AES-256; leave empty for a plain key"
+							   Size="MokaSize.Sm"
+							   autocomplete="new-password"
+							   aria-label="Password for the new key" />
+		</div>
+	}
+
+	@if (_error is { } error)
+	{
+		<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+	}
+
+	@if (_output is { } output)
+	{
+		<div class="mc-results">
+			@foreach (string note in output.Notes)
+			{
+				<MokaAlert Severity="MokaToastSeverity.Info" Dense>@note</MokaAlert>
+			}
+
+			@if (output.CertificatePem is { } certificatePem)
+			{
+				<OutputBox Title="Certificate"
+						   Detail="@output.Title"
+						   Text="@certificatePem"
+						   FileName="@FileNameFrom(output.Title, ".crt")"
+						   Bytes="@output.Certificate?.Der"
+						   BytesFileName="@FileNameFrom(output.Title, ".cer")"
+						   CopyName="Certificate">
+					<Actions>
+						<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="CertificateIcons.Inspect" OnClick="@(() => OnInspect.InvokeAsync(certificatePem + output.ChainPem))">Inspect</MokaButton>
+					</Actions>
+				</OutputBox>
+			}
+
+			@if (output.ChainPem is { } chainPem)
+			{
+				<OutputBox Title="Chain (the CA)" Text="@chainPem" FileName="@FileNameFrom(output.Title, "-chain.pem")" CopyName="Chain" />
+			}
+
+			@if (output.RequestPem is { } requestPem)
+			{
+				<OutputBox Title="Signing request"
+						   Detail="@output.Title"
+						   Text="@requestPem"
+						   FileName="@FileNameFrom(output.Title, ".csr")"
+						   Bytes="@output.RequestDer"
+						   BytesFileName="@FileNameFrom(output.Title, ".csr.der")"
+						   CopyName="Signing request">
+					<Actions>
+						<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="CertificateIcons.Inspect" OnClick="@(() => OnInspect.InvokeAsync(requestPem))">Inspect</MokaButton>
+					</Actions>
+				</OutputBox>
+			}
+
+			@if (output.PrivateKeyPem is { } keyPem)
+			{
+				<OutputBox Title="Private key"
+						   Detail="@($"{output.KeyDescription}, {(output.PrivateKeyEncrypted ? "encrypted PKCS#8" : "PKCS#8, not encrypted")}")"
+						   Text="@keyPem"
+						   FileName="@FileNameFrom(output.Title, ".key")"
+						   Secret
+						   CopyName="Private key" />
+			}
+
+			@if (output.PublicKeyPem is { } publicPem)
+			{
+				<OutputBox Title="Public key" Detail="@output.KeyDescription" Text="@publicPem" FileName="@FileNameFrom(output.Title, ".pub.pem")" CopyName="Public key" />
+			}
+
+			@if (output.CertificatePem is not null && _key is not null)
+			{
+				<div class="mc-group">
+					<span class="mc-label">Save as PFX</span>
+					<div class="mc-form mc-form--two">
+						<MokaPasswordField Value="@_pfxPassword" ValueChanged="@(value => _pfxPassword = value ?? "")" Placeholder="PFX password" Size="MokaSize.Sm" autocomplete="new-password" aria-label="PFX password" />
+						<MokaTextField Value="@_friendlyName" ValueChanged="@(value => _friendlyName = value ?? "")" Placeholder="Friendly name (optional)" Size="MokaSize.Sm" autocomplete="off" aria-label="Friendly name" />
+					</div>
+					<div class="mc-row">
+						<EnumSegmentedControl TEnum="PfxEncryption" Value="_pfxEncryption" ValueChanged="@(value => _pfxEncryption = value)" Options="PfxChoices" AriaLabel="PFX encryption" />
+						<span class="mc-grow"></span>
+						<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Sm" StartIcon="MokatermIcons.Download" OnClick="SavePfxAsync">Save PFX</MokaButton>
+					</div>
+				</div>
+			}
+		</div>
+	}
+</ToolPageFrame>

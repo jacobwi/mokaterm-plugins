@@ -1,0 +1,91 @@
+@inherits SettingsSectionBase<CertificateSettings>
+
+@{
+	CertificateSettings settings = Settings.Clamped();
+}
+
+@* Built from the same fields as Mokaterm's own settings pages, and found by the settings search through each row's
+   label and description. *@
+<SettingsPage Title="Certificates" OnReset="ResetAsync">
+	<SettingsSection Title="New keys and certificates">
+		<SettingsRow Label="Key algorithm" Description="What the Generate section starts with. Ed25519 is not offered in this version.">
+			<EnumSegmentedControl TEnum="KeyAlgorithm"
+								  Value="settings.KeyAlgorithm"
+								  ValueChanged="value => SaveAsync(s => s with { KeyAlgorithm = value })"
+								  Options="Algorithms"
+								  AriaLabel="Default key algorithm" />
+		</SettingsRow>
+		<SettingsRow Label="RSA key size" Description="3072 bits is the size current guidance asks for keys meant to last past 2030.">
+			<EnumSegmentedControl TEnum="RsaKeySize"
+								  Value="settings.RsaKeySize"
+								  ValueChanged="value => SaveAsync(s => s with { RsaKeySize = value })"
+								  Options="RsaSizes"
+								  AriaLabel="Default RSA key size" />
+		</SettingsRow>
+		<SettingsRow Label="Curve" Description="The curve for new ECDSA keys. P-256 is the one every client supports.">
+			<EnumSegmentedControl TEnum="EllipticCurve"
+								  Value="settings.Curve"
+								  ValueChanged="value => SaveAsync(s => s with { Curve = value })"
+								  Options="Curves"
+								  AriaLabel="Default curve" />
+		</SettingsRow>
+		<SettingsRow Label="Validity" Description="How long a new certificate is valid. Publicly trusted TLS certificates may not exceed 398 days.">
+			<NumberSetting TValue="int"
+						   Value="settings.ValidityDays"
+						   ValueChanged="value => SaveAsync(s => s with { ValidityDays = value })"
+						   Min="CertificateSettings.MinValidityDays"
+						   Max="CertificateSettings.MaxValidityDays"
+						   Suffix="days"
+						   AriaLabel="Default validity in days" />
+		</SettingsRow>
+		<SettingsRow Label="Signature hash" Description="The hash new certificates, requests and signatures use.">
+			<EnumSegmentedControl TEnum="SignatureHash"
+								  Value="settings.SignatureHash"
+								  ValueChanged="value => SaveAsync(s => s with { SignatureHash = value })"
+								  Options="Hashes"
+								  AriaLabel="Default signature hash" />
+		</SettingsRow>
+		<SettingsRow Label="PFX encryption" Description="AES-256 for current systems; 3DES with SHA-1 only for Windows before 10 1709 or old Java, which cannot open AES.">
+			<EnumSegmentedControl TEnum="PfxEncryption"
+								  Value="settings.PfxEncryption"
+								  ValueChanged="value => SaveAsync(s => s with { PfxEncryption = value })"
+								  Options="PfxChoices"
+								  AriaLabel="PFX encryption" />
+		</SettingsRow>
+	</SettingsSection>
+
+	<SettingsSection Title="Expiry">
+		<SettingsRow Label="Expiring after" Description="A certificate this close to its end is marked as expiring, here and on the System page.">
+			<NumberSetting TValue="int"
+						   Value="settings.ExpiringDays"
+						   ValueChanged="value => SaveAsync(s => s with { ExpiringDays = value })"
+						   Min="CertificateSettings.MinExpiringDays"
+						   Max="CertificateSettings.MaxExpiringDays"
+						   Suffix="days left"
+						   AriaLabel="Days before expiry a certificate counts as expiring" />
+		</SettingsRow>
+	</SettingsSection>
+
+	<SettingsSection Title="Server check">
+		<SettingsRow Label="Time limit" Description="How long a server check waits for the connection and the handshake together. Desktop app only.">
+			<NumberSetting TValue="int"
+						   Value="settings.ServerCheckTimeoutSeconds"
+						   ValueChanged="value => SaveAsync(s => s with { ServerCheckTimeoutSeconds = value })"
+						   Min="CertificateSettings.MinServerCheckSeconds"
+						   Max="CertificateSettings.MaxServerCheckSeconds"
+						   Suffix="s"
+						   AriaLabel="Server check time limit in seconds" />
+		</SettingsRow>
+	</SettingsSection>
+
+	<SettingsSection Title="System page">
+		<SettingsRow Label="Extra paths" Description="More certificate files or folders on servers for the System view's Certificates page to read, separated by commas. A folder is read for its .pem, .crt, .cer and .cert files." Stacked>
+			<TextSetting Value="@settings.ExtraPaths"
+						 ValueChanged="value => SaveAsync(s => s with { ExtraPaths = value })"
+						 Validate="CertificateSettings.ExtraPathsProblem"
+						 AllowEmpty
+						 Placeholder="/etc/ssl/private-ca, /opt/app/tls/server.crt"
+						 AriaLabel="Extra certificate paths" />
+		</SettingsRow>
+	</SettingsSection>
+</SettingsPage>

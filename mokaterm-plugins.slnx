@@ -1,0 +1,16 @@
+<Solution>
+	<Folder Name="/Solution Items/">
+		<File Path=".editorconfig" />
+		<File Path="Directory.Build.props" />
+		<File Path="Directory.Packages.props" />
+		<File Path="global.json" />
+		<File Path="mokaterm.json" />
+		<File Path="nuget.config" />
+	</Folder>
+	<Folder Name="/plugins/" />
+	<Folder Name="/plugins/moka.certificates/">
+		<File Path="plugins/moka.certificates/listing.json" />
+		<Project Path="plugins/moka.certificates/src/Moka.Certificates.csproj" />
+		<Project Path="plugins/moka.certificates/tests/Moka.Certificates.Tests.csproj" />
+	</Folder>
+</Solution>

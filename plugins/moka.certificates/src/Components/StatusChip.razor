@@ -1,0 +1,36 @@
+@* An uppercase state with a glowing dot: VALID, EXPIRING, TRUSTED, MATCHES. *@
+<span class="mc-chip mc-chip--@ColorClass" title="@Title">
+	<MokaStatusDot Size="MokaSize.Xs" Color="Color" Glow="Glow" />
+	<span class="mc-chip-text">@Text</span>
+</span>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Text { get; set; } = "";
+
+	[Parameter]
+	public MokaColor Color { get; set; } = MokaColor.Success;
+
+	[Parameter]
+	public bool Glow { get; set; } = true;
+
+	[Parameter]
+	public string? Title { get; set; }
+
+	private string ColorClass => Color switch
+	{
+		MokaColor.Error => "error",
+		MokaColor.Warning => "warning",
+		MokaColor.Info => "info",
+		MokaColor.Surface => "plain",
+		_ => "success",
+	};
+
+	/// <summary>The color a certificate's expiry state is drawn in.</summary>
+	public static MokaColor ColorOf(ExpiryState state) => state switch
+	{
+		ExpiryState.Expired or ExpiryState.NotYetValid => MokaColor.Error,
+		ExpiryState.Expiring => MokaColor.Warning,
+		_ => MokaColor.Success,
+	};
+}

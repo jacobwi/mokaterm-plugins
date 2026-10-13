@@ -1,0 +1,61 @@
+.mc-facts {
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	gap: 4px var(--moka-spacing-md);
+	margin: 0;
+	font-size: var(--moka-font-size-sm);
+}
+
+.mc-facts dt {
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 10px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	line-height: 22px;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.mc-facts dd {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	margin: 0;
+}
+
+.mc-facts-value {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	min-width: 0;
+	min-height: 22px;
+	color: var(--moka-color-on-surface);
+}
+
+.mc-facts-text {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.mc-facts-mono {
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+}
+
+.mc-facts-none {
+	color: var(--moka-color-on-surface-variant);
+}
+
+/* A narrow panel puts each label above its value. */
+@container (max-width: 380px) {
+	.mc-facts {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0;
+	}
+
+	.mc-facts dd {
+		margin-bottom: var(--moka-spacing-xs);
+	}
+}

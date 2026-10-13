@@ -1,0 +1,229 @@
+name: Publish
+
+# Builds every listed version that has no release yet, releases it, then rebuilds, signs and deploys the index.
+#
+# While mokaterm.json carries a ref (packages packed from a Mokaterm checkout, not a published version), the run builds,
+# tests, checks and loads every listed plugin and stops there: no release, no index. Version numbers would otherwise be
+# spent on packages for a Mokaterm nobody runs. Plan reports which way it went (publish=true|false) and says so in the
+# job summary; release refuses on its own as well.
+#
+# Plugin code runs only in the build jobs, one runner per plugin, each with a read-only token and no secrets. The jobs
+# that write (release: contents; index: the signing key and Pages) run only this repository's scripts on data: they
+# check every package again from its bytes and take ids, sources and commits from this repository, never from what a
+# build job wrote. GALLERY_SIGNING_KEY is a repository secret, and the index job, which runs only for main, is the one
+# step that reads it.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  plan:
+    name: Plan
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      count: ${{ steps.plan.outputs.count }}
+      publish: ${{ steps.plan.outputs.publish }}
+    defaults:
+      run:
+        working-directory: mokaterm-plugins
+
+    steps:
+      - name: Check out the gallery
+        uses: actions/checkout@v5
+        with:
+          path: mokaterm-plugins
+          persist-credentials: false
+
+      - name: Find the Mokaterm to build against
+        id: mokaterm
+        run: python3 -B build/gallery.py mokaterm-ref >> "$GITHUB_OUTPUT"
+
+      - name: Check out Mokaterm
+        uses: actions/checkout@v5
+        with:
+          repository: jacobwi/Mokaterm
+          ref: ${{ steps.mokaterm.outputs.ref }}
+          path: Mokaterm
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Test the gallery scripts
+        run: python3 -B -m unittest discover -s build/tests
+
+      # One Mokaterm build for the whole run: every plugin job gets these exact packages and this load check.
+      - name: Make the Mokaterm packages available
+        run: python3 -B build/mokaterm_feed.py
+
+      - name: Build the load check
+        run: python3 -B build/gallery.py toolchain
+
+      - name: Plan
+        id: plan
+        run: python3 -B build/gallery.py plan --releases "github:$GITHUB_REPOSITORY" --github-output "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Keep the toolchain for the other jobs
+        if: steps.plan.outputs.count != '0'
+        uses: actions/upload-artifact@v5
+        with:
+          name: toolchain
+          path: |
+            mokaterm-plugins/.feed
+            mokaterm-plugins/.work/toolchain
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+  build:
+    name: Build ${{ matrix.id }}
+    needs: plan
+    if: needs.plan.outputs.count != '0'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    defaults:
+      run:
+        working-directory: mokaterm-plugins
+
+    steps:
+      - name: Check out the gallery
+        uses: actions/checkout@v5
+        with:
+          path: mokaterm-plugins
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Get the toolchain
+        uses: actions/download-artifact@v5
+        with:
+          name: toolchain
+          path: mokaterm-plugins
+
+      - name: Build, test, check and load ${{ matrix.id }}
+        run: python3 -B build/gallery.py build "$PLUGIN_ID" --out "artifacts/package-$PLUGIN_ID" --releases "github:$GITHUB_REPOSITORY"
+        env:
+          PLUGIN_ID: ${{ matrix.id }}
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Keep the package
+        uses: actions/upload-artifact@v5
+        with:
+          name: package-${{ matrix.id }}
+          path: mokaterm-plugins/artifacts/package-${{ matrix.id }}
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Release
+    needs: [plan, build]
+    # Only once mokaterm.json names a published Mokaterm. Whatever built is released even when another plugin failed;
+    # the failed build still fails the run.
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.publish == 'true' && needs.plan.outputs.count != '0' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: mokaterm-plugins
+
+    steps:
+      - name: Check out the gallery
+        uses: actions/checkout@v5
+        with:
+          path: mokaterm-plugins
+          persist-credentials: false
+
+      - name: Get the toolchain
+        uses: actions/download-artifact@v5
+        with:
+          name: toolchain
+          path: mokaterm-plugins
+
+      - name: Get the packages
+        uses: actions/download-artifact@v5
+        with:
+          pattern: package-*
+          path: mokaterm-plugins/artifacts/built
+
+      - name: Check them again and release them
+        run: python3 -B build/gallery.py release --built artifacts/built --commit "$GITHUB_SHA" --releases "github:$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  index:
+    name: Index
+    needs: [plan, release]
+    # Only on main and once mokaterm.json names a published Mokaterm. The index is rebuilt from the releases every time,
+    # so it is right even after a run that released nothing.
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' && needs.plan.result == 'success' && needs.plan.outputs.publish == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    defaults:
+      run:
+        working-directory: mokaterm-plugins
+
+    steps:
+      - name: Check out the gallery
+        uses: actions/checkout@v5
+        with:
+          path: mokaterm-plugins
+          persist-credentials: false
+
+      - name: Build the index
+        run: python3 -B build/gallery.py index --out _site --releases "github:$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      # The repository secret lives in a temporary file only while OpenSSL signs; the signature is then verified
+      # against signing/gallery-2026.pub.pem, the key the app carries, before anything is deployed.
+      - name: Sign the index
+        run: python3 -B build/gallery.py sign --index _site/index.json
+        env:
+          GALLERY_SIGNING_KEY: ${{ secrets.GALLERY_SIGNING_KEY }}
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: mokaterm-plugins/_site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

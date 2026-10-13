@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+*.user
+artifacts/
+# The Mokaterm packages built from source for local and CI builds (build/mokaterm_feed.py).
+.feed/
+# Scratch output of the gallery scripts.
+.work/
+__pycache__/

@@ -1,0 +1,103 @@
+@inherits CertificateViewBase
+
+<ToolPageFrame Title="Inspect"
+			   Summary="@Summary"
+			   Loaded="true"
+			   Loading="_reading"
+			   ListPage
+			   Detail="@(Selected is null ? null : DetailPanel)">
+	<div class="mc-stack">
+		<InputBox Label="Certificates, keys or a request"
+				  Value="_input"
+				  ValueChanged="OnInputChangedAsync"
+				  Placeholder="Paste PEM (-----BEGIN ...) or base64, or open a .pem, .crt, .cer, .der, .csr, .key, .pfx or .p12 file"
+				  Rows="7" />
+
+		@if (_askPassword)
+		{
+			<div class="mc-row" @onkeydown="OnPasswordKeyAsync">
+				<div class="mc-grow">
+					<MokaPasswordField Value="@_password"
+									   ValueChanged="OnPasswordChanged"
+									   Placeholder="Password for the PFX or the encrypted key"
+									   Size="MokaSize.Sm"
+									   autocomplete="off"
+									   aria-label="Password" />
+				</div>
+				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Sm" StartIcon="MokatermIcons.Unlock" OnClick="ReadAsync">Open</MokaButton>
+			</div>
+		}
+
+		<NoteList Notes="_inspection.Notes" />
+
+		@if (_inspection.Chain is { } chain)
+		{
+			<div class="@(chain.InOrder ? "mc-result-line mc-result-line--good" : "mc-result-line mc-result-line--bad")">
+				<StatusChip Text="@(chain.InOrder ? "chain in order" : "chain broken")" Color="@(chain.InOrder ? MokaColor.Success : MokaColor.Error)" />
+				<span>@chain.Summary</span>
+			</div>
+		}
+
+		@if (_inspection.Items.Count > 0)
+		{
+			<div class="mc-list" role="list">
+				@foreach (InspectedItem item in _inspection.Items)
+				{
+					<button type="button"
+							class="@(item.Number == _selected ? "mc-item mc-item--selected" : "mc-item")"
+							@key="item.Number"
+							aria-pressed="@(item.Number == _selected ? "true" : "false")"
+							@onclick="@(() => Select(item))">
+						<MokaStatusDot Size="MokaSize.Xs" Color="@DotOf(item)" Glow="@GlowOf(item)" />
+						<span class="mc-item-kind">@KindOf(item)</span>
+						<span class="mc-item-main">
+							<span class="mc-item-title">@item.Title</span>
+							<span class="mc-item-sub">@(item.Subtitle ?? item.Format)</span>
+						</span>
+						<span class="mc-item-end">@EndOf(item)</span>
+					</button>
+				}
+			</div>
+		}
+		else if (_input.IsEmpty)
+		{
+			<MokaEmptyState Icon="CertificateIcons.Certificate"
+							Title="Nothing to inspect yet"
+							Description="Paste a certificate, a chain, a key or a signing request, or open a file. Everything is read here and nothing is sent anywhere." />
+		}
+	</div>
+</ToolPageFrame>
+
+@code {
+	private RenderFragment DetailPanel => @<text>
+		@if (Selected is { } item)
+		{
+			<ToolDetailPanel Title="@item.Title"
+							 Subtitle="@($"Item {item.Number}, {item.Format}")"
+							 DotColor="@DotOf(item)"
+							 DotGlow="@GlowOf(item)"
+							 OnClose="CloseDetail">
+				@if (item.Certificate is { } certificate)
+				{
+					<CertificateDetails Info="certificate" />
+					@foreach (string match in item.Matches)
+					{
+						<span class="mc-note">@match</span>
+					}
+				}
+				else if (item.Request is { } request)
+				{
+					<RequestDetails Info="request" />
+				}
+				else if (item.Key is { } key)
+				{
+					<KeyDetails Info="key" Private="@(item.Kind == MaterialKind.PrivateKey)" Format="@item.Format" PublicKeyPem="@item.PublicKeyPem" Matches="item.Matches" />
+				}
+				else if (item.Locked)
+				{
+					<MokaAlert Severity="MokaToastSeverity.Info" Dense>Encrypted with @item.Subtitle. Enter its password above and press Open.</MokaAlert>
+				}
+			</ToolDetailPanel>
+		}
+	</text>;
+}

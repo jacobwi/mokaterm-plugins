@@ -1,0 +1,26 @@
+@inherits AppToolBase
+
+@* The Certificates app tool: a side menu of sections, each kept alive while another shows, so switching back finds
+   what was typed. *@
+<div class="mc-tool">
+	<ToolNavigation Entries="Entries" Current="@_current" CurrentChanged="Show" Label="Certificates">
+		<div class="mc-section" hidden="@(_current != InspectId)">
+			<InspectSection Request="_inspectRequest" />
+		</div>
+		<div class="mc-section" hidden="@(_current != GenerateId)">
+			<GenerateSection OnInspect="InspectAsync" />
+		</div>
+		<div class="mc-section" hidden="@(_current != ConvertId)">
+			<ConvertSection OnInspect="InspectAsync" />
+		</div>
+		<div class="mc-section" hidden="@(_current != SignId)">
+			<SignSection />
+		</div>
+		<div class="mc-section" hidden="@(_current != EncryptId)">
+			<EncryptSection />
+		</div>
+		<div class="mc-section" hidden="@(_current != CheckId)">
+			<ServerCheckSection OnInspect="InspectAsync" />
+		</div>
+	</ToolNavigation>
+</div>

@@ -1,0 +1,37 @@
+<Project>
+
+	<PropertyGroup>
+		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+	</PropertyGroup>
+
+	<!-- MokatermVersion: the exact Mokaterm packages every plugin builds against, written by build/mokaterm_feed.py. -->
+	<Import Project=".feed/mokaterm.props" Condition="Exists('$(MSBuildThisFileDirectory).feed/mokaterm.props')" />
+
+	<Target Name="MokatermFeedMissing" BeforeTargets="CollectPackageReferences" Condition="'$(MokatermVersion)' == ''">
+		<Error Text="Run build/mokaterm_feed.py first: it writes .feed/mokaterm.props, which names the Mokaterm version to build against." />
+	</Target>
+
+	<ItemGroup>
+		<PackageVersion Include="Mokaterm.UI.Common" Version="$(MokatermVersion)" />
+		<PackageVersion Include="Mokaterm.Plugin.Sdk" Version="$(MokatermVersion)" />
+	</ItemGroup>
+
+	<!--
+		Framework-aligned packages on the .NET 10 servicing line Mokaterm ships with. The desktop host does not carry
+		System.Security.Cryptography.Pkcs, so a plugin that needs it brings it in lib; the web host's shared framework has
+		its own copy, which the plugin loader prefers.
+	-->
+	<ItemGroup>
+		<PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.12" />
+		<PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+	</ItemGroup>
+
+	<!-- Tests: the versions Mokaterm's own tests use (xunit v3 on Microsoft.Testing.Platform, see global.json). -->
+	<ItemGroup>
+		<PackageVersion Include="xunit.v3" Version="4.0.1" />
+		<PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
+		<PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+		<PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.4.1" />
+	</ItemGroup>
+
+</Project>

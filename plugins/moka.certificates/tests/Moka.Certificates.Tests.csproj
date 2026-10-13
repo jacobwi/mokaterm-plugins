@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+		The plugin's certificate logic against material the tests make themselves (no network, no fixtures from elsewhere),
+		the System page's parsers against fixture outputs of certbot, nginx -T and grep, and what the module registers.
+		xunit v3 on Microsoft.Testing.Platform, like Mokaterm's own tests.
+	-->
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
+		<RootNamespace>Moka.Certificates.Tests</RootNamespace>
+	</PropertyGroup>
+
+	<!--
+		CA1707: Method_Scenario_Expectation names.
+		CA2000: tests create and drop disposables freely.
+		CA5394: Random is fine for test data.
+		CA5350, CA5351: tests build legacy material on purpose to see it read.
+	-->
+	<PropertyGroup>
+		<NoWarn>$(NoWarn);CA1707;CA2000;CA5394;CA5350;CA5351</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Using Include="Xunit" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="xunit.v3" />
+		<PackageReference Include="xunit.runner.visualstudio" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" />
+		<PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+
+		<!-- The plugin takes these from its host and does not copy them; a test project is its own host. -->
+		<PackageReference Include="Mokaterm.UI.Common" />
+		<PackageReference Include="System.Security.Cryptography.Pkcs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\src\Moka.Certificates.csproj" />
+	</ItemGroup>
+
+</Project>
