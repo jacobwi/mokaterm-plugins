@@ -198,6 +198,27 @@ def run_tests_of(test, properties):
     run(["dotnet", target], env=dotnet_environment())
 
 
+def built_folders(path):
+    """The built plugins under path, as (folder, plugin id) pairs sorted by id.
+
+    The publish workflow downloads every package-<id> artifact into one folder. actions/download-artifact puts each in a
+    folder of its own when several match, but unpacks a single match straight into the path, so both layouts count. The
+    id comes from the build.json the build wrote, not from a folder name a download step chose.
+    """
+    candidates = [path] if os.path.isfile(os.path.join(path, "build.json")) else sorted(
+        folder for folder in glob.glob(os.path.join(path, "*")) if os.path.isdir(folder))
+    found = []
+    for folder in candidates:
+        manifest = os.path.join(folder, "build.json")
+        if os.path.isfile(manifest):
+            plugin_id = read_json(manifest).get("id")
+        else:
+            name = os.path.basename(folder)
+            plugin_id = name[len("package-"):] if name.startswith("package-") else name
+        found.append((folder, plugin_id))
+    return sorted(found, key=lambda pair: pair[1] or "")
+
+
 def fetch_community(listing, clone_from=None):
     """Checks out the entry's commit in .work/community/<id>/repo. clone_from replaces the URL, for local tests only."""
     base = os.path.join(WORK, "community", listing.id)

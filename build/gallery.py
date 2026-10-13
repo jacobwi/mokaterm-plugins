@@ -280,12 +280,10 @@ def _release(args):
         raise GalleryError(f"--commit {args.commit!r} is not a full commit.")
 
     failures = []
-    folders = sorted(path for path in glob.glob(os.path.join(args.built, "*")) if os.path.isdir(path))
+    folders = gallery_build.built_folders(args.built)
     if not folders:
         info("Nothing was built, so nothing is released.")
-    for folder in folders:
-        name = os.path.basename(folder)
-        plugin_id = name[len("package-"):] if name.startswith("package-") else name
+    for folder, plugin_id in folders:
         try:
             with group(f"Releasing {plugin_id}"):
                 _release_one(listings.get(plugin_id), folder, toolchain, backend, releases, published, args.commit, args.repository)
