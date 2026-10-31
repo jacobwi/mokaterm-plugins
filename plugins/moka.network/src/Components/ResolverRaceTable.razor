@@ -1,0 +1,32 @@
+@using System.Globalization
+@using Moka.Network.Lookup
+
+@* One race's outcome: every resolver that answered, fastest first, then the ones that failed with the reason beside
+   them. A time covers the whole try behind a resolver's name, fallback servers included. *@
+<div class="mn-table mn-table--race" role="table" aria-label="Resolver race">
+	<div class="mn-tr mn-th" role="row">
+		<span role="columnheader">Resolver</span>
+		<span role="columnheader">Answer</span>
+		<span class="mn-td--end" role="columnheader">Time</span>
+	</div>
+	@foreach (ResolverRaceResult row in Results)
+	{
+		<div class="mn-tr" role="row">
+			<span class="mn-td mn-td--mono mn-td--dim" role="cell">@row.Entry.Label</span>
+			<span class="@(row.Result is null ? "mn-td mn-td--mono mn-td--bad" : "mn-td mn-td--mono")" role="cell" title="@row.Failure">
+				@(row.Result is { } result ? ResolverRace.AnswerSummary(result) : row.Failure)
+			</span>
+			<span class="mn-td mn-td--mono mn-td--end" role="cell">@Milliseconds(row.Elapsed)</span>
+		</div>
+	}
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public IReadOnlyList<ResolverRaceResult> Results { get; set; } = [];
+
+	/// <summary>The same round trip print every tab uses: one decimal under 10 ms, whole milliseconds above.</summary>
+	private static string Milliseconds(TimeSpan elapsed) => elapsed.TotalMilliseconds < 10
+		? elapsed.TotalMilliseconds.ToString("0.0", CultureInfo.CurrentCulture) + " ms"
+		: elapsed.TotalMilliseconds.ToString("N0", CultureInfo.CurrentCulture) + " ms";
+}

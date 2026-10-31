@@ -64,6 +64,18 @@ public sealed class PingTests
 	}
 
 	[Fact]
+	public void Statistics_CountATcpRefusalAsAnAnsweredRequest()
+	{
+		PingStatistics stats = new();
+
+		// The shape a TCP pinger sends back when the host refuses the port: a reply, with the reason beside it.
+		stats.Add(new EchoReply(EchoStatus.Reply, IPAddress.Parse("192.0.2.1"), 12, "the port is closed, but the host answered"));
+
+		Assert.Equal(1, stats.Received);
+		Assert.Equal(12, stats.Average);
+	}
+
+	[Fact]
 	public async Task Runner_SendsTheCountAndNumbersEachReply()
 	{
 		FakePinger pinger = new((_, _) => FakePinger.Reply("192.0.2.1"));

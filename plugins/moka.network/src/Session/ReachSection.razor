@@ -1,0 +1,66 @@
+@inherits SessionSectionBase
+@using Moka.Network.Server
+@using Moka.Red.Primitives.Button
+
+<ToolPageFrame Title="Reach"
+			   Summary="@Summary"
+			   Loaded="true"
+			   PrimaryText="@PrimaryText"
+			   PrimaryIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Start)"
+			   PrimaryDisabled="@(Busy && !Running)"
+			   PrimaryTitle="@PrimaryTitle"
+			   OnPrimary="PrimaryAsync">
+	<div class="mn-stack">
+		<div class="mn-group" @onkeydown="OnKeyAsync">
+			<div class="mn-fields">
+				<div class="mn-field mn-field--host">
+					<MokaTextField Label="Host" Value="@_host" ValueChanged="@(value => _host = value ?? "")" Placeholder="example.com or 192.0.2.10" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" Disabled="@(!Connected)" />
+				</div>
+				<div class="mn-field mn-field--fixed" style="max-width: 110px">
+					<MokaTextField Label="Port" Value="@_port" ValueChanged="@(value => _port = value ?? "")" Placeholder="443" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
+				</div>
+				<div class="mn-field mn-field--fixed" style="max-width: 110px">
+					<MokaTextField Label="Wait (s)" Value="@_seconds" ValueChanged="@(value => _seconds = value ?? "")" Placeholder="5" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
+				</div>
+				<div class="mn-field mn-field--fixed" style="max-width: 110px">
+					<MokaTextField Label="Pings" Value="@_count" ValueChanged="@(value => _count = value ?? "")" Placeholder="4" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
+				</div>
+			</div>
+			<div class="mn-row">
+				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="NetworkIcons.Ping" Disabled="@(!CanPing)" OnClick="PingAsync">Ping</MokaButton>
+				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="NetworkIcons.Trace" Disabled="@(!CanTrace)" OnClick="TraceAsync">Trace</MokaButton>
+				<span class="mn-gap"></span>
+				<SessionOriginNote Session="Session" />
+			</div>
+			<div class="mn-row">
+				<span class="mn-note">Check opens TCP; ping sends ICMP echo; trace walks the path with @(HasTracePath ? "tracepath" : HasTraceroute ? "traceroute" : "tracepath or traceroute").</span>
+			</div>
+		</div>
+
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+		@if (Offline)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Info" Dense>The session is not connected. Reconnect it to reach out from the server again.</MokaAlert>
+		}
+		@if (_tcp is { } verdict)
+		{
+			<div class="@(verdict.State is ReachState.Open ? "mn-result-line mn-result-line--good" : verdict.State is ReachState.Closed or ReachState.NoAnswer or ReachState.Unreachable ? "mn-result-line mn-result-line--bad" : "mn-result-line")">
+				<span class="mn-mono">@(_tcpTarget is { } target ? target : "")</span>
+				<strong>@verdict.Word</strong>
+				<span class="mn-note">@verdict.Detail</span>
+			</div>
+		}
+
+		@if (_pingText.Length > 0)
+		{
+			<TextOutput Title="Ping from the server" Text="@_pingText" Detail="@_pingTarget" />
+		}
+		@if (_traceText.Length > 0)
+		{
+			<TextOutput Title="@($"Trace from the server ({_tracer})")" Text="@_traceText" Detail="@_traceTarget" />
+		}
+	</div>
+</ToolPageFrame>

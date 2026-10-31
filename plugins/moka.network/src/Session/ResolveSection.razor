@@ -1,0 +1,77 @@
+@inherits SessionSectionBase
+@using Moka.Network.Server
+
+<ToolPageFrame Title="Resolve"
+			   Summary="@Summary"
+			   Loaded="true"
+			   PrimaryText="@PrimaryText"
+			   PrimaryIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Start)"
+			   PrimaryDisabled="@(Busy && !Running)"
+			   PrimaryTitle="@PrimaryTitle"
+			   OnPrimary="PrimaryAsync">
+	<div class="mn-stack">
+		<div class="mn-group" @onkeydown="OnKeyAsync">
+			<div class="mn-fields">
+				<div class="mn-field mn-field--host">
+					<MokaTextField Label="Host" Value="@_host" ValueChanged="@(value => _host = value ?? "")" Placeholder="example.com or 192.0.2.10" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" Disabled="NotReady" />
+				</div>
+			</div>
+			<div class="mn-row">
+				<SessionOriginNote Session="Session" />
+				<span class="mn-note">An address asks for its name; a name asks for the addresses the server sees.</span>
+			</div>
+		</div>
+
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+		@if (Offline)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Info" Dense>The session is not connected. Reconnect it to ask its server again.</MokaAlert>
+		}
+		@if (_absent)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Info" Dense>This server has no getent, so its resolver cannot be asked this way.</MokaAlert>
+		}
+
+		@if (_nameservers.Count > 0)
+		{
+			<div class="mn-results">
+				<span class="mn-label">The server asks these resolvers</span>
+				<div class="mn-row">
+					@for (int index = 0; index < _nameservers.Count; index++)
+					{
+						int server = index;
+						<span class="mn-td mn-td--mono" @key="server">@_nameservers[server].ToString()</span>
+					}
+				</div>
+			</div>
+		}
+
+		@if (_target is { } target)
+		{
+			<div class="mn-results">
+				<span class="mn-note mn-mono">@target</span>
+				@if (_rows.Count > 0)
+				{
+					<div class="mn-table mn-table--scroll" style="--mn-columns: 1fr 60px 1fr" role="table" aria-label="The server's answer">
+						<div class="mn-tr mn-th" role="row">
+							<span role="columnheader">Address</span>
+							<span role="columnheader">Family</span>
+							<span role="columnheader">@(_reverse ? "Name" : "Names")</span>
+						</div>
+						@foreach (GetentHost row in _rows)
+						{
+							<div class="mn-tr" role="row">
+								<span class="mn-td mn-td--mono" role="cell">@row.Address.ToString()</span>
+								<span class="mn-td mn-td--dim" role="cell">@(row.IsIPv6 ? "IPv6" : "IPv4")</span>
+								<span class="mn-td mn-td--mono" role="cell">@NameOf(row)</span>
+							</div>
+						}
+					</div>
+				}
+			</div>
+		}
+	</div>
+</ToolPageFrame>

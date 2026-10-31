@@ -8,6 +8,9 @@
 		<div class="mn-section" hidden="@(_current != DnsId)">
 			<DnsSection />
 		</div>
+		<div class="mn-section" hidden="@(_current != MapId)">
+			<MapSection />
+		</div>
 		<div class="mn-section" hidden="@(_current != PingId)">
 			<PingSection />
 		</div>
@@ -25,6 +28,9 @@
 		</div>
 		<div class="mn-section" hidden="@(_current != SubnetId)">
 			<SubnetSection />
+		</div>
+		<div class="mn-section" hidden="@(_current != ConnectionsId)">
+			<DesktopConnectionsPanel />
 		</div>
 	</ToolNavigation>
 </div>

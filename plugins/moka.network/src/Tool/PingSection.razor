@@ -23,15 +23,19 @@
 				<div class="mn-field">
 					<MokaTextField Label="Wait (ms)" Value="@_timeout" ValueChanged="@(value => _timeout = value ?? "")" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
 				</div>
-				<div class="mn-field">
-					<MokaTextField Label="Size (bytes)" Value="@_size" ValueChanged="@(value => _size = value ?? "")" Placeholder="32" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
-				</div>
+				<PingShapeField Mode="_mode" Size="_size" SizeChanged="@(value => _size = value)" Port="_port" PortChanged="@(value => _port = value)" Disabled="Busy" />
 			</div>
+			@if (_mode == PingMode.Tcp)
+			{
+				<span class="mn-note">Size is an ICMP idea: a TCP probe is one connection attempt to a port, so there is no payload to choose.</span>
+			}
 			<RecentTargetsBar OnPick="@(value => _host = value)" />
 			<div class="mn-row">
+				<EnumSegmentedControl TEnum="PingMode" Value="_mode" ValueChanged="@(value => _mode = value)" Options="PingModeChoices.Options" AriaLabel="Request kind" Disabled="Busy" />
 				<EnumSegmentedControl TEnum="AddressChoice" Value="_choice" ValueChanged="@(value => _choice = value)" Options="AddressChoices.Options" AriaLabel="Address family" Disabled="Busy" />
 				<MokaCheckbox Label="Until stopped" Value="_continuous" ValueChanged="@(value => _continuous = value)" />
 				<span class="mn-gap"></span>
+				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="NetworkIcons.Mtu" Disabled="Busy" OnClick="MtuAsync">Find path MTU</MokaButton>
 				<OriginNote />
 			</div>
 		</div>
@@ -45,6 +49,12 @@
 		{
 			<div class="mn-results">
 				<span class="mn-note mn-mono">@target</span>
+				@if (_mtu is { } mtu)
+				{
+					<div class="@MtuClass(mtu)">@MtuText(mtu)</div>
+					<FactList Facts="@MtuFacts(mtu)" />
+					<span class="mn-note">The search sends packets with the Don't Fragment bit set, halving the gap between a size that passes and one that fails. Which hop is too small stays hidden: without raw sockets, the answer that reports a too-big packet names no router.</span>
+				}
 				@if (_stats.Sent > 0)
 				{
 					<div class="mn-stats" aria-label="Summary">

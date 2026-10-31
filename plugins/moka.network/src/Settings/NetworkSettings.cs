@@ -26,6 +26,14 @@ public sealed record NetworkSettings : ISettingsSection
 
 	public const int MaxPingTimeoutMilliseconds = 10000;
 
+	public const int MinTcpPingPort = 1;
+
+	public const int MaxTcpPingPort = 65535;
+
+	public const int MinServerTimeoutSeconds = 2;
+
+	public const int MaxServerTimeoutSeconds = 120;
+
 	public static string SectionKey => "plugin.moka.network";
 
 	public DnsResolverKind Resolver { get; init; } = DnsResolverKind.System;
@@ -45,11 +53,22 @@ public sealed record NetworkSettings : ISettingsSection
 	/// <summary>How long ping and traceroute wait for each reply.</summary>
 	public int PingTimeoutMilliseconds { get; init; } = 2000;
 
+	/// <summary>The port the ping tab dials when its requests are TCP connection attempts.</summary>
+	public int TcpPingPort { get; init; } = 443;
+
+	/// <summary>
+	/// How long the session tool's quick commands on the server get: a lookup, the listening list, the program probe.
+	/// The longer actions weigh their own wait from this and from what they ask for.
+	/// </summary>
+	public int ServerTimeoutSeconds { get; init; } = 15;
+
 	public TimeSpan DnsTimeout => TimeSpan.FromSeconds(DnsTimeoutSeconds);
 
 	public TimeSpan ConnectTimeout => TimeSpan.FromSeconds(ConnectTimeoutSeconds);
 
 	public TimeSpan WhoisTimeout => TimeSpan.FromSeconds(WhoisTimeoutSeconds);
+
+	public TimeSpan ServerTimeout => TimeSpan.FromSeconds(ServerTimeoutSeconds);
 
 	/// <summary>A copy with every value inside what the settings page allows, since settings.json can be edited by hand.</summary>
 	public NetworkSettings Clamped()
@@ -64,6 +83,8 @@ public sealed record NetworkSettings : ISettingsSection
 			ConnectTimeoutSeconds = Math.Clamp(ConnectTimeoutSeconds, MinConnectTimeoutSeconds, MaxConnectTimeoutSeconds),
 			WhoisTimeoutSeconds = Math.Clamp(WhoisTimeoutSeconds, MinWhoisTimeoutSeconds, MaxWhoisTimeoutSeconds),
 			PingTimeoutMilliseconds = Math.Clamp(PingTimeoutMilliseconds, MinPingTimeoutMilliseconds, MaxPingTimeoutMilliseconds),
+			TcpPingPort = Math.Clamp(TcpPingPort, MinTcpPingPort, MaxTcpPingPort),
+			ServerTimeoutSeconds = Math.Clamp(ServerTimeoutSeconds, MinServerTimeoutSeconds, MaxServerTimeoutSeconds),
 		};
 	}
 }

@@ -47,6 +47,8 @@
 									   aria-label="Custom resolver address" />
 					</div>
 				}
+				<span class="mn-gap"></span>
+				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="NetworkIcons.Race" Disabled="Busy" OnClick="RaceAsync">Race</MokaButton>
 			</div>
 			<div class="mn-row">
 				<OriginNote />
@@ -57,6 +59,15 @@
 		@if (_error is { } error)
 		{
 			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+
+		@if (_race is { } race)
+		{
+			<div class="mn-results">
+				<span class="mn-note mn-mono">Race: @_raceQuestion</span>
+				<ResolverRaceTable Results="race" />
+				<span class="mn-note">Every resolver got the same question at the same moment. Those that answered are ranked fastest first; each time covers every server tried behind that name.</span>
+			</div>
 		}
 
 		@if (_result is { } result)

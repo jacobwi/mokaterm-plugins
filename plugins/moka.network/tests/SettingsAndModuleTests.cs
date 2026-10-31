@@ -22,6 +22,8 @@ public sealed class SettingsAndModuleTests
 			ConnectTimeoutSeconds = 999,
 			WhoisTimeoutSeconds = -5,
 			PingTimeoutMilliseconds = int.MaxValue,
+			TcpPingPort = 0,
+			ServerTimeoutSeconds = 999,
 		};
 
 		NetworkSettings clamped = wild.Clamped();
@@ -32,6 +34,10 @@ public sealed class SettingsAndModuleTests
 		Assert.Equal(NetworkSettings.MaxConnectTimeoutSeconds, clamped.ConnectTimeoutSeconds);
 		Assert.Equal(NetworkSettings.MinWhoisTimeoutSeconds, clamped.WhoisTimeoutSeconds);
 		Assert.Equal(NetworkSettings.MaxPingTimeoutMilliseconds, clamped.PingTimeoutMilliseconds);
+		Assert.Equal(NetworkSettings.MinTcpPingPort, clamped.TcpPingPort);
+		Assert.Equal(NetworkSettings.MaxTcpPingPort, (wild with { TcpPingPort = 99999 }).Clamped().TcpPingPort);
+		Assert.Equal(NetworkSettings.MaxServerTimeoutSeconds, clamped.ServerTimeoutSeconds);
+		Assert.Equal(NetworkSettings.MinServerTimeoutSeconds, (wild with { ServerTimeoutSeconds = 0 }).Clamped().ServerTimeoutSeconds);
 		Assert.Equal(new NetworkSettings(), new NetworkSettings().Clamped());
 	}
 

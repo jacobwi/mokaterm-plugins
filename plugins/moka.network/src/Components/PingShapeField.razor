@@ -1,0 +1,50 @@
+@using Moka.Network.Echo
+
+@* The request's shape depends on its kind: ICMP carries a payload of a chosen size, TCP dials a port. The other kind's
+   field is left out entirely rather than shown grey, since it has no effect on the requests. *@
+@if (Mode == PingMode.Icmp)
+{
+	<div class="mn-field">
+		<MokaTextField Label="Size (bytes)"
+					   Value="@Size"
+					   ValueChanged="@(value => SizeChanged.InvokeAsync(value ?? ""))"
+					   Placeholder="32"
+					   Size="MokaSize.Sm"
+					   inputmode="numeric"
+					   autocomplete="off"
+					   Disabled="Disabled" />
+	</div>
+}
+else
+{
+	<div class="mn-field">
+		<MokaTextField Label="Port"
+					   Value="@Port"
+					   ValueChanged="@(value => PortChanged.InvokeAsync(value ?? ""))"
+					   Placeholder="443"
+					   Size="MokaSize.Sm"
+					   inputmode="numeric"
+					   autocomplete="off"
+					   Disabled="Disabled" />
+	</div>
+}
+
+@code {
+	[Parameter, EditorRequired]
+	public PingMode Mode { get; set; }
+
+	[Parameter, EditorRequired]
+	public string Size { get; set; } = "";
+
+	[Parameter]
+	public EventCallback<string> SizeChanged { get; set; }
+
+	[Parameter, EditorRequired]
+	public string Port { get; set; } = "";
+
+	[Parameter]
+	public EventCallback<string> PortChanged { get; set; }
+
+	[Parameter]
+	public bool Disabled { get; set; }
+}

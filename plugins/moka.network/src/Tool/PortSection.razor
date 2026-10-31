@@ -17,6 +17,9 @@
 				<div class="mn-field mn-field--ports">
 					<MokaTextField Label="Ports" Value="@_ports" ValueChanged="@(value => _ports = value ?? "")" Placeholder="22, 443, rdp" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
 				</div>
+				<div class="mn-field mn-field--ports">
+					<MokaTextField Label="Custom ports" Value="@_custom" ValueChanged="@(value => _custom = value ?? "")" Placeholder="9, 3000 8080" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
+				</div>
 			</div>
 			<RecentTargetsBar OnPick="@(value => _host = value)" />
 			<div class="mn-row">
@@ -25,7 +28,7 @@
 				<span class="mn-gap"></span>
 				<OriginNote />
 			</div>
-			<span class="mn-note">Up to @PortList.MaxPorts ports, no ranges. Each gets one TCP connection, closed at once; nothing is sent. @Settings.ConnectTimeoutSeconds s per port.</span>
+			<span class="mn-note">Up to @PortList.MaxPorts ports by number or name, plus up to @PortList.MaxCustomPorts custom numbers, no ranges. Each gets one TCP connection, closed at once; nothing is sent. @Settings.ConnectTimeoutSeconds s per port.</span>
 		</div>
 
 		@if (_error is { } error)
@@ -49,13 +52,17 @@
 						@foreach (PortRow row in _rows)
 						{
 							<div class="mn-tr" role="row" @key="row.Port">
-								<span class="mn-td mn-td--mono" role="cell">
-									@row.Port
-									@if (PortList.ServiceName(row.Port) is { } service)
-									{
-										<span class="mn-td--dim mn-service">@service</span>
-									}
-								</span>
+									<span class="mn-td mn-td--mono" role="cell">
+										@row.Port
+										@if (PortList.ServiceName(row.Port) is { } service)
+										{
+											<span class="mn-td--dim mn-service">@service</span>
+										}
+										else if (_customOnly.Contains(row.Port))
+										{
+											<span class="mn-td--dim mn-service">custom</span>
+										}
+									</span>
 								<span class="mn-td" role="cell">
 									@if (row.Result is { } result)
 									{

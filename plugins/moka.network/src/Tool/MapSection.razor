@@ -1,0 +1,194 @@
+@inherits NetworkViewBase
+@using Moka.Network.Lookup
+@using Moka.Network.Lookup.Mapping
+@using Moka.Network.Subnets
+
+<ToolPageFrame Title="Map"
+			   Summary="@Summary"
+			   Loaded="true"
+			   PrimaryText="@(Running ? "Stop" : "Draw the map")"
+			   PrimaryIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Map)"
+			   PrimaryDisabled="@(Busy && !Running)"
+			   OnPrimary="PrimaryAsync">
+	<div class="mn-stack">
+		<div class="mn-group" @onkeydown="OnKeyAsync">
+			<div class="mn-fields">
+				<div class="mn-field mn-field--host">
+					<MokaTextField Label="Name"
+								   Value="@_name"
+								   ValueChanged="@(value => _name = value ?? "")"
+								   Placeholder="example.com"
+								   Size="MokaSize.Sm"
+								   spellcheck="false"
+								   autocomplete="off"
+								   data-autofocus />
+				</div>
+				<div class="mn-field">
+					<MokaSelect TValue="DnsRecordType"
+								Label="Type"
+								Items="@MapTypes"
+								Value="_type"
+								ValueChanged="@(value => _type = value)"
+								ValueSelector="@(type => type.ToString())"
+								Size="MokaSize.Sm"
+								aria-label="Record type" />
+				</div>
+			</div>
+			<RecentTargetsBar OnPick="@(value => _name = value)" />
+			<div class="mn-row">
+				<OriginNote />
+				<span class="mn-note">The delegation is asked of the root servers directly, without recursion. @Settings.DnsTimeoutSeconds s per server.</span>
+			</div>
+			<div class="mn-row">
+				<div class="mn-field mn-field--sweep">
+					<MokaTextField Label="PTR sweep of"
+								   Value="@_prefix"
+								   ValueChanged="@(value => _prefix = value ?? "")"
+								   Placeholder="192.168.1.0/24"
+								   Size="MokaSize.Sm"
+								   spellcheck="false"
+								   autocomplete="off"
+								   aria-label="Prefix to sweep for PTR records" />
+				</div>
+				<MokaButton Variant="MokaVariant.Outlined"
+							Size="MokaSize.Xs"
+							StartIcon="NetworkIcons.Dns"
+							Disabled="Busy"
+							OnClick="SweepAsync">Sweep PTRs</MokaButton>
+				<span class="mn-note">Every address asked for its name, up to a /24.</span>
+			</div>
+		</div>
+
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+
+		@if (Running && _sweepTotal > 0)
+		{
+			<div class="mn-result-line">Asking @Count(_sweepDone) of @Count(_sweepTotal) addresses for their names...</div>
+		}
+		else if (Running && _stage is { } stage)
+		{
+			<div class="mn-result-line">@(Char.ToUpperInvariant(stage[0]) + stage[1..])...</div>
+		}
+
+		@if (_views is { Any: true } views)
+		{
+			<div class="mn-results">
+				<div class="mn-row">
+					<CopyButton Text="@MapText.Render(views)" Label="Copy the map" />
+					<span class="mn-note">Every view that has run, as indented text.</span>
+				</div>
+
+				@if (_note is { } note)
+				{
+					<span class="mn-note">@note</span>
+				}
+
+				@if (views.Walk is { } walk)
+				{
+					<span class="mn-label">Delegation — @walk.Steps.Count @(walk.Steps.Count == 1 ? "server" : "servers") asked</span>
+					<div class="mn-map-levels" role="list" aria-label="Delegation">
+						@for (int index = 0; index < walk.Steps.Count; index++)
+						{
+							DelegationStep step = walk.Steps[index];
+							<div class="@StepClass(step.Kind)" role="listitem">
+								<div class="mn-map-server">
+									<span class="mn-map-step">@(index + 1)</span>
+									<span class="mn-map-name">@step.ServerName</span>
+									<span class="mn-map-address mn-mono">@DnsClient.Describe(step.Server)</span>
+									@if (step.Exchange is { } exchange)
+									{
+										<span class="mn-note">@Milliseconds(exchange.Elapsed)</span>
+									}
+								</div>
+								<span class="mn-map-outcome">@step.Outcome</span>
+							</div>
+						}
+					</div>
+					<div class="@(walk.ReachedAnswer ? "mn-result-line mn-result-line--good" : "mn-result-line mn-result-line--bad")">@walk.Summary</div>
+				}
+
+				@if (views.Chain is { } chain)
+				{
+					<span class="mn-label">CNAME chain — @chain.Hops.Count @(chain.Hops.Count == 1 ? "hop" : "hops")</span>
+					<div class="mn-map-hops" role="list" aria-label="CNAME chain">
+						@foreach (CnameHop hop in chain.Hops)
+						{
+							<div class="mn-map-hop" role="listitem">
+								<div class="mn-map-server">
+									<span class="mn-map-name">@hop.Name</span>
+									<span class="mn-map-address mn-mono">@DnsClient.Describe(hop.Server)</span>
+									<span class="mn-note">@Milliseconds(hop.Elapsed)</span>
+								</div>
+								@foreach (DnsRecord record in hop.Records)
+								{
+									<span class="mn-map-record"><span class="mn-map-type">@record.TypeName</span> <span class="mn-mono">@record.Data</span></span>
+								}
+								@if (hop.Records.Count == 0)
+								{
+									<span class="mn-map-outcome">no records</span>
+								}
+							</div>
+						}
+					</div>
+					<div class="@(chain.Outcome == CnameChainOutcome.Complete ? "mn-result-line mn-result-line--good" : "mn-result-line mn-result-line--warn")">@chain.Summary</div>
+				}
+
+				@if (views.Matrix is { } matrix)
+				{
+					<span class="mn-label">Resolvers — the same question, each in turn</span>
+					<div class="mn-table mn-table--map" role="table" aria-label="Resolver matrix">
+						<div class="mn-tr mn-th" role="row">
+							<span class="mn-c-res" role="columnheader">Resolver</span>
+							<span class="mn-c-ans" role="columnheader">Answer</span>
+							<span class="mn-c-code mn-td--end" role="columnheader">Code</span>
+							<span class="mn-c-time mn-td--end" role="columnheader">Time</span>
+						</div>
+						@foreach (ResolverMatrixRow row in matrix.Rows)
+						{
+							<div class="mn-tr" role="row" title="@row.Failure">
+								<span class="mn-td mn-c-res" role="cell">@row.Resolver</span>
+								<span class="@(row.Answered ? "mn-td mn-td--mono mn-c-ans" : "mn-td mn-td--mono mn-td--dim mn-c-ans")" role="cell">@(row.Answer ?? row.Failure)</span>
+								<span class="@CodeClass(row)" role="cell">@(row.Code ?? "")</span>
+								<span class="mn-td mn-td--mono mn-td--end mn-td--dim mn-c-time" role="cell">@(row.Answered ? Milliseconds(row.Elapsed) : "")</span>
+							</div>
+						}
+					</div>
+					@foreach (string disagreement in matrix.Disagreements)
+					{
+						<div class="mn-result-line mn-result-line--warn">@disagreement</div>
+					}
+				}
+
+				@if (views.Sweep is { } sweep && views.SweepPrefix is { } prefix)
+				{
+					<span class="mn-label">PTR sweep of @prefix</span>
+					<div class="mn-stats" aria-label="Sweep summary">
+						<div class="mn-stat"><span class="mn-label">Asked</span><span class="mn-stat-value">@Count(sweep.Items.Count)</span></div>
+						<div class="mn-stat"><span class="mn-label">Named</span><span class="mn-stat-value">@Count(sweep.Found)</span></div>
+						<div class="mn-stat"><span class="mn-label">Silent</span><span class="mn-stat-value">@Count(sweep.Silent)</span></div>
+					</div>
+					@if (sweep.Found > 0)
+					{
+						<div class="mn-table mn-table--sweep mn-table--scroll" role="table" aria-label="Names found">
+							<div class="mn-tr mn-th" role="row">
+								<span class="mn-c-addr" role="columnheader">Address</span>
+								<span class="mn-c-host" role="columnheader">Name</span>
+							</div>
+							@foreach (PtrSweepItem item in sweep.Items.Where(item => !item.Silent))
+							{
+								<div class="mn-tr" role="row">
+									<span class="mn-td mn-td--mono mn-td--dim mn-c-addr" role="cell">@item.Address</span>
+									<span class="mn-td mn-td--mono mn-c-host" role="cell">@item.Name</span>
+								</div>
+							}
+						</div>
+					}
+					<div class="mn-result-line">@Count(sweep.Silent) of @Count(sweep.Items.Count) addresses are silent: no PTR record, or nobody answered for them.</div>
+				}
+			</div>
+		}
+	</div>
+</ToolPageFrame>

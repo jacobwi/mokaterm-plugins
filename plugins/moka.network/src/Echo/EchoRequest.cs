@@ -1,7 +1,7 @@
 namespace Moka.Network.Echo;
 
-/// <summary>How one echo request is sent: its time to live, how long to wait and how many bytes it carries.</summary>
-public sealed record EchoRequest(int Ttl, TimeSpan Timeout, int PayloadSize)
+/// <summary>How one echo request is sent: its time to live, how long to wait, how many bytes it carries, and whether it may be broken up on the way.</summary>
+public sealed record EchoRequest(int Ttl, TimeSpan Timeout, int PayloadSize, bool DontFragment = false)
 {
 	public const int MinPayload = 0;
 

@@ -35,15 +35,23 @@
 	</SettingsSection>
 
 	<SettingsSection Title="Probes">
-		<SettingsRow Label="Reply wait" Description="How long ping and traceroute wait for each reply before counting it lost. Either tab can change it for one run.">
-			<NumberSetting TValue="int"
-						   Value="settings.PingTimeoutMilliseconds"
-						   ValueChanged="value => SaveAsync(s => s with { PingTimeoutMilliseconds = value })"
-						   Min="NetworkSettings.MinPingTimeoutMilliseconds"
-						   Max="NetworkSettings.MaxPingTimeoutMilliseconds"
-						   Suffix="ms"
-						   AriaLabel="Ping reply wait in milliseconds" />
-		</SettingsRow>
+			<SettingsRow Label="Reply wait" Description="How long ping and traceroute wait for each reply before counting it lost. Either tab can change it for one run.">
+				<NumberSetting TValue="int"
+							   Value="settings.PingTimeoutMilliseconds"
+							   ValueChanged="value => SaveAsync(s => s with { PingTimeoutMilliseconds = value })"
+							   Min="NetworkSettings.MinPingTimeoutMilliseconds"
+							   Max="NetworkSettings.MaxPingTimeoutMilliseconds"
+							   Suffix="ms"
+							   AriaLabel="Ping reply wait in milliseconds" />
+			</SettingsRow>
+			<SettingsRow Label="TCP ping port" Description="The port the ping tab dials for each request when it sends TCP connection attempts instead of ICMP. The tab starts with this port.">
+				<NumberSetting TValue="int"
+							   Value="settings.TcpPingPort"
+							   ValueChanged="value => SaveAsync(s => s with { TcpPingPort = value })"
+							   Min="NetworkSettings.MinTcpPingPort"
+							   Max="NetworkSettings.MaxTcpPingPort"
+							   AriaLabel="TCP ping port" />
+			</SettingsRow>
 		<SettingsRow Label="Port check time limit" Description="How long the port check waits for each connection before it counts the port as timed out.">
 			<NumberSetting TValue="int"
 						   Value="settings.ConnectTimeoutSeconds"
@@ -53,14 +61,26 @@
 						   Suffix="s"
 						   AriaLabel="Port check time limit in seconds" />
 		</SettingsRow>
-		<SettingsRow Label="Whois time limit" Description="How long each whois server gets, from connecting to its last byte.">
-			<NumberSetting TValue="int"
-						   Value="settings.WhoisTimeoutSeconds"
-						   ValueChanged="value => SaveAsync(s => s with { WhoisTimeoutSeconds = value })"
-						   Min="NetworkSettings.MinWhoisTimeoutSeconds"
-						   Max="NetworkSettings.MaxWhoisTimeoutSeconds"
-						   Suffix="s"
-						   AriaLabel="Whois time limit in seconds" />
-		</SettingsRow>
-	</SettingsSection>
-</SettingsPage>
+			<SettingsRow Label="Whois time limit" Description="How long each whois server gets, from connecting to its last byte.">
+				<NumberSetting TValue="int"
+							   Value="settings.WhoisTimeoutSeconds"
+							   ValueChanged="value => SaveAsync(s => s with { WhoisTimeoutSeconds = value })"
+							   Min="NetworkSettings.MinWhoisTimeoutSeconds"
+							   Max="NetworkSettings.MaxWhoisTimeoutSeconds"
+							   Suffix="s"
+							   AriaLabel="Whois time limit in seconds" />
+			</SettingsRow>
+		</SettingsSection>
+
+		<SettingsSection Title="Session tool">
+			<SettingsRow Label="Server command time limit" Description="How long the session tool's quick commands get on the connected server: a name lookup, the listening list, the program probe. Longer actions weigh their own wait.">
+				<NumberSetting TValue="int"
+							   Value="settings.ServerTimeoutSeconds"
+							   ValueChanged="value => SaveAsync(s => s with { ServerTimeoutSeconds = value })"
+							   Min="NetworkSettings.MinServerTimeoutSeconds"
+							   Max="NetworkSettings.MaxServerTimeoutSeconds"
+							   Suffix="s"
+							   AriaLabel="Server command time limit in seconds" />
+			</SettingsRow>
+		</SettingsSection>
+	</SettingsPage>

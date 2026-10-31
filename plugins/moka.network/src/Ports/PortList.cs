@@ -11,6 +11,9 @@ public static class PortList
 {
 	public const int MaxPorts = 10;
 
+	/// <summary>How many extra numbers the custom box may hold, beside the known list.</summary>
+	public const int MaxCustomPorts = 16;
+
 	private static readonly Dictionary<string, int> Services = new(StringComparer.OrdinalIgnoreCase)
 	{
 		["ftp"] = 21,
@@ -75,6 +78,54 @@ public static class PortList
 			if (found.Count > MaxPorts)
 			{
 				problem = $"At most {MaxPorts} ports at a time.";
+				return false;
+			}
+		}
+
+		ports = found;
+		problem = null;
+		return true;
+	}
+
+	/// <summary>
+	/// The custom box beside it: plain port numbers only, no service names, since a custom port is one the known list
+	/// has no name for. Empty is allowed and checks nothing extra.
+	/// </summary>
+	public static bool TryParseCustom(string? text, [NotNullWhen(true)] out IReadOnlyList<int>? ports, [NotNullWhen(false)] out string? problem)
+	{
+		ports = null;
+		string input = (text ?? "").Trim();
+		if (input.Length == 0)
+		{
+			ports = [];
+			problem = null;
+			return true;
+		}
+
+		if (input.Contains('-', StringComparison.Ordinal) || input.Contains(':', StringComparison.Ordinal))
+		{
+			problem = "No ranges here either: type single port numbers, separated by commas or spaces.";
+			return false;
+		}
+
+		List<int> found = [];
+		foreach (string part in input.Split(Separators, StringSplitOptions.RemoveEmptyEntries))
+		{
+			int port;
+			if (!int.TryParse(part, NumberStyles.None, CultureInfo.InvariantCulture, out port) || port is < 1 or > 65535)
+			{
+				problem = $"{Shorten(part)} is not a port number. A custom port runs from 1 to 65535; service names work in the Ports field above.";
+				return false;
+			}
+
+			if (!found.Contains(port))
+			{
+				found.Add(port);
+			}
+
+			if (found.Count > MaxCustomPorts)
+			{
+				problem = $"At most {MaxCustomPorts} custom ports at a time.";
 				return false;
 			}
 		}

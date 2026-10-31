@@ -1,0 +1,67 @@
+@inherits SessionSectionBase
+@using Moka.Network.Server
+
+<ToolPageFrame Title="Listening ports"
+			   Summary="@Summary"
+			   Loaded="@_probed"
+			   Loading="@Busy"
+			   PrimaryText="@(Running ? "Stop" : "Read again")"
+			   PrimaryIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Start)"
+			   PrimaryDisabled="@(Busy && !Running)"
+			   PrimaryTitle="@PrimaryTitle"
+			   OnPrimary="PrimaryAsync">
+	<div class="mn-stack">
+		<div class="mn-group">
+			<div class="mn-row">
+				<SessionOriginNote Session="Session" />
+				<span class="mn-note">From ss -tulpn on the server: tcp and udp, numbers only, no name lookups.</span>
+			</div>
+		</div>
+
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+		@if (Offline)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Info" Dense>The session is not connected. Reconnect it to read the server again.</MokaAlert>
+		}
+		@if (_absent)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Info" Dense>
+				This server has no ss (the iproute2 tools), so its listening ports cannot be listed here.
+			</MokaAlert>
+		}
+
+		@if (_rows.Count > 0)
+		{
+			<div class="mn-results">
+				@if (_hiddenProcesses)
+				{
+					<span class="mn-note">ss names a process only for sockets the logged-in account can look into; root sees every one.</span>
+				}
+				<div class="mn-table mn-table--scroll" style="--mn-columns: 56px 90px 1fr 1fr" role="table" aria-label="The server's listening sockets">
+					<div class="mn-tr mn-th" role="row">
+						<span role="columnheader">Net</span>
+						<span role="columnheader">State</span>
+						<span role="columnheader">Local address</span>
+						<span role="columnheader">Process</span>
+					</div>
+					@foreach (SsRow row in _rows)
+					{
+						<div class="mn-tr" role="row">
+							<span class="mn-td mn-td--mono" role="cell">@row.Netid</span>
+							<span class="mn-td mn-td--dim" role="cell">@row.State</span>
+							<span class="mn-td mn-td--mono" role="cell">@row.Local</span>
+							<span class="mn-td mn-td--mono" role="cell" title="@(row.ProcessDetail.Length > 0 ? row.ProcessDetail : null)">@Process(row)</span>
+						</div>
+					}
+				</div>
+			</div>
+		}
+		else if (_probed && _hasSs && !Busy && _error is null && Connected)
+		{
+			<p class="mn-note">Nothing is listening on the server, or ss printed nothing this account may see.</p>
+		}
+	</div>
+</ToolPageFrame>
