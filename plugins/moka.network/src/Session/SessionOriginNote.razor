@@ -1,0 +1,19 @@
+@using Mokaterm.Abstractions.Sessions
+
+@* Where every probe in the session tool starts: the machine the session is logged in on. That is the whole point of
+   this half of the Network Toolkit — the addresses, ports and paths a server sees are its own, not the desktop's. *@
+<span class="mn-origin" title="@Explanation">
+	<MokaStatusDot Size="MokaSize.Xs" Color="@(Connected ? MokaColor.Success : MokaColor.Error)" Glow />
+	<span>@(Connected ? "Runs from the session's server" : "The session is not connected")</span>
+</span>
+
+@code {
+	[Parameter]
+	public ISessionHandle? Session { get; set; }
+
+	private bool Connected => Session is { State: SessionState.Connected };
+
+	private string Explanation => Session is { } session
+		? $"Every probe leaves from {session.Host.Address}, the machine this session is logged in on."
+		: "Connect the session to run probes on its server.";
+}

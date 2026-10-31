@@ -1,0 +1,91 @@
+@inherits SessionSectionBase
+@using Moka.Network.Components
+@using Moka.Network.Server
+
+<ToolPageFrame Title="Capture"
+			   Summary="@Summary"
+			   Loaded="true"
+			   PrimaryText="@PrimaryText"
+			   PrimaryIcon="@(Capturing ? NetworkIcons.Stop : NetworkIcons.Start)"
+			   PrimaryDisabled="@(Busy && !Capturing)"
+			   PrimaryTitle="@PrimaryTitle"
+			   OnPrimary="PrimaryAsync">
+	<div class="mn-stack">
+		<div class="mn-group" @onkeydown="OnKeyAsync">
+			<div class="mn-fields">
+				<div class="mn-field mn-field--host">
+					<MokaTextField Label="Host" Value="@_host" ValueChanged="@(value => _host = value ?? "")" Placeholder="any host, or example.com" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" Disabled="Capturing" />
+				</div>
+				<div class="mn-field mn-field--fixed" style="max-width: 110px">
+					<MokaTextField Label="Port" Value="@_port" ValueChanged="@(value => _port = value ?? "")" Placeholder="any" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" Disabled="Capturing" />
+				</div>
+			</div>
+			<div class="mn-row">
+				<EnumSegmentedControl TEnum="CaptureProtocol" Value="_protocol" ValueChanged="@(value => _protocol = value)" Options="Protocols" AriaLabel="Protocol" Disabled="Capturing" />
+				<span class="mn-gap"></span>
+				<SessionOriginNote Session="Session" />
+			</div>
+			<div class="mn-row">
+				<span class="mn-note">Three fields, nothing more: tcpdump gets no free-text expression, so a capture cannot be pointed anywhere but these.</span>
+			</div>
+		</div>
+
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+		@if (_absent)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Info" Dense>This server has no tcpdump, so nothing can be captured here.</MokaAlert>
+		}
+		else if (_refused is { } refused)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@refused</MokaAlert>
+		}
+
+		<div class="mn-counts">
+			<span class="mn-note">@Count(_lines.Count) lines</span>
+			@if (_lines.Dropped > 0)
+			{
+				<span class="mn-note">The oldest @Count(_lines.Dropped) are counted but no longer listed.</span>
+			}
+			@if (Capturing)
+			{
+				<span class="mn-note">@_filter</span>
+			}
+			<span class="mn-gap"></span>
+			@if (_lines.Count > 0)
+			{
+				<CopyButton Text="@_lines.AllText()" Label="Copy capture" />
+			}
+		</div>
+
+		@if (_rows.Count > 0)
+		{
+			<div class="mn-table mn-table--scroll mn-table--live" style="--mn-columns: 92px 1fr 1fr 76px 2fr" role="table" aria-label="Captured packets">
+				@for (int index = _rows.Count - 1; index >= 0; index--)
+				{
+					CaptureEntry entry = _rows[index];
+					<div class="mn-tr" role="row">
+						<span class="mn-td mn-td--mono mn-td--dim" role="cell">@entry.Parsed.Time</span>
+						<span class="mn-td mn-td--mono" role="cell">@entry.Parsed.Source</span>
+						<span class="mn-td mn-td--mono" role="cell">@entry.Parsed.Destination</span>
+						<span class="mn-td mn-td--mono mn-td--dim" role="cell">@Protocol(entry)</span>
+						<span class="mn-td" role="cell">@entry.Parsed.Info</span>
+					</div>
+				}
+				<div class="mn-tr mn-th" role="row">
+					<span role="columnheader">Time</span>
+					<span role="columnheader">Source</span>
+					<span role="columnheader">Destination</span>
+					<span role="columnheader">Proto</span>
+					<span role="columnheader">Info</span>
+				</div>
+			</div>
+		}
+		else if (!Capturing)
+		{
+			<p class="mn-note">@(_probed ? "Start a capture to see the packets the server sends and receives." : "Asking the server what it has.")</p>
+		}
+	</div>
+</ToolPageFrame>

@@ -1,0 +1,159 @@
+/* The sweep input sits beside its button, wide enough for a prefix but not as wide as a host. */
+.mn-field--sweep {
+	flex: 1.5 1 180px;
+	max-width: 280px;
+}
+
+/* The delegation and the chain: one block per server asked, its outcome under it, the left border saying how it went. */
+.mn-map-levels,
+.mn-map-hops {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-sm);
+}
+
+.mn-map-level,
+.mn-map-hop {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	padding: 6px var(--moka-spacing-sm) 6px calc(var(--moka-spacing-sm) + 2px);
+	border: 1px solid var(--moka-color-outline-variant);
+	border-left: 3px solid var(--moka-color-outline);
+	border-radius: var(--moka-radius-sm);
+	background: var(--moka-color-surface);
+}
+
+.mn-map-level--referral {
+	border-left-color: var(--moka-color-info);
+}
+
+.mn-map-level--answer {
+	border-left-color: var(--moka-color-success);
+}
+
+.mn-map-level--nodata {
+	border-left-color: var(--moka-color-warning);
+}
+
+.mn-map-level--failed {
+	border-left-color: var(--moka-color-error);
+}
+
+/* Who was asked: the step's number, its name, its address, and how long it took, on one wrapping line. */
+.mn-map-server {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.mn-map-step {
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 10px;
+	font-weight: var(--moka-font-weight-semibold);
+}
+
+.mn-map-name {
+	overflow-wrap: anywhere;
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+}
+
+.mn-map-address {
+	color: var(--moka-color-on-surface-variant);
+}
+
+.mn-map-outcome {
+	color: var(--moka-color-on-surface-variant);
+	font-size: var(--moka-font-size-xs);
+	overflow-wrap: anywhere;
+}
+
+/* One record of a hop: the type in a small box, the data in mono beside it. */
+.mn-map-record {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	padding-inline-start: var(--moka-spacing-sm);
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.mn-map-type {
+	flex: 0 0 auto;
+	padding: 0 4px;
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-sm);
+	color: var(--moka-color-on-surface-variant);
+	font-size: 9px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.06em;
+	line-height: 16px;
+	text-transform: uppercase;
+}
+
+/* The resolver matrix: resolver, answer, code, time. */
+.mn-table--map {
+	--mn-columns: minmax(120px, 1fr) minmax(0, 2.4fr) 92px 72px;
+}
+
+.mn-table--map .mn-tr {
+	grid-template-areas: "res ans code time";
+}
+
+.mn-c-res {
+	grid-area: res;
+}
+
+.mn-c-ans {
+	grid-area: ans;
+}
+
+.mn-c-code {
+	grid-area: code;
+}
+
+.mn-c-time {
+	grid-area: time;
+}
+
+/* The sweep's found names: address then name. */
+.mn-table--sweep {
+	--mn-columns: minmax(110px, 1fr) minmax(0, 2fr);
+}
+
+.mn-table--sweep .mn-tr {
+	grid-template-areas: "addr host";
+}
+
+.mn-c-addr {
+	grid-area: addr;
+}
+
+.mn-c-host {
+	grid-area: host;
+}
+
+/* A narrow page puts the answer under the resolver, where it can use the whole width. */
+@container mt-page (max-width: 559px) {
+	.mn-table--map {
+		--mn-columns: minmax(0, 1fr) auto;
+	}
+
+	/* Doubled classes: the tool's shared row rules reach in through ::deep with the weight of two classes and an attribute. */
+	.mn-table.mn-table--map .mn-tr {
+		grid-template-areas:
+			"res code time"
+			"ans ans ans";
+		row-gap: 2px;
+		padding-top: 5px;
+		padding-bottom: 5px;
+	}
+
+	.mn-table.mn-table--map .mn-tr.mn-th {
+		display: none;
+	}
+}

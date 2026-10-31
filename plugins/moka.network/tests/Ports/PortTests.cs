@@ -40,6 +40,33 @@ public sealed class PortTests
 		Assert.Null(PortList.ServiceName(31337));
 	}
 
+	[Theory]
+	[InlineData("", new int[0])]
+	[InlineData("9", new[] { 9 })]
+	[InlineData("9, 3000 8080", new[] { 9, 3000, 8080 })]
+	[InlineData("53;53 53", new[] { 53 })]
+	[InlineData("1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16", new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 })]
+	public void CustomList_ReadsPlainNumbersAndNothingElse(string text, int[] expected)
+	{
+		Assert.True(PortList.TryParseCustom(text, out IReadOnlyList<int>? ports, out string? problem), problem);
+		Assert.Equal(expected, ports);
+	}
+
+	[Theory]
+	[InlineData("1-100", "No ranges")]
+	[InlineData("80:443", "No ranges")]
+	[InlineData("ssh", "not a port number")]
+	[InlineData("0", "not a port number")]
+	[InlineData("65536", "not a port number")]
+	[InlineData("+80", "not a port number")]
+	[InlineData("1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17", "At most 16 custom ports")]
+	public void CustomList_RefusesRangesNamesAndLongLists(string text, string expected)
+	{
+		Assert.False(PortList.TryParseCustom(text, out IReadOnlyList<int>? ports, out string? problem));
+		Assert.Null(ports);
+		Assert.Contains(expected, problem, StringComparison.Ordinal);
+	}
+
 	[Fact]
 	public async Task Check_ReadsTheGreetingAsPlainText()
 	{

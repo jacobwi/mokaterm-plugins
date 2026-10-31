@@ -10,22 +10,26 @@ namespace Moka.Network.Tool;
 public sealed partial class NetworkTool : AppToolBase
 {
 	private const string DnsId = "dns";
+	private const string MapId = "map";
 	private const string PingId = "ping";
 	private const string PortId = "port";
 	private const string TraceId = "trace";
 	private const string WhoisId = "whois";
 	private const string WakeId = "wake";
 	private const string SubnetId = "subnet";
+	private const string ConnectionsId = "connections";
 
 	private static readonly IReadOnlyList<ToolNavEntry> Entries =
 	[
 		new(DnsId, "DNS lookup", NetworkIcons.Dns),
+		new(MapId, "Map", NetworkIcons.Map),
 		new(PingId, "Ping", NetworkIcons.Ping),
 		new(PortId, "Port check", NetworkIcons.Port),
 		new(TraceId, "Traceroute", NetworkIcons.Trace),
 		new(WhoisId, "Whois", NetworkIcons.Whois),
 		new(WakeId, "Wake-on-LAN", NetworkIcons.Wake),
 		new(SubnetId, "Subnets", NetworkIcons.Subnet),
+		new(ConnectionsId, "Connections", NetworkIcons.Network),
 	];
 
 	private string _current = DnsId;

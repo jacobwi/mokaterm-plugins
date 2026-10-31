@@ -1,0 +1,50 @@
+@* The desktop half of the connection table: this machine's own TCP connections and the ports it listens on, read
+   again every few seconds while the panel is on screen. Not wired anywhere yet: the Network Toolkit app tool places
+   it when its tab is added. *@
+<div class="mn-panel">
+	<div class="mn-panel-head">
+		<span class="mn-label">This machine's connections</span>
+		<span class="mn-note">@Read</span>
+	</div>
+	<div class="mn-note">Read from this computer's own connection table. The .NET APIs it reads do not say which process owns a connection, so the table cannot either.</div>
+
+	@if (_connections.Count > 0)
+	{
+		<div class="mn-table mn-table--scroll" role="table" aria-label="TCP connections">
+			<div class="mn-tr mn-th" role="row">
+				<span role="columnheader">Local</span>
+				<span role="columnheader">Remote</span>
+				<span role="columnheader">State</span>
+			</div>
+			@foreach (LocalConnectionRow row in _connections)
+			{
+				<div class="mn-tr" role="row">
+					<span class="mn-td mn-td--mono" role="cell">@row.Local</span>
+					<span class="mn-td mn-td--mono" role="cell">@row.Remote</span>
+					<span class="mn-td" role="cell">@row.State</span>
+				</div>
+			}
+		</div>
+	}
+	else
+	{
+		<p class="mn-note">This computer holds no TCP connections right now.</p>
+	}
+
+	@if (_listeners.Count > 0)
+	{
+		<div class="mn-table mn-table--scroll" role="table" aria-label="Listening ports">
+			<div class="mn-tr mn-th" role="row">
+				<span role="columnheader">Protocol</span>
+				<span role="columnheader">Listening on</span>
+			</div>
+			@foreach (LocalListenerRow row in _listeners)
+			{
+				<div class="mn-tr" role="row">
+					<span class="mn-td mn-td--mono" role="cell">@row.Protocol</span>
+					<span class="mn-td mn-td--mono" role="cell">@row.Local</span>
+				</div>
+			}
+		</div>
+	}
+</div>

@@ -1,0 +1,86 @@
+/* A self-contained panel: it ships unwired, so it styles itself rather than relying on the tool's sheet. */
+.mn-panel {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.mn-panel-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: var(--moka-spacing-sm);
+}
+
+.mn-panel .mn-label {
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 10px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.mn-panel .mn-note {
+	color: var(--moka-color-on-surface-variant);
+	font-size: var(--moka-font-size-xs);
+}
+
+.mn-panel .mn-table {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	max-height: 320px;
+	overflow-y: auto;
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+	background: var(--moka-color-surface);
+}
+
+.mn-panel .mn-tr {
+	display: grid;
+	grid-template-columns: 1fr 1fr 140px;
+	align-items: center;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+	min-height: 28px;
+	padding: 3px var(--moka-spacing-sm);
+	border-top: 1px solid var(--moka-color-outline-variant);
+	font-size: var(--moka-font-size-sm);
+}
+
+.mn-panel .mn-table[aria-label="Listening ports"] .mn-tr {
+	grid-template-columns: 80px 1fr;
+}
+
+.mn-panel .mn-tr:first-child {
+	border-top: 0;
+}
+
+.mn-panel .mn-tr:hover {
+	background: var(--moka-color-surface-hover);
+}
+
+.mn-panel .mn-th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	min-height: 24px;
+	background: var(--moka-color-surface-2);
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 9px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.mn-panel .mn-td {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.mn-panel .mn-td--mono {
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+}

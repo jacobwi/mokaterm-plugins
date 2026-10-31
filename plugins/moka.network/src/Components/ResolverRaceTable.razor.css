@@ -1,0 +1,3 @@
+.mn-table--race {
+	--mn-columns: minmax(130px, 1fr) minmax(0, 1.8fr) 80px;
+}

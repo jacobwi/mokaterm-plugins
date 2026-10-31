@@ -19,7 +19,7 @@ public sealed class SystemPinger : IPinger
 		ArgumentNullException.ThrowIfNull(address);
 		ArgumentNullException.ThrowIfNull(request);
 		byte[] payload = Payload(Math.Clamp(request.PayloadSize, EchoRequest.MinPayload, EchoRequest.MaxPayload));
-		PingOptions options = new(Math.Clamp(request.Ttl, EchoRequest.MinTtl, EchoRequest.MaxTtl), dontFragment: false);
+		PingOptions options = new(Math.Clamp(request.Ttl, EchoRequest.MinTtl, EchoRequest.MaxTtl), request.DontFragment);
 		using Ping ping = new();
 		long started = Stopwatch.GetTimestamp();
 		PingReply reply;

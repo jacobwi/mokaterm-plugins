@@ -10,16 +10,19 @@ namespace Moka.Network.Tool;
 
 /// <summary>
 /// Checks whether a few TCP ports on one host accept a connection: all at once, each with its own time limit, each
-/// row filled in as its answer comes. A known list rather than a range keeps it a check, not a scan.
+/// row filled in as its answer comes. A known list rather than a range keeps it a check, not a scan; the custom box
+/// adds numbers the known list has no name for, for this session only.
 /// </summary>
 public sealed partial class PortSection : NetworkViewBase
 {
 	private readonly List<PortRow> _rows = [];
 	private string _host = "";
 	private string _ports = "22";
+	private string _custom = "";
 	private bool _greeting = true;
 	private bool _greetingAsked;
 	private AddressChoice _choice;
+	private HashSet<int> _customOnly = [];
 	private string? _target;
 	private string? _error;
 
@@ -68,12 +71,16 @@ public sealed partial class PortSection : NetworkViewBase
 	private async Task CheckAsync()
 	{
 		_error = null;
-		if (!HostInput.TryParse(_host, out HostTarget? target, out string? problem) || !PortList.TryParse(_ports, out IReadOnlyList<int>? ports, out problem))
+		if (!HostInput.TryParse(_host, out HostTarget? target, out string? problem)
+			|| !PortList.TryParse(_ports, out IReadOnlyList<int>? ports, out problem)
+			|| !PortList.TryParseCustom(_custom, out IReadOnlyList<int>? custom, out problem))
 		{
 			_error = problem;
 			return;
 		}
 
+		// A number typed twice, or once in each box, is checked once; only the extras carry the custom label.
+		int[] extra = [.. custom.Where(port => !ports.Contains(port))];
 		Recent.Remember(target.Host);
 		AddressChoice choice = _choice;
 		bool greeting = _greeting;
@@ -81,6 +88,8 @@ public sealed partial class PortSection : NetworkViewBase
 		CancellationTokenSource run = BeginRun();
 		_rows.Clear();
 		_rows.AddRange(ports.Select(port => new PortRow(port)));
+		_rows.AddRange(extra.Select(port => new PortRow(port)));
+		_customOnly = [.. extra];
 		_greetingAsked = greeting;
 		_target = $"Looking up {target.Host}";
 		StateHasChanged();
@@ -91,7 +100,7 @@ public sealed partial class PortSection : NetworkViewBase
 				{
 					IPAddress address = await TargetResolver.ResolveAsync(target, choice, TargetResolver.DefaultTimeout, run.Token);
 					Post(() => _target = target.IsAddress ? $"Connecting to {address}" : $"Connecting to {target.Host} at {address}");
-					await Task.WhenAll(ports.Select(async port =>
+					await Task.WhenAll(_rows.Select(row => row.Port).Distinct().Select(async port =>
 					{
 						PortResult result = await PortCheck.CheckAsync(address, port, timeout, greeting, run.Token);
 						Post(() => SetResult(result));

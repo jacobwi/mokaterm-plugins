@@ -1,4 +1,6 @@
-# Next release (Network Toolkit 1.2.0)
+# Next: to be planned
+
+# Released: Network Toolkit 1.2.0
 
 Planned after 1.1.0 ships. The theme is the network toolkit's second identity: today every probe runs from the user's
 own computer, and most of these add the server's vantage point over an SSH session.
