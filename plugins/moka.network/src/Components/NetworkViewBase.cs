@@ -1,6 +1,7 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Moka.Network.Settings;
+using Moka.Network.Targets;
 using Mokaterm.Abstractions.Interaction;
 using Mokaterm.Abstractions.Platform;
 using Mokaterm.Abstractions.Settings;
@@ -31,6 +32,10 @@ public abstract class NetworkViewBase : ComponentBase, IDisposable
 
 	[Inject]
 	protected TimeProvider Time { get; set; } = default!;
+
+	/// <summary>The hosts this app run has already asked about, which every tab offers under its input.</summary>
+	[Inject]
+	protected RecentTargets Recent { get; set; } = default!;
 
 	protected NetworkSettings Settings => SettingsService.Get<NetworkSettings>().Clamped();
 

@@ -38,9 +38,19 @@ public sealed class PasswordAlphabet
 				return symbolProblem;
 			}
 
-			if (Kept(options.SymbolSet, options.AvoidLookAlikes).Length == 0)
+			if (Kept(options.SymbolSet, options).Length == 0)
 			{
 				return "Every symbol in the set is a look-alike, so none is left.";
+			}
+		}
+
+		// The excluded characters and the look-alikes leave nothing of a chosen kind: said in words here rather than
+		// found by a generator that can never satisfy "at least one of each kind".
+		foreach (CharacterKind kind in Enum.GetValues<CharacterKind>())
+		{
+			if (options.Has(kind) && Kept(SourceOf(kind, options), options).Length == 0)
+			{
+				return $"Every {NameOf(kind)} is left out, so that kind has nothing to draw from.";
 			}
 		}
 
@@ -67,15 +77,7 @@ public sealed class PasswordAlphabet
 		{
 			if (options.Has(kind))
 			{
-				string source = kind switch
-				{
-					CharacterKind.Lowercase => CharacterSets.Lowercase,
-					CharacterKind.Uppercase => CharacterSets.Uppercase,
-					CharacterKind.Digit => CharacterSets.Digits,
-					_ => options.SymbolSet,
-				};
-
-				classes.Add(new CharacterClass(kind, Kept(source, options.AvoidLookAlikes)));
+				classes.Add(new CharacterClass(kind, Kept(SourceOf(kind, options), options)));
 			}
 		}
 
@@ -96,9 +98,30 @@ public sealed class PasswordAlphabet
 		return true;
 	}
 
-	private static string Kept(string characters, bool avoidLookAlikes)
+	private static string SourceOf(CharacterKind kind, PasswordOptions options) => kind switch
 	{
-		string distinct = CharacterSets.Distinct(characters);
-		return avoidLookAlikes ? CharacterSets.WithoutLookAlikes(distinct) : distinct;
+		CharacterKind.Lowercase => CharacterSets.Lowercase,
+		CharacterKind.Uppercase => CharacterSets.Uppercase,
+		CharacterKind.Digit => CharacterSets.Digits,
+		_ => options.SymbolSet,
+	};
+
+	private static string NameOf(CharacterKind kind) => kind switch
+	{
+		CharacterKind.Lowercase => "lowercase letter",
+		CharacterKind.Uppercase => "capital letter",
+		CharacterKind.Digit => "digit",
+		_ => "symbol",
+	};
+
+	private static string Kept(string characters, PasswordOptions options)
+	{
+		string kept = CharacterSets.Distinct(characters);
+		if (options.AvoidLookAlikes)
+		{
+			kept = CharacterSets.WithoutLookAlikes(kept);
+		}
+
+		return CharacterSets.Without(kept, options.Excluded);
 	}
 }

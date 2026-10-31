@@ -1,7 +1,7 @@
 using System.Net;
 using Moka.DevTools.Components;
 using Moka.DevTools.Jwt;
-using Moka.DevTools.Tests.Rendering;
+using Mokaterm.Plugin.TestHost;
 
 namespace Moka.DevTools.Tests.Jwt;
 

@@ -9,9 +9,6 @@ namespace Moka.Passwords.Strength;
 /// </summary>
 public static class Entropy
 {
-	/// <summary>What one word of the list adds: log2 of 7776, about 12.9 bits.</summary>
-	public static double BitsPerWord { get; } = Math.Log2(WordList.Count);
-
 	/// <summary>Every password the options allow is equally likely, so the bits are log2 of how many there are.</summary>
 	/// <exception cref="ArgumentException">The options cannot make a password.</exception>
 	public static double OfPassword(PasswordOptions options)
@@ -67,7 +64,7 @@ public static class Entropy
 			throw new ArgumentException(problem, nameof(options));
 		}
 
-		double bits = options.Words * BitsPerWord;
+		double bits = options.Words * Math.Log2(options.WordList.Count);
 		if (options.AddDigit)
 		{
 			bits += Math.Log2(CharacterSets.Digits.Length * (double)options.Words);

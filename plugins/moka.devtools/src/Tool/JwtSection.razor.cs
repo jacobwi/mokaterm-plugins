@@ -7,6 +7,7 @@ using Moka.DevTools.Jwt;
 using Moka.DevTools.Text;
 using Moka.Red.Core.Enums;
 using Mokaterm.UI.Common.Components;
+using Mokaterm.UI.Common.PluginUi;
 
 namespace Moka.DevTools.Tool;
 
@@ -80,9 +81,9 @@ public sealed partial class JwtSection : DevToolViewBase, IDisposable
 					_ => "auth_time, signed in",
 				};
 
-				facts.Add(time.When is { } when
-					? new Fact(label, TimeFormats.IsoUtc(when), Note: $"{Relative(time.Claim, when, now)}. Local {TimeFormats.InZone(when, TimeZoneInfo.Local)}")
-					: new Fact(label, time.Problem ?? "", Mono: false));
+			facts.Add(time.When is { } when
+				? new Fact(label, [TimeFormats.IsoUtc(when)], Mono: true, Note: $"{Relative(time.Claim, when, now)}. Local {TimeFormats.InZone(when, TimeZoneInfo.Local)}")
+				: new Fact(label, [time.Problem ?? ""], Mono: false));
 			}
 
 			return facts;
@@ -93,10 +94,10 @@ public sealed partial class JwtSection : DevToolViewBase, IDisposable
 		? []
 		:
 		[
-			new Fact("Algorithm", jwt.Algorithm ?? "none named", Mono: false),
-			new Fact("Length", jwt.Signature.Length == 1 ? "1 byte" : string.Create(CultureInfo.CurrentCulture, $"{jwt.Signature.Length:N0} bytes"), Mono: false),
-			new Fact("Base64url", jwt.SignatureText.Length > 0 ? jwt.SignatureText : "(empty)", Copyable: jwt.SignatureText.Length > 0),
-			new Fact("Hex", jwt.Signature.Length > 0 ? HexText.Format(jwt.Signature) : "(empty)", Copyable: jwt.Signature.Length > 0),
+			new Fact("Algorithm", [jwt.Algorithm ?? "none named"], Mono: false),
+			new Fact("Length", [jwt.Signature.Length == 1 ? "1 byte" : string.Create(CultureInfo.CurrentCulture, $"{jwt.Signature.Length:N0} bytes")], Mono: false),
+			new Fact("Base64url", [jwt.SignatureText.Length > 0 ? jwt.SignatureText : "(empty)"], Mono: true, Copyable: jwt.SignatureText.Length > 0),
+			new Fact("Hex", [jwt.Signature.Length > 0 ? HexText.Format(jwt.Signature) : "(empty)"], Mono: true, Copyable: jwt.Signature.Length > 0),
 		];
 
 	private string NotCheckedText => Family switch

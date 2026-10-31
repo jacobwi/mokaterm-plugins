@@ -13,6 +13,12 @@ public sealed record PassphraseOptions
 
 	public int Words { get; init; } = DefaultWords;
 
+	/// <summary>Draws from the EFF short list (1296 short words) instead of the large one (7776), so a passphrase is quicker to type.</summary>
+	public bool ShortWords { get; init; }
+
+	/// <summary>The list the words are drawn from.</summary>
+	public WordList WordList => WordList.For(ShortWords);
+
 	public PassphraseSeparator Separator { get; init; } = PassphraseSeparator.Dash;
 
 	/// <summary>The separator while <see cref="Separator"/> is <see cref="PassphraseSeparator.Custom"/>.</summary>
@@ -43,8 +49,8 @@ public sealed record PassphraseOptions
 
 	/// <summary>
 	/// Whether different words can spell the same passphrase. Without a separator or capitals the word boundaries are
-	/// lost, so a few passphrases can be made two ways and the strength is an upper bound. The four words with a dash in
-	/// the list do not collide behind a dash separator, because none of them splits into two words of the list.
+	/// lost, so a few passphrases can be made two ways and the strength is an upper bound. The words with a dash in
+	/// either list do not collide behind a dash separator, because none of them splits into two words of its list.
 	/// </summary>
 	public bool BoundariesAmbiguous => SeparatorText.Length == 0 && !Capitalize;
 

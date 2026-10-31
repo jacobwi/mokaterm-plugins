@@ -157,7 +157,7 @@ public static partial class CertificateReader
 					Pin = pin,
 					Usable = false,
 					Limitation = oid == OidNames.Ed25519
-						? "Ed25519 is not supported in this version: the key is shown, not used."
+						? "Ed25519 is shown, not used: .NET's certificate APIs cannot make or use Ed25519 keys yet, so the runtime must add it first."
 						: $"{name} keys are shown, not used: this tool signs, verifies and encrypts with RSA and ECDSA.",
 				};
 			}

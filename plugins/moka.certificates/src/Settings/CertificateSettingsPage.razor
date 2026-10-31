@@ -8,7 +8,7 @@
    label and description. *@
 <SettingsPage Title="Certificates" OnReset="ResetAsync">
 	<SettingsSection Title="New keys and certificates">
-		<SettingsRow Label="Key algorithm" Description="What the Generate section starts with. Ed25519 is not offered in this version.">
+		<SettingsRow Label="Key algorithm" Description="What the Generate section starts with. Ed25519 cannot be offered yet: .NET's certificate APIs cannot make Ed25519 certificates, so the runtime must add it first.">
 			<EnumSegmentedControl TEnum="KeyAlgorithm"
 								  Value="settings.KeyAlgorithm"
 								  ValueChanged="value => SaveAsync(s => s with { KeyAlgorithm = value })"
@@ -79,6 +79,15 @@
 	</SettingsSection>
 
 	<SettingsSection Title="System page">
+		<SettingsRow Label="Refresh every" Description="How often the System view's Certificates page reads the server again while it is shown. 0 turns it off.">
+			<NumberSetting TValue="int"
+						   Value="settings.RefreshSeconds"
+						   ValueChanged="value => SaveAsync(s => s with { RefreshSeconds = value })"
+						   Min="CertificateSettings.MinRefreshSeconds"
+						   Max="CertificateSettings.MaxRefreshSeconds"
+						   Suffix="s"
+						   AriaLabel="System page refresh in seconds" />
+		</SettingsRow>
 		<SettingsRow Label="Extra paths" Description="More certificate files or folders on servers for the System view's Certificates page to read, separated by commas. A folder is read for its .pem, .crt, .cer and .cert files." Stacked>
 			<TextSetting Value="@settings.ExtraPaths"
 						 ValueChanged="value => SaveAsync(s => s with { ExtraPaths = value })"

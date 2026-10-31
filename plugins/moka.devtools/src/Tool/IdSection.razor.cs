@@ -4,6 +4,7 @@ using Moka.DevTools.Dates;
 using Moka.DevTools.Ids;
 using Moka.DevTools.Text;
 using Mokaterm.UI.Common.Components;
+using Mokaterm.UI.Common.PluginUi;
 
 namespace Moka.DevTools.Tool;
 
@@ -74,12 +75,12 @@ public sealed partial class IdSection : DevToolViewBase
 
 	private List<Fact> ReportFacts(IdReport report)
 	{
-		List<Fact> facts = [new("Canonical", report.Canonical, Copyable: true)];
+		List<Fact> facts = [new("Canonical", [report.Canonical], Mono: true, Copyable: true)];
 		foreach (IdFact fact in report.Facts)
 		{
 			facts.Add(fact.Label == "Time" && report.Time is { } time
-				? new Fact("Time", fact.Value, Note: $"{RelativeTime.Describe(time, Now)}. Local {TimeFormats.InZone(time, TimeZoneInfo.Local)}")
-				: new Fact(fact.Label, fact.Value, fact.Mono, Copyable: fact.Label.StartsWith("As ", StringComparison.Ordinal)));
+				? new Fact("Time", [fact.Value], Mono: true, Note: $"{RelativeTime.Describe(time, Now)}. Local {TimeFormats.InZone(time, TimeZoneInfo.Local)}")
+				: new Fact(fact.Label, [fact.Value], fact.Mono, Copyable: fact.Label.StartsWith("As ", StringComparison.Ordinal)));
 		}
 
 		return facts;

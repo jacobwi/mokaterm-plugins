@@ -151,7 +151,7 @@
 									 role="button"
 									 tabindex="0"
 									 @onclick="@(() => _certificateIndex = position)">
-									<MokaStatusDot Size="MokaSize.Xs" Color="@StatusChip.ColorOf(certificate.Expiry)" Glow="@(certificate.Expiry != ExpiryState.Valid)" />
+									<MokaStatusDot Size="MokaSize.Xs" Color="@ExpiryColor.Of(certificate.Expiry)" Glow="@(certificate.Expiry != ExpiryState.Valid)" />
 									<span class="mta-cell">@certificate.Title</span>
 									<span class="mta-cell mta-dim mta-mono">@(position == 0 ? "server" : certificate.IsSelfSigned == true ? "root" : "chain")</span>
 								</div>

@@ -3,7 +3,7 @@
 @* Everything about one certificate, the same in the Inspect view, a server's chain and the System page. *@
 <div class="mc-details">
 	<ChipRow>
-		<StatusChip Text="@CertificateReport.ExpiryName(Info.Expiry)" Color="StatusChip.ColorOf(Info.Expiry)" Glow="@(Info.Expiry != ExpiryState.Valid)" />
+		<StatusChip Text="@CertificateReport.ExpiryName(Info.Expiry)" Color="ExpiryColor.Of(Info.Expiry)" Glow="@(Info.Expiry != ExpiryState.Valid)" />
 		<span class="mc-details-when">@CertificateReport.ExpiryText(Info)</span>
 		@if (Info.IsCertificateAuthority)
 		{

@@ -53,7 +53,7 @@
 					<EnumSegmentedControl TEnum="EllipticCurve" Value="_curve" ValueChanged="@(value => _curve = value)" Options="Curves" AriaLabel="Curve" Disabled="_busy" />
 				}
 			</div>
-			<span class="mc-note">Ed25519 is not offered in this version: most CAs and TLS stacks still expect RSA or ECDSA.</span>
+			<span class="mc-note">Ed25519 cannot be offered yet: .NET's certificate APIs cannot make Ed25519 certificates, so the runtime must add it first. Most CAs and TLS stacks also still expect RSA or ECDSA.</span>
 		</div>
 	}
 
@@ -162,6 +162,7 @@
 						   FileName="@FileNameFrom(output.Title, ".crt")"
 						   Bytes="@output.Certificate?.Der"
 						   BytesFileName="@FileNameFrom(output.Title, ".cer")"
+						   BytesLabel="Save DER"
 						   CopyName="Certificate">
 					<Actions>
 						<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="CertificateIcons.Inspect" OnClick="@(() => OnInspect.InvokeAsync(certificatePem + output.ChainPem))">Inspect</MokaButton>
@@ -182,6 +183,7 @@
 						   FileName="@FileNameFrom(output.Title, ".csr")"
 						   Bytes="@output.RequestDer"
 						   BytesFileName="@FileNameFrom(output.Title, ".csr.der")"
+						   BytesLabel="Save DER"
 						   CopyName="Signing request">
 					<Actions>
 						<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="CertificateIcons.Inspect" OnClick="@(() => OnInspect.InvokeAsync(requestPem))">Inspect</MokaButton>

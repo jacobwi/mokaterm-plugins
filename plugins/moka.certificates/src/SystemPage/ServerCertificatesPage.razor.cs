@@ -12,9 +12,10 @@ using Mokaterm.UI.Common.ToolPages;
 namespace Moka.Certificates.SystemPage;
 
 /// <summary>
-/// The certificates a server uses: certbot's lineages, the files nginx and Apache name, and the extra paths from
-/// settings, each read through the view's script runner and described by the same reader the tool uses. Renewals and
-/// reloads are reviewed changes, as root.
+/// The certificates a server uses: certbot's lineages, the files nginx, Apache, Caddy, HAProxy, lighttpd and Traefik
+/// name, and the extra paths from settings, each read through the view's script runner and described by the same
+/// reader the tool uses. It reads again on the plugin's refresh setting while the view shows, since renewals and
+/// reissues change what is there. Renewals and reloads are reviewed changes, as root.
 /// </summary>
 public sealed partial class ServerCertificatesPage : SystemPageBase
 {
@@ -34,6 +35,15 @@ public sealed partial class ServerCertificatesPage : SystemPageBase
 
 	[Inject]
 	private TimeProvider Time { get; set; } = default!;
+
+	// Read once when the page opens: a changed interval applies the next time it is shown.
+	protected override void OnInitialized()
+	{
+		if (SettingsService.Get<CertificateSettings>().Clamped().RefreshSeconds is > 0 and int seconds)
+		{
+			StartPolling(TimeSpan.FromSeconds(seconds), PollAsync);
+		}
+	}
 
 	private bool HasCertbot => Context.Server.HasCommand(ServerCertificateCommands.Certbot);
 
@@ -91,24 +101,35 @@ public sealed partial class ServerCertificatesPage : SystemPageBase
 		}
 	}
 
-	private string LookedIn
-	{
-		get
+		private string LookedIn
 		{
-			List<string> places = [];
-			places.Add(HasCertbot ? "certbot certificates" + (Context.CanReadAsRoot ? "" : " (needs root mode)") : "certbot (not installed)");
-			places.Add("/etc/letsencrypt/live");
-			places.Add(Context.Server.HasCommand(ServerCertificateCommands.Nginx) ? "nginx -T" : "nginx (not installed)");
-			places.Add("SSLCertificateFile lines under " + string.Join(", ", ServerCertificateCommands.ApacheFolders));
-			int extra = _settings.ExtraPathList().Count;
-			places.Add(extra == 0 ? "no extra paths (add some in Settings, Plugins, Certificates)" : string.Create(CultureInfo.CurrentCulture, $"{extra} extra paths from Settings"));
-			return "Looked in " + string.Join("; ", places) + ".";
+			get
+			{
+				List<string> places = [];
+				places.Add(HasCertbot ? "certbot certificates" + (Context.CanReadAsRoot ? "" : " (needs root mode)") : "certbot (not installed)");
+				places.Add("/etc/letsencrypt/live");
+				places.Add(Context.Server.HasCommand(ServerCertificateCommands.Nginx) ? "nginx -T" : "nginx (not installed)");
+				places.Add("SSLCertificateFile lines under " + string.Join(", ", ServerCertificateCommands.ApacheFolders));
+				places.Add("tls lines in " + ServerCertificateCommands.Caddyfile);
+				places.Add("crt and crt-list in " + ServerCertificateCommands.HaproxyConfiguration);
+				places.Add("ssl.pemfile in " + ServerCertificateCommands.LighttpdConfiguration);
+				places.Add("certFile values under " + ServerCertificateCommands.TraefikFolder);
+				int extra = _settings.ExtraPathList().Count;
+				places.Add(extra == 0 ? "no extra paths (add some in Settings, Plugins, Certificates)" : string.Create(CultureInfo.CurrentCulture, $"{extra} extra paths from Settings"));
+				return "Looked in " + string.Join("; ", places) + ".";
+			}
 		}
-	}
 
 	protected override async Task LoadAsync(CancellationToken cancellationToken)
 	{
 		_settings = SettingsService.Get<CertificateSettings>().Clamped();
+		await ReadCertificatesAsync(cancellationToken);
+	}
+
+	/// <summary>Reads the discovery script and then the files it found. A failure other than a script that did not run is the frame's error.</summary>
+	/// <exception cref="SystemScriptException">A script failed, or did not run to its end.</exception>
+	private async Task ReadCertificatesAsync(CancellationToken cancellationToken)
+	{
 		bool asRoot = ReadAsRoot;
 		SystemScriptResult discovered = await ReadAsync(ServerCertificateCommands.Discover(Context.Server, _settings.ExtraPathList(), asRoot), cancellationToken);
 		if (!discovered.Succeeded)
@@ -134,6 +155,30 @@ public sealed partial class ServerCertificatesPage : SystemPageBase
 			.OrderBy(file => file.Leaf is null)
 			.ThenBy(file => file.Leaf?.NotAfter ?? DateTimeOffset.MaxValue)];
 		ApplyFilter();
+	}
+
+	private async Task PollAsync()
+	{
+		if (LoadError is not null)
+		{
+			return;
+		}
+
+		try
+		{
+			await ReadCertificatesAsync(Lifetime);
+		}
+		catch (SystemScriptException)
+		{
+			// The next read the user asks for shows what went wrong; a poll keeps what is on screen.
+			return;
+		}
+		catch (OperationCanceledException) when (Lifetime.IsCancellationRequested)
+		{
+			return;
+		}
+
+		StateHasChanged();
 	}
 
 	private static MokaColor DotOf(ServerCertificateFile file) => file.Leaf is { } leaf

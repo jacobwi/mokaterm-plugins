@@ -43,7 +43,7 @@ public sealed partial class PasswordGeneratorTool : AppToolBase, IDisposable
 		: _mode switch
 		{
 			GenerationMode.Password => string.Create(CultureInfo.CurrentCulture, $"{_password.Length} characters from {PasswordAlphabet.For(_password).Size}"),
-			GenerationMode.Passphrase => string.Create(CultureInfo.CurrentCulture, $"{_passphrase.Words} words from {WordList.Count}"),
+			GenerationMode.Passphrase => string.Create(CultureInfo.CurrentCulture, $"{_passphrase.Words} words from {_passphrase.WordList.Count}"),
 			_ => string.Create(CultureInfo.CurrentCulture, $"{_pinDigits} digits"),
 		};
 

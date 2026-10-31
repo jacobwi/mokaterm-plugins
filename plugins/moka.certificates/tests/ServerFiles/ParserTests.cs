@@ -62,14 +62,88 @@ public sealed class ParserTests
 		IReadOnlyList<ConfiguredCertificate> found = ApacheConfig.Parse(Fixtures.ApacheGrep);
 
 		Assert.Equal(
-			[
-				new ConfiguredCertificate("/etc/ssl/certs/ssl-cert-snakeoil.pem", "Apache", "/etc/apache2/sites-enabled/default-ssl.conf", ["www.example.org", "example.org"], "SSLCertificateFile"),
-				new ConfiguredCertificate("/etc/ssl/shop/shop.crt", "Apache", "/etc/apache2/sites-enabled/shop.conf", ["shop.example.org"], "SSLCertificateFile"),
-				new ConfiguredCertificate("/etc/apache2/ssl/chain.pem", "Apache", "/etc/apache2/sites-enabled/shop.conf", ["shop.example.org"], "SSLCertificateChainFile"),
-				new ConfiguredCertificate("/etc/pki/tls/certs/localhost.crt", "Apache", "/etc/httpd/conf.d/ssl.conf", [], "SSLCertificateFile"),
-			],
+		[
+			new ConfiguredCertificate("/etc/ssl/certs/ssl-cert-snakeoil.pem", "Apache", "/etc/apache2/sites-enabled/default-ssl.conf", ["www.example.org", "example.org"], "SSLCertificateFile"),
+			new ConfiguredCertificate("/etc/ssl/shop/shop.crt", "Apache", "/etc/apache2/sites-enabled/shop.conf", ["shop.example.org"], "SSLCertificateFile"),
+			new ConfiguredCertificate("/etc/apache2/ssl/chain.pem", "Apache", "/etc/apache2/sites-enabled/shop.conf", ["shop.example.org"], "SSLCertificateChainFile"),
+			new ConfiguredCertificate("/etc/pki/tls/certs/localhost.crt", "Apache", "/etc/httpd/conf.d/ssl.conf", [], "SSLCertificateFile"),
+		],
 			found,
 			new ConfiguredComparer());
+	}
+
+	[Fact]
+	public void Caddy_TakesTlsCertPathsAndSaysWhatItCannotFollow()
+	{
+		(IReadOnlyList<ConfiguredCertificate> found, IReadOnlyList<string> skipped) = CaddyConfig.Parse(Fixtures.CaddyGrep);
+
+		Assert.Equal(
+		[
+			new ConfiguredCertificate("/etc/ssl/example.com.cert.pem", "Caddy", "/etc/caddy/Caddyfile", [], "tls"),
+			new ConfiguredCertificate("/etc/ssl/quoted.pem", "Caddy", "/etc/caddy/Caddyfile", [], "tls"),
+		],
+			found,
+			new ConfiguredComparer());
+		Assert.Contains("chosen at runtime", Assert.Single(skipped), StringComparison.Ordinal);
+	}
+
+	[Fact]
+	public void HAProxy_TakesCrtFilesAndEveryCrtListEntry()
+	{
+		IReadOnlyList<ConfiguredCertificate> found = HAProxyConfig.Parse(Fixtures.HAProxyPart);
+
+		Assert.Equal(
+		[
+			new ConfiguredCertificate("/etc/haproxy/certs/site.pem", "HAProxy", "/etc/haproxy/haproxy.cfg", [], "crt"),
+			new ConfiguredCertificate("/etc/haproxy/certs/other.pem", "HAProxy", "/etc/haproxy/haproxy.cfg", [], "crt"),
+			new ConfiguredCertificate("/etc/haproxy/certs/shop.example.org.pem", "HAProxy", "/etc/haproxy/certs/list.txt", [], "crt-list"),
+			new ConfiguredCertificate("/etc/haproxy/certs/api.example.org.pem", "HAProxy", "/etc/haproxy/certs/list.txt", [], "crt-list"),
+		],
+			found,
+			new ConfiguredComparer());
+	}
+
+	[Fact]
+	public void HAProxy_NothingOrNoise_FindsNothing()
+	{
+		Assert.Empty(HAProxyConfig.Parse(""));
+		Assert.Empty(HAProxyConfig.Parse("some noise without a path\n12:no digits before the colon\n"));
+	}
+
+	[Fact]
+	public void Lighttpd_TakesPemFilesAndSaysWhatIsRelative()
+	{
+		(IReadOnlyList<ConfiguredCertificate> found, IReadOnlyList<string> skipped) = LighttpdConfig.Parse(Fixtures.LighttpdGrep);
+
+		Assert.Equal(
+		[
+			new ConfiguredCertificate("/etc/lighttpd/server.pem", "lighttpd", "/etc/lighttpd/lighttpd.conf", [], "ssl.pemfile"),
+			new ConfiguredCertificate("/etc/lighttpd/shop.pem", "lighttpd", "/etc/lighttpd/conf-enabled/90-cert.conf", [], "ssl.pemfile"),
+		],
+			found,
+			new ConfiguredComparer());
+		Assert.Contains("relative", Assert.Single(skipped), StringComparison.Ordinal);
+	}
+
+	[Fact]
+	public void Traefik_TakesCertFileValuesInYamlAndToml()
+	{
+		IReadOnlyList<ConfiguredCertificate> found = TraefikConfig.Parse(Fixtures.TraefikGrep);
+
+		Assert.Equal(
+		[
+			new ConfiguredCertificate("/etc/traefik/certs/example.com.crt", "Traefik", "/etc/traefik/dynamic/certs.yml", [], "certFile"),
+			new ConfiguredCertificate("/etc/traefik/certs/toml-site.crt", "Traefik", "/etc/traefik/traefik.toml", [], "certFile"),
+			new ConfiguredCertificate("/etc/traefik/dynamic/certs/relative.crt", "Traefik", "/etc/traefik/dynamic/relative.yml", [], "certFile"),
+		],
+			found,
+			new ConfiguredComparer());
+	}
+
+	[Fact]
+	public void Traefik_KeyFileLinesAreNotGrepped()
+	{
+		Assert.Empty(TraefikConfig.Parse("/etc/traefik/dynamic/certs.yml:6:  keyFile: /etc/traefik/certs/example.com.key\n"));
 	}
 
 	[Fact]
@@ -79,8 +153,8 @@ public sealed class ParserTests
 
 		Assert.Equal(2, result.Lineages.Count);
 		Assert.Equal(["/etc/letsencrypt/live/example.com/", "/etc/letsencrypt/live/old.example.org/"], result.LiveFolders);
-		Assert.Equal(8, result.Configured.Count);
-		Assert.Single(result.Skipped);
+		Assert.Equal(19, result.Configured.Count);
+		Assert.Equal(3, result.Skipped.Count);
 		Assert.Equal(["/opt/app/tls/server.crt"], result.ExtraFiles);
 		Assert.False(result.CertbotNeedsRoot);
 		Assert.False(result.NginxFailed);

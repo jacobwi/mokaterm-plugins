@@ -45,11 +45,17 @@ public sealed record PasswordSettings : ISettingsSection
 	/// <summary>The symbols passwords draw from, and passphrases when they add one.</summary>
 	public string SymbolSet { get; init; } = CharacterSets.DefaultSymbols;
 
+	/// <summary>Characters passwords never draw, whatever kind they belong to.</summary>
+	public string Excluded { get; init; } = "";
+
 	public bool AvoidLookAlikes { get; init; }
 
 	public bool RequireEachKind { get; init; } = true;
 
 	public int Words { get; init; } = PassphraseOptions.DefaultWords;
+
+	/// <summary>Passphrases draw from the EFF short list rather than the large one.</summary>
+	public bool ShortWords { get; init; }
 
 	public PassphraseSeparator Separator { get; init; } = PassphraseSeparator.Dash;
 
@@ -83,6 +89,7 @@ public sealed record PasswordSettings : ISettingsSection
 			Digits = Digits || !anyKind,
 			Symbols = Symbols || !anyKind,
 			SymbolSet = CharacterSets.SymbolSetProblem(SymbolSet) is null ? SymbolSet : CharacterSets.DefaultSymbols,
+			Excluded = CharacterSets.ExcludedProblem(Excluded) is null ? Excluded : "",
 			Words = Math.Clamp(Words, MinWords, MaxWords),
 			Separator = Enum.IsDefined(Separator) ? Separator : PassphraseSeparator.Dash,
 			CustomSeparator = PassphraseOptions.CustomSeparatorProblem(CustomSeparator) is null ? CustomSeparator : "",
@@ -99,6 +106,7 @@ public sealed record PasswordSettings : ISettingsSection
 		Digits = Digits,
 		Symbols = Symbols,
 		SymbolSet = SymbolSet,
+		Excluded = Excluded,
 		AvoidLookAlikes = AvoidLookAlikes,
 		RequireEachKind = RequireEachKind,
 	};
@@ -106,6 +114,7 @@ public sealed record PasswordSettings : ISettingsSection
 	public PassphraseOptions ToPassphraseOptions() => new()
 	{
 		Words = Words,
+		ShortWords = ShortWords,
 		Separator = Separator,
 		CustomSeparator = CustomSeparator,
 		Capitalize = Capitalize,

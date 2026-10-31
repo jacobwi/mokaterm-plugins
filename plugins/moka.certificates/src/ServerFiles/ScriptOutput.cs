@@ -23,7 +23,7 @@ public static class ScriptOutput
 		foreach (string line in output.ReplaceLineEndings("\n").Split('\n'))
 		{
 			if (line.StartsWith(ServerCertificateCommands.Marker, StringComparison.Ordinal)
-				&& line[ServerCertificateCommands.Marker.Length..] is "certbot" or "live" or "nginx" or "apache" or "extra" or "end")
+				&& line[ServerCertificateCommands.Marker.Length..] is "certbot" or "live" or "nginx" or "apache" or "caddy" or "haproxy" or "lighttpd" or "traefik" or "extra" or "end")
 			{
 				current = line[ServerCertificateCommands.Marker.Length..];
 				parts[current] = new StringBuilder();
@@ -45,15 +45,25 @@ public static class ScriptOutput
 		}
 
 		string Part(string name) => parts.TryGetValue(name, out StringBuilder? text) ? text.ToString() : "";
-		(IReadOnlyList<ConfiguredCertificate> nginx, IReadOnlyList<string> skipped) = NginxConfig.Parse(Part("nginx"));
+		(IReadOnlyList<ConfiguredCertificate> nginx, IReadOnlyList<string> nginxSkipped) = NginxConfig.Parse(Part("nginx"));
+		(IReadOnlyList<ConfiguredCertificate> caddy, IReadOnlyList<string> caddySkipped) = CaddyConfig.Parse(Part("caddy"));
+		(IReadOnlyList<ConfiguredCertificate> lighttpd, IReadOnlyList<string> lighttpdSkipped) = LighttpdConfig.Parse(Part("lighttpd"));
 		return new DiscoveryResult
 		{
 			Lineages = CertbotOutput.Parse(Part("certbot")),
 			CertbotNeedsRoot = flags.Contains("certbot:needs-root"),
 			LiveFolders = Lines(Part("live")),
 			LiveNeedsRoot = flags.Contains("live:needs-root"),
-			Configured = [.. nginx, .. ApacheConfig.Parse(Part("apache"))],
-			Skipped = skipped,
+			Configured =
+			[
+				.. nginx,
+				.. ApacheConfig.Parse(Part("apache")),
+				.. caddy,
+				.. HAProxyConfig.Parse(Part("haproxy")),
+				.. lighttpd,
+				.. TraefikConfig.Parse(Part("traefik")),
+			],
+			Skipped = [.. nginxSkipped, .. caddySkipped, .. lighttpdSkipped],
 			NginxFailed = flags.Contains("nginx:failed"),
 			ExtraFiles = Lines(Part("extra")),
 		};

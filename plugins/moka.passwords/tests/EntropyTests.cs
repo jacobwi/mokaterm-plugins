@@ -88,11 +88,11 @@ public sealed class EntropyTests
 	}
 
 	[Fact]
-	public void Passphrase_IsWordsTimesLog2Of7776_PlusTheExtras()
+	public void Passphrase_IsWordsTimesLog2OfTheList_PlusTheExtras()
 	{
 		PassphraseOptions options = new();
 
-		Assert.Equal(12.92481250360578, Entropy.BitsPerWord, Precision);
+		Assert.Equal(12.92481250360578, Math.Log2(WordList.Large.Count), Precision);
 		Assert.Equal(6 * Math.Log2(7776), Entropy.OfPassphrase(options), Precision);
 		Assert.Equal(6 * Math.Log2(7776), Entropy.OfPassphrase(options with { Capitalize = true }), Precision);
 		Assert.Equal((6 * Math.Log2(7776)) + Math.Log2(10 * 6), Entropy.OfPassphrase(options with { AddDigit = true }), Precision);
@@ -101,6 +101,17 @@ public sealed class EntropyTests
 			(3 * Math.Log2(7776)) + Math.Log2(10 * 3) + Math.Log2(28 * 3),
 			Entropy.OfPassphrase(options with { Words = 3, AddDigit = true, AddSymbol = true }),
 			Precision);
+	}
+
+	// The short list is smaller, so every word of it is worth less: log2 of 1296, about 10.3 bits.
+	[Fact]
+	public void Passphrase_FromTheShortList_CountsTheSmallerList()
+	{
+		PassphraseOptions options = new() { ShortWords = true };
+
+		Assert.Equal(1296, options.WordList.Count);
+		Assert.Equal(6 * Math.Log2(1296), Entropy.OfPassphrase(options), Precision);
+		Assert.True(Entropy.OfPassphrase(options) < Entropy.OfPassphrase(options with { ShortWords = false }));
 	}
 
 	[Fact]

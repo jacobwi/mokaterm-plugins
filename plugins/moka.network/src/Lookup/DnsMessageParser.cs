@@ -76,17 +76,18 @@ public static class DnsMessageParser
 		List<DnsRecord> authority = ReadSection(reader, authorityCount, null);
 		List<DnsRecord> additional = ReadSection(reader, additionalCount, edns);
 
-		return new DnsMessage
-		{
-			Header = header,
-			Questions = questions,
-			Answers = answers,
-			Authority = authority,
-			Additional = additional,
-			EdnsPayloadSize = edns.PayloadSize,
-			ResponseCode = (edns.ExtendedCode << 4) | header.ResponseCode,
-			Size = length,
-		};
+			return new DnsMessage
+			{
+				Header = header,
+				Questions = questions,
+				Answers = answers,
+				Authority = authority,
+				Additional = additional,
+				EdnsPayloadSize = edns.PayloadSize,
+				DnssecOk = edns.DnssecOk,
+				ResponseCode = (edns.ExtendedCode << 4) | header.ResponseCode,
+				Size = length,
+			};
 	}
 
 	/// <summary>
@@ -123,12 +124,13 @@ public static class DnsMessageParser
 			int end = reader.Position + length;
 			if (type == (int)DnsRecordType.OPT && edns is not null)
 			{
-				// The pseudo record's class is the UDP size and its TTL carries the upper bits of the response code. Only
-				// the first one counts; RFC 6891 makes a second one an error the server should never send.
+				// The pseudo record's class is the UDP size and its TTL carries the upper bits of the response code and
+				// the DO bit. Only the first one counts; RFC 6891 makes a second one an error the server should never send.
 				if (edns.PayloadSize is null)
 				{
 					edns.PayloadSize = recordClass;
 					edns.ExtendedCode = (int)(ttl >> 24);
+					edns.DnssecOk = (ttl & DnsQueryBuilder.DnssecOk) != 0;
 				}
 
 				reader.Seek(end);
@@ -156,5 +158,7 @@ public static class DnsMessageParser
 		public int? PayloadSize { get; set; }
 
 		public int ExtendedCode { get; set; }
+
+		public bool DnssecOk { get; set; }
 	}
 }

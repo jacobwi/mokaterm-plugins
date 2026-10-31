@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Moka.Network.Lookup;
 using Moka.Network.Settings;
+using Moka.Network.Targets;
 using Moka.Network.Tool;
+using Moka.Network.Whois;
 using Mokaterm.Abstractions.Settings;
 using Mokaterm.UI.Common.Contributions;
 
@@ -66,5 +68,19 @@ public sealed class SettingsAndModuleTests
 		Assert.Equal(typeof(NetworkSettingsPage), settings.Component);
 		Assert.Equal(NetworkSettings.SectionKey, Assert.Single(provider.GetServices<SettingsSectionType>()).Key);
 		Assert.Equal("moka.network", new NetworkModule().Info.Id);
+	}
+
+	[Fact]
+	public void Module_RegistersOneRecentTargetsListAndOneRdapClientForTheAppRun()
+	{
+		ServiceCollection services = new();
+
+		new NetworkModule().ConfigureServices(services);
+		using ServiceProvider provider = services.BuildServiceProvider();
+
+		Assert.Same(provider.GetRequiredService<RecentTargets>(), provider.GetRequiredService<RecentTargets>());
+		RdapClient rdap = provider.GetRequiredService<RdapClient>();
+		Assert.Same(rdap, provider.GetRequiredService<RdapClient>());
+		Assert.IsType<HttpsRdapTransport>(provider.GetRequiredService<IRdapTransport>());
 	}
 }

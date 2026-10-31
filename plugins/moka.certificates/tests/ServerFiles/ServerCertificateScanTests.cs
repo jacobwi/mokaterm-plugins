@@ -23,6 +23,17 @@ public sealed class ServerCertificateScanTests
 				"/etc/ssl/shop/shop.crt",
 				"/etc/apache2/ssl/chain.pem",
 				"/etc/pki/tls/certs/localhost.crt",
+				"/etc/ssl/example.com.cert.pem",
+				"/etc/ssl/quoted.pem",
+				"/etc/haproxy/certs/site.pem",
+				"/etc/haproxy/certs/other.pem",
+				"/etc/haproxy/certs/shop.example.org.pem",
+				"/etc/haproxy/certs/api.example.org.pem",
+				"/etc/lighttpd/server.pem",
+				"/etc/lighttpd/shop.pem",
+				"/etc/traefik/certs/example.com.crt",
+				"/etc/traefik/certs/toml-site.crt",
+				"/etc/traefik/dynamic/certs/relative.crt",
 				"/opt/app/tls/server.crt",
 			],
 			candidates.Select(candidate => candidate.Path));
@@ -32,6 +43,10 @@ public sealed class ServerCertificateScanTests
 		Assert.Contains("example.com www.example.com", example.Uses[1].Detail, StringComparison.Ordinal);
 		Assert.Equal("ECDSA", example.Lineage?.KeyType);
 		Assert.Contains("every server without its own", candidates[4].Uses[0].Detail, StringComparison.Ordinal);
+		Assert.Equal("Caddy", candidates[9].Uses[0].Source);
+		Assert.Contains("(tls)", candidates[9].Uses[0].Detail, StringComparison.Ordinal);
+		Assert.Equal("HAProxy", candidates[13].Uses[0].Source);
+		Assert.Contains("crt-list", candidates[13].Uses[0].Detail, StringComparison.Ordinal);
 		Assert.Equal("Settings", candidates[^1].Uses[0].Source);
 	}
 

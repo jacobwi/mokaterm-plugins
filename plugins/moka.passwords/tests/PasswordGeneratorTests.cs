@@ -1,4 +1,5 @@
 using Moka.Passwords.Generation;
+using Moka.Passwords.Strength;
 
 namespace Moka.Passwords.Tests;
 
@@ -194,6 +195,96 @@ public sealed class PasswordGeneratorTests
 		Assert.Equal(26 + 26 + 10 + 28, PasswordAlphabet.For(new PasswordOptions()).Size);
 		Assert.Equal(24 + 24 + 8 + 27, PasswordAlphabet.For(new PasswordOptions { AvoidLookAlikes = true }).Size);
 	}
+
+	[Fact]
+	public void ExcludedCharacters_NeverAppear()
+	{
+		PasswordOptions options = new() { Length = 32, Excluded = "aeiou0!@" };
+
+		for (int draw = 0; draw < 2000; draw++)
+		{
+			Assert.DoesNotContain(PasswordGenerator.Generate(options), c => "aeiou0!@".Contains(c, StringComparison.Ordinal));
+		}
+	}
+
+	// "at least one of each kind" still holds over the smaller alphabet.
+	[Fact]
+	public void ExcludedCharacters_KeepTheRuleSatisfiable()
+	{
+		PasswordOptions options = new() { Length = 32, Excluded = "aeiou" };
+
+		for (int draw = 0; draw < 500; draw++)
+		{
+			string password = PasswordGenerator.Generate(options);
+
+			Assert.Contains(password, char.IsAsciiLetterLower);
+			Assert.Contains(password, char.IsAsciiLetterUpper);
+			Assert.Contains(password, char.IsAsciiDigit);
+			Assert.DoesNotContain(password, c => "aeiou".Contains(c, StringComparison.Ordinal));
+		}
+	}
+
+	[Fact]
+	public void ExcludedCharacters_CountTheSmallerAlphabet()
+	{
+		PasswordOptions options = new() { Excluded = "ab", RequireEachKind = false };
+
+		Assert.Equal(88, PasswordAlphabet.For(options).Size);
+		Assert.Equal(88, PasswordAlphabet.For(options with { Excluded = "abab" }).Size);
+		Assert.Equal(20 * Math.Log2(88), Entropy.OfPassword(options), 1e-9);
+	}
+
+	[Fact]
+	public void ExcludedCharacters_NoKindOffers_AreSimplyIgnored()
+	{
+		PasswordOptions options = new() { Excluded = "é ab", RequireEachKind = false };
+
+		Assert.Equal(90 - 2, PasswordAlphabet.For(options).Size);
+	}
+
+	[Fact]
+	public void ExcludedCharacters_ExcludingTheLookAlikesAgain_ChangesNothing()
+	{
+		PasswordOptions options = new() { Excluded = CharacterSets.LookAlikes, AvoidLookAlikes = true };
+
+		Assert.Equal(PasswordAlphabet.For(new PasswordOptions { AvoidLookAlikes = true }).Size, PasswordAlphabet.For(options).Size);
+	}
+
+	[Fact]
+	public void ExcludedCharacters_ThatEmptyAChosenKind_AreRefusedInPlainWords()
+	{
+		PasswordOptions options = new() { Excluded = CharacterSets.Lowercase };
+
+		Assert.Equal("Every lowercase letter is left out, so that kind has nothing to draw from.", PasswordAlphabet.ProblemWith(options));
+		Assert.Throws<ArgumentException>(() => PasswordGenerator.Generate(options));
+	}
+
+	[Fact]
+	public void ExcludedCharacters_ThatEmptyEveryKind_AreRefused()
+	{
+		string everything = string.Concat(CharacterSets.Lowercase, CharacterSets.Uppercase, CharacterSets.Digits, CharacterSets.DefaultSymbols);
+		PasswordOptions options = new() { Excluded = everything };
+
+		Assert.NotNull(PasswordAlphabet.ProblemWith(options));
+	}
+
+	[Fact]
+	public void ExcludedCharacters_ThatEmptyAnUnchosenKind_AreTaken()
+	{
+		PasswordOptions options = new() { Lowercase = false, Excluded = CharacterSets.Lowercase };
+
+		Assert.Null(PasswordAlphabet.ProblemWith(options));
+	}
+
+	[Theory]
+	[InlineData("")]
+	[InlineData("a1!")]
+	[InlineData("é\t ")]
+	public void ExcludedLists_OfAnyCharacters_AreTaken(string list) => Assert.Null(CharacterSets.ExcludedProblem(list));
+
+	[Fact]
+	public void ExcludedLists_TooLong_AreRefused() =>
+		Assert.NotNull(CharacterSets.ExcludedProblem(new string('a', CharacterSets.MaxExcludedLength + 1)));
 
 	[Fact]
 	public void Kinds_NeverShareACharacter()

@@ -2,7 +2,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Moka.Network;
 using Moka.Network.Components;
 using Moka.Network.Settings;
+using Moka.Network.Targets;
 using Moka.Network.Tool;
+using Moka.Network.Whois;
 using Mokaterm.Abstractions.Modules;
 using Mokaterm.Abstractions.Platform;
 using Mokaterm.Abstractions.Plugins;
@@ -27,6 +29,11 @@ public sealed class NetworkModule : IMokatermModule
 
 	public void ConfigureServices(IServiceCollection services)
 	{
+		// One list of recent targets for every tab, and the RDAP client with IANA's bootstrap list, for the app run.
+		services.AddSingleton<RecentTargets>();
+		services.AddSingleton<IRdapTransport, HttpsRdapTransport>();
+		services.AddSingleton<RdapClient>();
+
 		services.AddAppTool(new AppToolDescriptor
 		{
 			Id = ToolId,

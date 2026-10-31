@@ -2,6 +2,21 @@
 
 <ToolPageFrame Title="Regex" Summary="@Summary" Loaded="true">
 	<div class="dt-group">
+		<span class="dt-label">Common patterns</span>
+		<ChipRow>
+			@foreach (RegexPreset preset in RegexPresets.All)
+			{
+				<MokaButton Variant="MokaVariant.Text"
+							Color="MokaColor.Surface"
+							Size="MokaSize.Xs"
+							title="@($"{preset.Description} {preset.Pattern}")"
+							OnClick="() => UsePresetAsync(preset)">@preset.Name</MokaButton>
+			}
+		</ChipRow>
+		<span class="dt-note">Everyday patterns, kept pragmatic rather than true to any RFC. Picking one puts it in the box.</span>
+	</div>
+
+	<div class="dt-group">
 		<MokaTextField Class="dt-field-mono"
 					   Value="@_pattern"
 					   ValueChanged="OnPatternChangedAsync"

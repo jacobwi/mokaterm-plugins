@@ -17,7 +17,7 @@ public sealed class TlsTargetTests
 	[InlineData("bücher.example", "", "", "xn--bcher-kva.example", 443, "xn--bcher-kva.example")]
 	public void TryParse_ReadsWhatPeopleType(string host, string port, string sni, string expectedHost, int expectedPort, string? expectedSni)
 	{
-		Assert.True(TlsTarget.TryParse(host, port, sni, out TlsTarget? target, out string? problem), problem);
+		Assert.True(TlsTarget.TryParse(host, port, sni, StartTlsMode.Plain, out TlsTarget? target, out string? problem), problem);
 
 		Assert.Equal(expectedHost, target.Host);
 		Assert.Equal(expectedPort, target.Port);
@@ -32,11 +32,29 @@ public sealed class TlsTargetTests
 	[InlineData("example.com", "443", "192.0.2.1", "SNI carries a name")]
 	public void TryParse_SaysWhatIsWrong(string host, string port, string sni, string expected)
 	{
-		Assert.False(TlsTarget.TryParse(host, port, sni, out _, out string? problem));
+		Assert.False(TlsTarget.TryParse(host, port, sni, StartTlsMode.Plain, out _, out string? problem));
 
 		Assert.Contains(expected, problem, StringComparison.Ordinal);
 	}
 
 	[Fact]
 	public void Endpoint_BracketsIpv6() => Assert.Equal("[2001:db8::7]:443", new TlsTarget("2001:db8::7", 443, null).Endpoint);
+
+	[Theory]
+	[InlineData(StartTlsMode.Plain, 443)]
+	[InlineData(StartTlsMode.Smtp, 587)]
+	[InlineData(StartTlsMode.Imap, 143)]
+	[InlineData(StartTlsMode.Ftp, 21)]
+	public void DefaultPort_IsEachModeUsualPort(StartTlsMode mode, int port) => Assert.Equal(port, TlsTarget.DefaultPort(mode));
+
+	[Theory]
+	[InlineData(StartTlsMode.Smtp, 587)]
+	[InlineData(StartTlsMode.Imap, 143)]
+	public void TryParse_TakesTheModesPortWhenNoneIsTyped(StartTlsMode mode, int port)
+	{
+		Assert.True(TlsTarget.TryParse("mail.example.com", "", "", mode, out TlsTarget? target, out _));
+
+		Assert.Equal(port, target.Port);
+		Assert.Equal(mode, target.StartTls);
+	}
 }

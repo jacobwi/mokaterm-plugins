@@ -22,6 +22,7 @@
 					<MokaTextField Label="Wait (ms)" Value="@_timeout" ValueChanged="@(value => _timeout = value ?? "")" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
 				</div>
 			</div>
+			<RecentTargetsBar OnPick="@(value => _host = value)" />
 			<div class="mn-row">
 				<EnumSegmentedControl TEnum="AddressChoice" Value="_choice" ValueChanged="@(value => _choice = value)" Options="AddressChoices.Options" AriaLabel="Address family" Disabled="Busy" />
 				<MokaCheckbox Label="Look up hop names" Value="_lookupNames" ValueChanged="@(value => _lookupNames = value)" />

@@ -453,7 +453,7 @@ public static partial class CertificateReader
 
 	private static string Unsupported(string? algorithm, string what) => algorithm switch
 	{
-		OidNames.Ed25519 => $"An Ed25519 {what} was found. Ed25519 is not supported in this version.",
+		OidNames.Ed25519 => $"An Ed25519 {what} was found. Ed25519 cannot be used yet: .NET's certificate APIs do not support it, so the runtime must add it first.",
 		OidNames.Ed448 => $"An Ed448 {what} was found. Ed448 is not supported.",
 		OidNames.X25519 or OidNames.X448 => $"An X25519 or X448 {what} was found. Key agreement keys are not supported.",
 		OidNames.RsaPssKey => $"An RSA-PSS restricted {what} was found. Those are not supported; a plain RSA key works.",

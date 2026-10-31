@@ -8,6 +8,9 @@ public sealed partial class PasswordSettingsPage : SettingsSectionBase<PasswordS
 {
 	private Task SaveAsync(Func<PasswordSettings, PasswordSettings> change) => UpdateAsync(settings => change(settings).Clamped());
 
+	/// <summary>The credit for both lists the tool can draw from, which the license asks for.</summary>
+	private static string Credit => $"{WordList.Large.Credit}; {WordList.Small.Credit}";
+
 	private Task SaveKindsAsync(PasswordOptions options) => SaveAsync(settings => settings with
 	{
 		Lowercase = options.Lowercase,

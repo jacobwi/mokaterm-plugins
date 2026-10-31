@@ -34,6 +34,9 @@
 
 		<!-- The plugin takes this from its host and does not copy it; a test project is its own host. -->
 		<PackageReference Include="Mokaterm.UI.Common" />
+
+		<!-- Renders the plugin's views to HTML with the host services faked, on a faked desktop or web host. -->
+		<PackageReference Include="Mokaterm.Plugin.TestHost" />
 	</ItemGroup>
 
 	<ItemGroup>

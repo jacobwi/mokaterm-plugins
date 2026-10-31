@@ -14,6 +14,8 @@
 	<ItemGroup>
 		<PackageVersion Include="Mokaterm.UI.Common" Version="$(MokatermVersion)" />
 		<PackageVersion Include="Mokaterm.Plugin.Sdk" Version="$(MokatermVersion)" />
+		<!-- The render harness for plugin tests; never part of a plugin package (PrivateAssets="all"). -->
+		<PackageVersion Include="Mokaterm.Plugin.TestHost" Version="$(MokatermVersion)" />
 	</ItemGroup>
 
 	<!--
@@ -22,7 +24,7 @@
 		its own copy, which the plugin loader prefers.
 	-->
 	<ItemGroup>
-		<PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.12" />
+		<PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
 		<PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
 	</ItemGroup>
 

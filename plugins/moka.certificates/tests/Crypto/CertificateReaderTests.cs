@@ -363,9 +363,9 @@ public sealed class CertificateReaderTests
 		KeyInfo info = CertificateReader.DescribeKey(Assert.Single(publicSet.PublicKeys).Key);
 		Assert.Equal("Ed25519", info.Algorithm);
 		Assert.False(info.Usable);
-		Assert.Contains("not supported in this version", info.Limitation, StringComparison.Ordinal);
+		Assert.Contains("shown, not used", info.Limitation, StringComparison.Ordinal);
 		Assert.Empty(privateSet.Items);
-		Assert.Contains("Ed25519 is not supported in this version", Assert.Single(privateSet.Notes).Message, StringComparison.Ordinal);
+		Assert.Contains("the runtime must add it first", Assert.Single(privateSet.Notes).Message, StringComparison.Ordinal);
 	}
 
 	[Theory]

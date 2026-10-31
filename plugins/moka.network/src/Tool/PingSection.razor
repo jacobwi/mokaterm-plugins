@@ -27,6 +27,7 @@
 					<MokaTextField Label="Size (bytes)" Value="@_size" ValueChanged="@(value => _size = value ?? "")" Placeholder="32" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
 				</div>
 			</div>
+			<RecentTargetsBar OnPick="@(value => _host = value)" />
 			<div class="mn-row">
 				<EnumSegmentedControl TEnum="AddressChoice" Value="_choice" ValueChanged="@(value => _choice = value)" Options="AddressChoices.Options" AriaLabel="Address family" Disabled="Busy" />
 				<MokaCheckbox Label="Until stopped" Value="_continuous" ValueChanged="@(value => _continuous = value)" />

@@ -5,12 +5,22 @@ using Moka.Certificates.Crypto;
 namespace Moka.Certificates.Tls;
 
 /// <summary>
-/// Where a server check connects: a host name or address, a port, and the name sent as SNI (the host itself when it is
-/// a name, none for an address unless one is given).
+/// Where a server check connects: a host name or address, a port, the name sent as SNI (the host itself when it is a
+/// name, none for an address unless one is given), and whether the handshake follows a STARTTLS exchange.
 /// </summary>
 public sealed record TlsTarget(string Host, int Port, string? ServerName)
 {
-	public const int DefaultPort = 443;
+	/// <summary>The port a TLS connection is expected on when none is typed: HTTPS's, or the STARTTLS port in those modes.</summary>
+	public static int DefaultPort(StartTlsMode mode) => mode switch
+	{
+		StartTlsMode.Smtp => 587,
+		StartTlsMode.Imap => 143,
+		StartTlsMode.Ftp => 21,
+		_ => 443,
+	};
+
+	/// <summary>Whether the handshake follows a STARTTLS line exchange on a plain port.</summary>
+	public StartTlsMode StartTls { get; init; } = StartTlsMode.Plain;
 
 	/// <summary>The name the certificate is checked against: the SNI name, else the host.</summary>
 	public string NameToCheck => ServerName ?? Host;
@@ -22,11 +32,12 @@ public sealed record TlsTarget(string Host, int Port, string? ServerName)
 
 	/// <summary>
 	/// Reads what was typed. The host may be a name, an address, <c>host:port</c>, <c>[v6]:port</c> or a whole
-	/// https address, whose port is taken when the port box is empty.
+	/// https address, whose port is taken when the port box is empty; the mode's own port is the default then.
 	/// </summary>
-	public static bool TryParse(string? host, string? port, string? serverName, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out TlsTarget? target, [System.Diagnostics.CodeAnalysis.NotNullWhen(false)] out string? problem)
+	public static bool TryParse(string? host, string? port, string? serverName, StartTlsMode startTls, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out TlsTarget? target, [System.Diagnostics.CodeAnalysis.NotNullWhen(false)] out string? problem)
 	{
 		target = null;
+		int defaultPort = DefaultPort(startTls);
 		string text = (host ?? "").Trim();
 		int? typedPort = null;
 		if (text.Contains("://", StringComparison.Ordinal))
@@ -73,7 +84,7 @@ public sealed record TlsTarget(string Host, int Port, string? ServerName)
 			return false;
 		}
 
-		int portNumber = DefaultPort;
+		int portNumber = defaultPort;
 		string portText = (port ?? "").Trim();
 		if (portText.Length > 0)
 		{
@@ -110,7 +121,7 @@ public sealed record TlsTarget(string Host, int Port, string? ServerName)
 			sni = hostName;
 		}
 
-		target = new TlsTarget(hostName, portNumber, sni);
+		target = new TlsTarget(hostName, portNumber, sni) { StartTls = startTls };
 		problem = null;
 		return true;
 	}

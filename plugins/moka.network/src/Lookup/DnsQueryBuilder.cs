@@ -14,9 +14,13 @@ public static class DnsQueryBuilder
 	/// </summary>
 	public const int EdnsPayloadSize = 1232;
 
+	/// <summary>The DO bit in the OPT record's TTL field, the one flag EDNS defines (RFC 6891): answer with DNSSEC data.</summary>
+	public const uint DnssecOk = 0x8000;
+
 	/// <summary>
 	/// The query for <paramref name="name"/> (presentation form, see <see cref="DnsName.TryNormalize"/>). AD is set as
-	/// RFC 6840 suggests, so a validating resolver says whether it checked the answer with DNSSEC.
+	/// RFC 6840 suggests, so a validating resolver says whether it checked the answer with DNSSEC, and a DNSSEC type sets
+	/// the DO bit so the server knows to answer with the records asked for.
 	/// </summary>
 	public static byte[] Build(ushort id, string name, int type)
 	{
@@ -36,11 +40,17 @@ public static class DnsQueryBuilder
 		position += 4;
 
 		// OPT: the root name, type 41, the UDP size in the class field, a zero TTL (version 0, no DO bit) and no options.
+		// A DNSSEC type turns on the DO bit, which lives in the TTL's lower half.
 		span[position] = 0;
 		BinaryPrimitives.WriteUInt16BigEndian(span[(position + 1)..], (ushort)DnsRecordType.OPT);
 		BinaryPrimitives.WriteUInt16BigEndian(span[(position + 3)..], EdnsPayloadSize);
+		BinaryPrimitives.WriteUInt32BigEndian(span[(position + 5)..], WantsDnssecRecords(type) ? DnssecOk : 0);
 		return query;
 	}
+
+	/// <summary>True for the record types that make the query set the DO bit: the DNSSEC records the lookup offers.</summary>
+	public static bool WantsDnssecRecords(int type) =>
+		type is (int)DnsRecordType.DS or (int)DnsRecordType.DNSKEY;
 
 	/// <summary>A transaction id from the system's cryptographic generator: a guessable id is half of a spoofed answer.</summary>
 	public static ushort NewId() => (ushort)RandomNumberGenerator.GetInt32(0, 0x10000);

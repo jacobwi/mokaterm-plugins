@@ -78,6 +78,40 @@ public sealed class DnsMessageParserTests
 	}
 
 	[Fact]
+	public void Parse_FormatsTheDnssecRecordTypes()
+	{
+		byte[] message = new Packet()
+			.Header(1, ResponseFlags, 1, 3)
+			.Question("example.com", 48)
+			.Pointer(12).Fixed(43, 86400, Packet.Data(data => data.U16(2371).U8(13).U8(2).Raw(Convert.FromHexString("a1b2c3d4"))))
+			.Pointer(12).Fixed(48, 3600, Packet.Data(data => data.U16(257).U8(3).U8(13).Raw(Convert.FromHexString("01020304"))))
+			.Pointer(12).Fixed(43, 60, Packet.Data(data => data.U16(2371).U8(13).U8(2)))
+			.ToArray();
+
+		DnsMessage parsed = DnsMessageParser.Parse(message);
+
+		Assert.Equal(
+			["2371 13 2 a1b2c3d4", "257 3 13 AQIDBA==", @"\# 4 09430d02"],
+			parsed.Answers.Select(record => record.Data));
+		Assert.Equal(["DS", "DNSKEY", "DS"], parsed.Answers.Select(record => record.TypeName));
+		Assert.Equal([86400u, 3600u, 60u], parsed.Answers.Select(record => record.Ttl));
+		Assert.False(parsed.Answers[0].Malformed);
+		Assert.False(parsed.Answers[1].Malformed);
+		Assert.True(parsed.Answers[2].Malformed);
+	}
+
+	[Fact]
+	public void Parse_MarksADnskeyWithNoKeyAsMalformed()
+	{
+		byte[] message = new Packet().Header(1, ResponseFlags, 1, 1).Question("example.com", 48).Pointer(12).Fixed(48, 60, Packet.Data(data => data.U16(257).U8(3).U8(13))).ToArray();
+
+		DnsRecord record = Assert.Single(DnsMessageParser.Parse(message).Answers);
+
+		Assert.True(record.Malformed);
+		Assert.Equal(@"\# 4 0101030d", record.Data);
+	}
+
+	[Fact]
 	public void Parse_CapsTheHexOfLongUnknownData()
 	{
 		byte[] data = new byte[DnsRecordData.MaxHexBytes + 44];
@@ -358,6 +392,20 @@ public sealed class DnsMessageParserTests
 		Assert.Equal(new DnsQuestion("_sip._tcp.example.com", 33, 1), Assert.Single(parsed.Questions));
 		Assert.Equal(DnsQueryBuilder.EdnsPayloadSize, parsed.EdnsPayloadSize);
 		Assert.Empty(parsed.Additional);
+	}
+
+	[Theory]
+	[InlineData((int)DnsRecordType.DS, true)]
+	[InlineData((int)DnsRecordType.DNSKEY, true)]
+	[InlineData((int)DnsRecordType.A, false)]
+	[InlineData((int)DnsRecordType.TXT, false)]
+	public void Build_SetsTheDoBitForTheDnssecTypesOnly(int type, bool expected)
+	{
+		DnsMessage parsed = DnsMessageParser.Parse(DnsQueryBuilder.Build(1, "example.com", type));
+
+		Assert.Equal(expected, parsed.DnssecOk);
+		Assert.Equal(expected, DnsQueryBuilder.WantsDnssecRecords(type));
+		Assert.Equal(DnsQueryBuilder.EdnsPayloadSize, parsed.EdnsPayloadSize);
 	}
 
 	[Fact]
