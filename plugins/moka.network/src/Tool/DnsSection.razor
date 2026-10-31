@@ -31,6 +31,7 @@
 								aria-label="Record type" />
 				</div>
 			</div>
+			<RecentTargetsBar OnPick="@(value => _name = value)" />
 			<div class="mn-row">
 				<span class="mn-label">Resolver</span>
 				<EnumSegmentedControl TEnum="DnsResolverKind" Value="_resolver" ValueChanged="@(value => _resolver = value)" Options="Resolvers" AriaLabel="Resolver" Disabled="Busy" />

@@ -1,0 +1,29 @@
+.mn-recent {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.mn-recent-chip {
+	padding: 1px 8px;
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-sm);
+	background: var(--moka-color-surface);
+	color: var(--moka-color-on-surface);
+	font-family: var(--moka-font-family-mono);
+	font-size: 11px;
+	line-height: 18px;
+	white-space: nowrap;
+}
+
+.mn-recent-chip:hover {
+	border-color: color-mix(in srgb, var(--moka-color-primary) 40%, transparent);
+	background: color-mix(in srgb, var(--moka-color-primary) 8%, var(--moka-color-surface));
+}
+
+.mn-recent-chip:focus-visible {
+	outline: 2px solid var(--moka-color-primary);
+	outline-offset: 1px;
+}

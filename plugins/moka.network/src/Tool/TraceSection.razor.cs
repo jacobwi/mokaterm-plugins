@@ -121,6 +121,7 @@ public sealed partial class TraceSection : NetworkViewBase
 			return;
 		}
 
+		Recent.Remember(target.Host);
 		NetworkSettings settings = Settings;
 		AddressChoice choice = _choice;
 		bool lookupNames = _lookupNames;

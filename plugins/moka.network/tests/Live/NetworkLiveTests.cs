@@ -59,6 +59,21 @@ public sealed class NetworkLiveTests
 	}
 
 	[Fact]
+	public async Task Rdap_BootstrapsAndAsksTheRegistryAndTheRegistrar()
+	{
+		SkipUnlessLive();
+		using RdapClient client = new(new HttpsRdapTransport());
+
+		RdapResult result = await client.LookupDomainAsync("github.com", TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken);
+
+		TestContext.Current.SendDiagnosticMessage($"{result.Server} > {result.RegistrarServer}, registrar {result.Domain.Registrar}");
+		Assert.Equal("rdap.verisign.com", result.Server);
+		Assert.Equal("rdap.markmonitor.com", result.RegistrarServer);
+		Assert.Contains("MarkMonitor", result.Domain.Registrar, StringComparison.OrdinalIgnoreCase);
+		Assert.NotEmpty(result.Domain.Nameservers);
+	}
+
+	[Fact]
 	public async Task Ping_GetsReplies()
 	{
 		SkipUnlessLive();

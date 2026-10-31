@@ -17,6 +17,9 @@ public sealed record DnsMessage
 	/// <summary>The UDP size the other side's OPT record offers, or null when it sent none.</summary>
 	public int? EdnsPayloadSize { get; init; }
 
+	/// <summary>The OPT record's DO bit, set by this plugin's DNSSEC queries and echoed by a server that answers with DNSSEC data.</summary>
+	public bool DnssecOk { get; init; }
+
 	/// <summary>The full response code: the header's four bits plus the eight the OPT record carries.</summary>
 	public required int ResponseCode { get; init; }
 

@@ -33,6 +33,8 @@ internal static class DnsRecordData
 				(int)DnsRecordType.SRV => Srv(reader),
 				(int)DnsRecordType.TXT => Txt(reader, end),
 				(int)DnsRecordType.CAA => Caa(reader, end),
+				(int)DnsRecordType.DS => Ds(reader, end),
+				(int)DnsRecordType.DNSKEY => DnsKey(reader, end),
 				_ => reader.ReadName(),
 			};
 
@@ -76,7 +78,8 @@ internal static class DnsRecordData
 	/// <summary>The types with a shape of their own here; NS, CNAME, PTR and DNAME are one name each.</summary>
 	private static bool IsKnown(int type) => type is (int)DnsRecordType.A or (int)DnsRecordType.AAAA or (int)DnsRecordType.NS
 		or (int)DnsRecordType.CNAME or (int)DnsRecordType.PTR or 39 or (int)DnsRecordType.MX or (int)DnsRecordType.SOA
-		or (int)DnsRecordType.SRV or (int)DnsRecordType.TXT or (int)DnsRecordType.CAA;
+		or (int)DnsRecordType.SRV or (int)DnsRecordType.TXT or (int)DnsRecordType.CAA or (int)DnsRecordType.DS
+		or (int)DnsRecordType.DNSKEY;
 
 	private static string? Address(DnsReader reader, int end, int size)
 	{
@@ -114,6 +117,36 @@ internal static class DnsRecordData
 		ushort port = reader.ReadUInt16();
 		string target = reader.ReadName();
 		return string.Create(CultureInfo.InvariantCulture, $"{priority} {weight} {port} {target}");
+	}
+
+	private static string? Ds(DnsReader reader, int end)
+	{
+		ushort keyTag = reader.ReadUInt16();
+		byte algorithm = reader.ReadByte();
+		byte digestType = reader.ReadByte();
+		if (reader.Position >= end)
+		{
+			// A DS with no digest names a key by nothing.
+			return null;
+		}
+
+		string digest = Convert.ToHexStringLower(reader.ReadSpan(end - reader.Position));
+		return string.Create(CultureInfo.InvariantCulture, $"{keyTag} {algorithm} {digestType} {digest}");
+	}
+
+	private static string? DnsKey(DnsReader reader, int end)
+	{
+		ushort flags = reader.ReadUInt16();
+		byte protocol = reader.ReadByte();
+		byte algorithm = reader.ReadByte();
+		if (reader.Position >= end)
+		{
+			// A key with no key is not one.
+			return null;
+		}
+
+		string key = Convert.ToBase64String(reader.ReadSpan(end - reader.Position));
+		return string.Create(CultureInfo.InvariantCulture, $"{flags} {protocol} {algorithm} {key}");
 	}
 
 	private static string? Txt(DnsReader reader, int end)

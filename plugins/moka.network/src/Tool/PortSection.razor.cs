@@ -74,6 +74,7 @@ public sealed partial class PortSection : NetworkViewBase
 			return;
 		}
 
+		Recent.Remember(target.Host);
 		AddressChoice choice = _choice;
 		bool greeting = _greeting;
 		TimeSpan timeout = Settings.ConnectTimeout;

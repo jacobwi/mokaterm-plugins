@@ -2,7 +2,10 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Moka.Network.Lookup;
 
-/// <summary>The record types the lookup can ask for, plus OPT, which only ever arrives in the additional section.</summary>
+/// <summary>
+/// The record types the lookup can ask for, plus OPT, which only ever arrives in the additional section, and the DNSSEC
+/// types DS and DNSKEY, which make the query set the DO bit so the server knows to answer with them.
+/// </summary>
 public enum DnsRecordType
 {
 	A = 1,
@@ -16,5 +19,7 @@ public enum DnsRecordType
 	AAAA = 28,
 	SRV = 33,
 	OPT = 41,
+	DS = 43,
+	DNSKEY = 48,
 	CAA = 257,
 }

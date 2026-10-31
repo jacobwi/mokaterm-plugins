@@ -101,6 +101,7 @@ public sealed partial class PingSection : NetworkViewBase
 			return;
 		}
 
+		Recent.Remember(target.Host);
 		AddressChoice choice = _choice;
 		CancellationTokenSource run = BeginRun();
 		_rows.Clear();

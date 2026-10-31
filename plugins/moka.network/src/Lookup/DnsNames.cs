@@ -5,7 +5,7 @@ namespace Moka.Network.Lookup;
 /// <summary>What the view prints for record types and response codes, by their number, known or not.</summary>
 public static class DnsNames
 {
-	/// <summary>The types the lookup offers, in the order the picker shows them.</summary>
+	/// <summary>The types the lookup offers, in the order the picker shows them. The DNSSEC types set the DO bit.</summary>
 	public static readonly IReadOnlyList<DnsRecordType> Offered =
 	[
 		DnsRecordType.A,
@@ -17,6 +17,8 @@ public static class DnsNames
 		DnsRecordType.SOA,
 		DnsRecordType.SRV,
 		DnsRecordType.CAA,
+		DnsRecordType.DS,
+		DnsRecordType.DNSKEY,
 		DnsRecordType.PTR,
 	];
 

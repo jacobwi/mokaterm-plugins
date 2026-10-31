@@ -123,6 +123,7 @@ public sealed partial class DnsSection : NetworkViewBase
 		string input = _name.Trim();
 		string unbracketed = input.StartsWith('[') && input.EndsWith(']') ? input[1..^1] : input;
 		string name;
+		string target;
 		int type = (int)_type;
 		string? note = null;
 		if (AddressText.TryParse(unbracketed, out IPAddress? address))
@@ -130,10 +131,12 @@ public sealed partial class DnsSection : NetworkViewBase
 			name = ReverseName.For(address);
 			type = (int)DnsRecordType.PTR;
 			note = $"{address} is an address, so this asked for its PTR record at {name}.";
+			target = address.ToString();
 		}
 		else if (DnsName.TryNormalize(input, out string? normalized, out string? problem))
 		{
 			name = normalized;
+			target = normalized;
 		}
 		else
 		{
@@ -141,6 +144,7 @@ public sealed partial class DnsSection : NetworkViewBase
 			return;
 		}
 
+		Recent.Remember(target);
 		DnsResolverKind resolver = _resolver;
 		string custom = _custom;
 		TimeSpan timeout = Settings.DnsTimeout;

@@ -18,6 +18,7 @@
 					<MokaTextField Label="Ports" Value="@_ports" ValueChanged="@(value => _ports = value ?? "")" Placeholder="22, 443, rdp" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
 				</div>
 			</div>
+			<RecentTargetsBar OnPick="@(value => _host = value)" />
 			<div class="mn-row">
 				<EnumSegmentedControl TEnum="AddressChoice" Value="_choice" ValueChanged="@(value => _choice = value)" Options="AddressChoices.Options" AriaLabel="Address family" Disabled="Busy" />
 				<MokaCheckbox Label="Read what the server says first" Value="_greeting" ValueChanged="@(value => _greeting = value)" />
