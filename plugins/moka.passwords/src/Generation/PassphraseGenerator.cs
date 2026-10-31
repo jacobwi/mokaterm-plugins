@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 
 namespace Moka.Passwords.Generation;
 
-/// <summary>Draws passphrases: words from <see cref="WordList"/>, each as likely as any other, with the extras the options ask for.</summary>
+/// <summary>Draws passphrases: words from the chosen list, each as likely as any other, with the extras the options ask for.</summary>
 public static class PassphraseGenerator
 {
 	public static string Generate(PassphraseOptions options) => Generate(options, RandomNumberGenerator.GetInt32);
@@ -18,7 +18,7 @@ public static class PassphraseGenerator
 			throw new ArgumentException(problem, nameof(options));
 		}
 
-		IReadOnlyList<string> list = WordList.Words;
+		IReadOnlyList<string> list = options.WordList.Words;
 		string[] words = new string[options.Words];
 		for (int index = 0; index < words.Length; index++)
 		{

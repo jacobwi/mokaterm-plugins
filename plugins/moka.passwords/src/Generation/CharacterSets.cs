@@ -23,6 +23,12 @@ public static class CharacterSets
 	/// <summary>The longest symbol set taken as typed. There are only 32 ASCII symbols, so this leaves room for repeats.</summary>
 	public const int MaxSymbolSetLength = 64;
 
+	/// <summary>
+	/// The longest excluded list taken as typed. Only the 94 printable ASCII characters can be excluded at all, so this
+	/// leaves room for repeats and for characters no kind offers.
+	/// </summary>
+	public const int MaxExcludedLength = 94;
+
 	/// <summary>A symbol is printable ASCII that is neither a letter, a digit nor a space.</summary>
 	public static bool IsSymbol(char c) => c is > ' ' and <= '~' && !char.IsAsciiLetterOrDigit(c);
 
@@ -42,6 +48,11 @@ public static class CharacterSets
 		return text.All(IsSymbol) ? null : "Only ASCII symbols: no letters, digits, spaces or other characters.";
 	}
 
+	/// <summary>Why the text cannot be an excluded list, or null when it can. Empty excludes nothing, and any character may be on it.</summary>
+	public static string? ExcludedProblem(string? text) => text is null || text.Length <= MaxExcludedLength
+		? null
+		: $"At most {MaxExcludedLength} characters.";
+
 	/// <summary>Each character of the text once, in the order typed. Repeats would weigh a symbol more than the others.</summary>
 	public static string Distinct(string text)
 	{
@@ -60,9 +71,13 @@ public static class CharacterSets
 	}
 
 	/// <summary>The text without the look-alikes.</summary>
-	public static string WithoutLookAlikes(string text)
+	public static string WithoutLookAlikes(string text) => Without(text, LookAlikes);
+
+	/// <summary>The text without every character of <paramref name="remove"/>.</summary>
+	public static string Without(string text, string remove)
 	{
 		ArgumentNullException.ThrowIfNull(text);
-		return string.Concat(text.Where(c => !LookAlikes.Contains(c, StringComparison.Ordinal)));
+		ArgumentNullException.ThrowIfNull(remove);
+		return remove.Length == 0 ? text : string.Concat(text.Where(c => !remove.Contains(c, StringComparison.Ordinal)));
 	}
 }

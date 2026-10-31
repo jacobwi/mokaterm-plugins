@@ -67,7 +67,7 @@
 		}
 
 		<div class="dt-pair">
-			<OutputBox Title="Header" Text="@jwt.HeaderJson" CopyName="Header" />
+			<OutputBox Title="Header" Text="@jwt.HeaderJson" CopyName="Header" DisplayChars="TextLimits.DisplayChars" />
 
 			@if (jwt.Claims.Count > 0)
 			{
@@ -75,11 +75,11 @@
 			}
 			else if (jwt.PayloadJson is { } payloadJson)
 			{
-				<OutputBox Title="Payload" Text="@payloadJson" Secret CopyName="Payload" />
+				<OutputBox Title="Payload" Text="@payloadJson" Secret CopyName="Payload" DisplayChars="TextLimits.DisplayChars" />
 			}
 			else if (jwt.PayloadText is { } payloadText)
 			{
-				<OutputBox Title="Payload" Detail="not JSON" Text="@payloadText" Secret CopyName="Payload" />
+				<OutputBox Title="Payload" Detail="not JSON" Text="@payloadText" Secret CopyName="Payload" DisplayChars="TextLimits.DisplayChars" />
 			}
 		</div>
 

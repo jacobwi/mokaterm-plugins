@@ -26,6 +26,9 @@ public sealed record PasswordOptions
 	/// <summary>The symbols to draw from while <see cref="Symbols"/> is on; repeats count once.</summary>
 	public string SymbolSet { get; init; } = CharacterSets.DefaultSymbols;
 
+	/// <summary>Characters to leave out of every kind they belong to; repeats count once.</summary>
+	public string Excluded { get; init; } = "";
+
 	/// <summary>Leaves out <see cref="CharacterSets.LookAlikes"/>.</summary>
 	public bool AvoidLookAlikes { get; init; }
 

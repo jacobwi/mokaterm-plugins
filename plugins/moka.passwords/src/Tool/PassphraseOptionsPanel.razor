@@ -8,6 +8,9 @@
 				   Max="PasswordSettings.MaxWords"
 				   Suffix="@($"words, {PasswordSettings.MinWords} to {PasswordSettings.MaxWords}")"
 				   AriaLabel="Words in a passphrase" />
+	<MokaCheckbox Label="Shorter words"
+				  Value="Options.ShortWords"
+				  ValueChanged="value => ChangeAsync(Options with { ShortWords = value })" />
 </div>
 
 <div class="mp-group">

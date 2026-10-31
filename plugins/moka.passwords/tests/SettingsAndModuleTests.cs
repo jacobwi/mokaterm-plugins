@@ -22,6 +22,7 @@ public sealed class SettingsAndModuleTests
 			Separator = (PassphraseSeparator)42,
 			CustomSeparator = "abc",
 			SymbolSet = "letters",
+			Excluded = new string('a', CharacterSets.MaxExcludedLength + 1),
 		};
 
 		PasswordSettings clamped = wild.Clamped();
@@ -34,6 +35,7 @@ public sealed class SettingsAndModuleTests
 		Assert.Equal(PassphraseSeparator.Dash, clamped.Separator);
 		Assert.Equal("", clamped.CustomSeparator);
 		Assert.Equal(CharacterSets.DefaultSymbols, clamped.SymbolSet);
+		Assert.Equal("", clamped.Excluded);
 		Assert.Equal(PasswordSettings.MaxCount, (new PasswordSettings { Count = int.MaxValue }).Clamped().Count);
 		Assert.Equal(new PasswordSettings(), new PasswordSettings().Clamped());
 	}
@@ -64,9 +66,11 @@ public sealed class SettingsAndModuleTests
 			Length = 32,
 			Symbols = false,
 			SymbolSet = "!@",
+			Excluded = "0o",
 			AvoidLookAlikes = true,
 			RequireEachKind = false,
 			Words = 4,
+			ShortWords = true,
 			Separator = PassphraseSeparator.Custom,
 			CustomSeparator = "+",
 			Capitalize = true,
@@ -75,10 +79,10 @@ public sealed class SettingsAndModuleTests
 		};
 
 		Assert.Equal(
-			new PasswordOptions { Length = 32, Symbols = false, SymbolSet = "!@", AvoidLookAlikes = true, RequireEachKind = false },
+			new PasswordOptions { Length = 32, Symbols = false, SymbolSet = "!@", Excluded = "0o", AvoidLookAlikes = true, RequireEachKind = false },
 			settings.ToPasswordOptions());
 		Assert.Equal(
-			new PassphraseOptions { Words = 4, Separator = PassphraseSeparator.Custom, CustomSeparator = "+", Capitalize = true, AddDigit = true, AddSymbol = true, SymbolSet = "!@" },
+			new PassphraseOptions { Words = 4, ShortWords = true, Separator = PassphraseSeparator.Custom, CustomSeparator = "+", Capitalize = true, AddDigit = true, AddSymbol = true, SymbolSet = "!@" },
 			settings.ToPassphraseOptions());
 	}
 

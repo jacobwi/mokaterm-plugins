@@ -4,7 +4,9 @@ namespace Moka.Passwords.Tests;
 
 public sealed class PassphraseGeneratorTests
 {
-	private static readonly HashSet<string> Words = new(WordList.Words, StringComparer.Ordinal);
+	private static readonly HashSet<string> Words = new(WordList.Large.Words, StringComparer.Ordinal);
+
+	private static readonly HashSet<string> ShortWords = new(WordList.Small.Words, StringComparer.Ordinal);
 
 	[Theory]
 	[InlineData(PassphraseSeparator.Space, " ")]
@@ -29,9 +31,33 @@ public sealed class PassphraseGeneratorTests
 	public void Dash_JoinsTheWordsPicked()
 	{
 		PassphraseOptions options = new() { Words = 3, Separator = PassphraseSeparator.Dash };
-		ScriptedPicks picks = new(0, 1, WordList.Count - 1);
+		ScriptedPicks picks = new(0, 1, WordList.Large.Count - 1);
 
 		Assert.Equal("abacus-abdomen-zoom", PassphraseGenerator.Generate(options, picks.Pick));
+	}
+
+	// The short list serves its own words, still one for each roll of its dice.
+	[Fact]
+	public void ShortWords_ComeFromTheShortList()
+	{
+		PassphraseOptions options = new() { Words = 5, ShortWords = true, Separator = PassphraseSeparator.Space };
+
+		for (int draw = 0; draw < 300; draw++)
+		{
+			string[] words = PassphraseGenerator.Generate(options).Split(' ');
+
+			Assert.Equal(5, words.Length);
+			Assert.All(words, word => Assert.Contains(word, ShortWords));
+		}
+	}
+
+	[Fact]
+	public void ShortWords_DashJoinsTheWordsPicked()
+	{
+		PassphraseOptions options = new() { Words = 3, ShortWords = true, Separator = PassphraseSeparator.Dash };
+		ScriptedPicks picks = new(0, 1, WordList.Small.Count - 1);
+
+		Assert.Equal("acid-acorn-zoom", PassphraseGenerator.Generate(options, picks.Pick));
 	}
 
 	[Fact]

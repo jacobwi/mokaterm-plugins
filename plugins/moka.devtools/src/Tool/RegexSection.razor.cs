@@ -93,6 +93,13 @@ public sealed partial class RegexSection : DevToolViewBase, IDisposable
 		return ScheduleAsync();
 	}
 
+	/// <summary>Puts a preset's pattern in the box, as if it had been typed: the flags and the sample text stay as they are.</summary>
+	private Task UsePresetAsync(RegexPreset preset)
+	{
+		_pattern = preset.Pattern;
+		return ScheduleAsync();
+	}
+
 	private Task OnFlagChangedAsync(char flag, bool on)
 	{
 		if (on)

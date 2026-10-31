@@ -90,7 +90,7 @@
 
 			@if (result.Text is { } text)
 			{
-				<OutputBox Title="@result.Title" Detail="@Lines(text)" Text="@text" FileName="@result.FileName" CopyName="@result.Title">
+				<OutputBox Title="@result.Title" Detail="@Lines(text)" Text="@text" FileName="@result.FileName" CopyName="@result.Title" DisplayChars="TextLimits.DisplayChars">
 					<Actions>
 						<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="DevToolIcons.Swap" OnClick="() => UseAsInput(text)" title="Put the output in the box">Use as input</MokaButton>
 					</Actions>

@@ -73,7 +73,7 @@
 			<MokaAlert Severity="MokaToastSeverity.Info" Dense>@note</MokaAlert>
 		}
 
-		<OutputBox Title="Output" Detail="@OutputDetail" Text="@OutputText" FileName="@OutputFileName" CopyName="Output" Wrap="@(_view != OutputView.Dump)">
+		<OutputBox Title="Output" Detail="@OutputDetail" Text="@OutputText" FileName="@OutputFileName" CopyName="Output" Wrap="@(_view != OutputView.Dump)" DisplayChars="TextLimits.DisplayChars">
 			<Actions>
 				@if (output.Bytes is not null)
 				{

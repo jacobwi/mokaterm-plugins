@@ -4,6 +4,7 @@ using Moka.DevTools.Components;
 using Moka.DevTools.Dates;
 using Moka.DevTools.Text;
 using Mokaterm.UI.Common.Components;
+using Mokaterm.UI.Common.PluginUi;
 
 namespace Moka.DevTools.Tool;
 
@@ -42,17 +43,17 @@ public sealed partial class TimeSection : DevToolViewBase
 		DateTime utc = instant.UtcDateTime;
 		return
 		[
-			new("UTC", TimeFormats.IsoUtc(instant), Copyable: true),
-			new("Local", TimeFormats.InZone(instant, TimeZoneInfo.Local), Copyable: true, Note: TimeFormats.ZoneName(instant, TimeZoneInfo.Local)),
-			new("From now", RelativeTime.Describe(instant, Now), Mono: false),
-			new("Unix s", TimeFormats.UnixSeconds(instant), Copyable: true),
-			new("Unix ms", TimeFormats.UnixMilliseconds(instant), Copyable: true),
-			new("Unix µs", TimeFormats.UnixMicroseconds(instant), Copyable: true),
-			new("Unix ns", TimeFormats.UnixNanoseconds(instant), Copyable: true),
-			new("RFC 3339", TimeFormats.IsoUtc(instant), Copyable: true),
-			new("RFC 1123", TimeFormats.Rfc1123(instant), Copyable: true),
-			new("Day", string.Create(CultureInfo.InvariantCulture,
-				$"{utc.DayOfWeek}, day {utc.DayOfYear} of {utc.Year}, ISO week {ISOWeek.GetWeekOfYear(utc)} (UTC)"), Mono: false),
+			new("UTC", [TimeFormats.IsoUtc(instant)], Mono: true, Copyable: true),
+			new("Local", [TimeFormats.InZone(instant, TimeZoneInfo.Local)], Mono: true, Copyable: true, Note: TimeFormats.ZoneName(instant, TimeZoneInfo.Local)),
+			new("From now", [RelativeTime.Describe(instant, Now)], Mono: false),
+			new("Unix s", [TimeFormats.UnixSeconds(instant)], Mono: true, Copyable: true),
+			new("Unix ms", [TimeFormats.UnixMilliseconds(instant)], Mono: true, Copyable: true),
+			new("Unix µs", [TimeFormats.UnixMicroseconds(instant)], Mono: true, Copyable: true),
+			new("Unix ns", [TimeFormats.UnixNanoseconds(instant)], Mono: true, Copyable: true),
+			new("RFC 3339", [TimeFormats.IsoUtc(instant)], Mono: true, Copyable: true),
+			new("RFC 1123", [TimeFormats.Rfc1123(instant)], Mono: true, Copyable: true),
+			new("Day", [string.Create(CultureInfo.InvariantCulture,
+				$"{utc.DayOfWeek}, day {utc.DayOfYear} of {utc.Year}, ISO week {ISOWeek.GetWeekOfYear(utc)} (UTC)")], Mono: false),
 		];
 	}
 
