@@ -38,8 +38,9 @@ PACKAGES = [
     "src/Mokaterm.Abstractions/Mokaterm.Abstractions.csproj",
     "src/UI/Mokaterm.UI.Common/Mokaterm.UI.Common.csproj",
     "src/Mokaterm.Plugin.Sdk/Mokaterm.Plugin.Sdk.csproj",
+    "src/Mokaterm.Plugin.TestHost/Mokaterm.Plugin.TestHost.csproj",
 ]
-PACKAGE_IDS = ["Mokaterm.Abstractions", "Mokaterm.UI.Common", "Mokaterm.Plugin.Sdk"]
+PACKAGE_IDS = ["Mokaterm.Abstractions", "Mokaterm.UI.Common", "Mokaterm.Plugin.Sdk", "Mokaterm.Plugin.TestHost"]
 NUGET_ORG = "https://api.nuget.org/v3-flatcontainer"
 
 
