@@ -13,16 +13,20 @@ public sealed class TlsProbeLiveTests
 	{
 		string? host = Environment.GetEnvironmentVariable("MOKA_CERTIFICATES_TLS_HOST");
 		Assert.SkipWhen(string.IsNullOrWhiteSpace(host), "Set MOKA_CERTIFICATES_TLS_HOST to check a real server.");
-		Assert.True(TlsTarget.TryParse(host, "", "", out TlsTarget? target, out string? problem), problem);
+		Assert.True(TlsTarget.TryParse(host, "", "", StartTlsMode.Plain, out TlsTarget? target, out string? problem), problem);
 
 		using TlsObservation observation = await TlsProbe.ProbeAsync(target, TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken);
-		TlsReport report = TlsReportBuilder.Build(observation, DateTimeOffset.UtcNow, 30);
+		IReadOnlyList<TlsVersionResult> versions = await TlsProbe.ProbeVersionsAsync(target, TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken);
+		TlsReport report = TlsReportBuilder.Build(observation, DateTimeOffset.UtcNow, 30, versions);
 
 		Assert.NotEmpty(report.Sent);
 		Assert.NotEmpty(report.Chain);
 		Assert.StartsWith("TLS 1.", report.Protocol, StringComparison.Ordinal);
 		Assert.NotEqual("unknown", report.Cipher);
 		Assert.Equal(HostNameResult.Matches, report.NameMatch);
-		TestContext.Current.SendDiagnosticMessage($"{report.Endpoint} {report.Protocol} {report.Cipher}, sent {report.Sent.Count}, chain {report.Chain.Count}, trusted {report.Trusted}");
+		Assert.Equal(TlsVersions.Probed.Count, report.Versions.Count);
+		Assert.Contains(report.Versions, version => version.Outcome == TlsVersionOutcome.Accepted);
+		Assert.NotNull(report.VersionSummary);
+		TestContext.Current.SendDiagnosticMessage($"{report.Endpoint} {report.Protocol} {report.Cipher}, sent {report.Sent.Count}, chain {report.Chain.Count}, trusted {report.Trusted}, versions: {report.VersionSummary}");
 	}
 }

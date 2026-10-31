@@ -23,6 +23,11 @@ public sealed record CertificateSettings : ISettingsSection
 
 	public const int MaxServerCheckSeconds = 60;
 
+	/// <summary>How often the System page reads the server again while it is shown. 0, the floor, turns it off.</summary>
+	public const int MinRefreshSeconds = 0;
+
+	public const int MaxRefreshSeconds = 3600;
+
 	public const int MaxExtraPaths = 20;
 
 	public static string SectionKey => "plugin.moka.certificates";
@@ -45,6 +50,9 @@ public sealed record CertificateSettings : ISettingsSection
 
 	public int ServerCheckTimeoutSeconds { get; init; } = 10;
 
+	/// <summary>How often the System page reads the server again while it is shown; 0 turns it off.</summary>
+	public int RefreshSeconds { get; init; } = 60;
+
 	/// <summary>
 	/// More certificate files or folders on servers for the System page to read, separated by commas. They are paths on
 	/// the servers, not on this machine, so the settings backup carries them.
@@ -64,6 +72,7 @@ public sealed record CertificateSettings : ISettingsSection
 		PfxEncryption = Enum.IsDefined(PfxEncryption) ? PfxEncryption : PfxEncryption.Aes256,
 		ExpiringDays = Math.Clamp(ExpiringDays, MinExpiringDays, MaxExpiringDays),
 		ServerCheckTimeoutSeconds = Math.Clamp(ServerCheckTimeoutSeconds, MinServerCheckSeconds, MaxServerCheckSeconds),
+		RefreshSeconds = Math.Clamp(RefreshSeconds, MinRefreshSeconds, MaxRefreshSeconds),
 		ExtraPaths = ExtraPathsProblem(ExtraPaths) is null ? string.Join(", ", SplitPaths(ExtraPaths)) : "",
 	};
 

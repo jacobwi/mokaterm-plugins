@@ -12,7 +12,7 @@ namespace Moka.Certificates.Tls;
 /// </summary>
 public static class TlsReportBuilder
 {
-	public static TlsReport Build(TlsObservation observation, DateTimeOffset now, int expiringDays)
+	public static TlsReport Build(TlsObservation observation, DateTimeOffset now, int expiringDays, IReadOnlyList<TlsVersionResult>? versions = null)
 	{
 		ArgumentNullException.ThrowIfNull(observation);
 		if (observation.SentCertificates.Count == 0)
@@ -96,6 +96,42 @@ public static class TlsReportBuilder
 			warnings.Add($"The server agreed to {ProtocolName(observation.Protocol)}, which browsers no longer accept.");
 		}
 
+		// The pinned probes, when they ran: what the server takes, said once the negotiated protocol above has not said it.
+		string? versionSummary = null;
+		if (versions is { Count: > 0 } tried)
+		{
+			List<string> takes = [.. tried.Where(r => r.Outcome == TlsVersionOutcome.Accepted).Select(r => ProtocolName(r.Protocol))];
+			List<string> refuses = [.. tried.Where(r => r.Outcome == TlsVersionOutcome.Refused).Select(r => ProtocolName(r.Protocol))];
+			List<string> unknown = [.. tried.Where(r => r.Outcome == TlsVersionOutcome.NotOfferedHere).Select(r => ProtocolName(r.Protocol))];
+			if (takes.Count > 0)
+			{
+				// The first accepted is the least the server takes, since the versions were tried oldest first.
+				versionSummary = $"The server takes {Listed(takes)}";
+				if (refuses.Count > 0)
+				{
+					versionSummary += $" and refused {Listed(refuses)}";
+				}
+
+				versionSummary += ".";
+			}
+			else
+			{
+				versionSummary = "None of the TLS versions tried completed a handshake.";
+			}
+
+			if (unknown.Count > 0)
+			{
+				versionSummary += $" {Listed(unknown)} could not be checked from this machine.";
+				warnings.Add($"This machine refused to offer {Listed(unknown)} even when asked, so the check cannot say whether the server would take {(unknown.Count == 1 ? "it" : "them")}.");
+			}
+
+			List<string> oldAccepted = [.. tried.Where(r => r.Outcome == TlsVersionOutcome.Accepted && r.Protocol < SslProtocols.Tls12).Select(r => ProtocolName(r.Protocol))];
+			if (oldAccepted.Count > 0)
+			{
+				warnings.Add($"The server still accepts {Listed(oldAccepted)}, which browsers no longer accept.");
+			}
+		}
+
 		bool trusted = problems.Count == 0
 			&& ChainProblems.IsClean(observation.ChainStatus)
 			&& (observation.PolicyErrors & SslPolicyErrors.RemoteCertificateNotAvailable) == 0;
@@ -105,6 +141,9 @@ public static class TlsReportBuilder
 			ServerName = observation.Target.ServerName,
 			Protocol = ProtocolName(observation.Protocol),
 			Cipher = observation.CipherSuite?.ToString() ?? "unknown",
+			StartTls = observation.Target.StartTls,
+			Versions = versions ?? [],
+			VersionSummary = versionSummary,
 			Leaf = leaf,
 			Sent = sent,
 			Chain = chain,
@@ -131,6 +170,11 @@ public static class TlsReportBuilder
 		12 => "SSL 2.0",
 		_ => protocol.ToString(),
 	};
+
+	/// <summary>"TLS 1.2 and TLS 1.3", or "TLS 1.0", in the order given.</summary>
+	private static string Listed(List<string> names) => names.Count == 1
+		? names[0]
+		: $"{string.Join(", ", names.Take(names.Count - 1))} and {names[^1]}";
 
 	private static string NamesOf(CertificateInfo certificate)
 	{

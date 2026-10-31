@@ -32,6 +32,21 @@ public sealed class ServerCertificateCommandsTests
 	}
 
 	[Fact]
+	public void Discover_GreetsEveryServerConfigurationFile()
+	{
+		SystemScript script = ServerCertificateCommands.Discover(Server("awk"), [], asRoot: false);
+
+		Assert.Contains("grep -Hn -E '^[[:space:]]*tls([[:space:]]|$)' '/etc/caddy/Caddyfile'", script.Body, StringComparison.Ordinal);
+		Assert.Contains("grep -Hn -i -E '(^|[[:space:]])crt(-list)?([[:space:]]|$)' '/etc/haproxy/haproxy.cfg'", script.Body, StringComparison.Ordinal);
+		Assert.Contains("grep -Hn -E '^[[:space:]]*ssl\\.pemfile([[:space:]=]|$)' '/etc/lighttpd/lighttpd.conf'", script.Body, StringComparison.Ordinal);
+		Assert.Contains("grep -R -I -n -E 'certFile' '/etc/traefik'", script.Body, StringComparison.Ordinal);
+
+		// The crt-list files haproxy names are read where awk exists; without it the lists are left unread.
+		Assert.Contains("$i==\"crt-list\"", script.Body, StringComparison.Ordinal);
+		Assert.DoesNotContain("awk", ServerCertificateCommands.Discover(Server(), [], asRoot: false).Body, StringComparison.Ordinal);
+	}
+
+	[Fact]
 	public void ReadFiles_FiltersWithAwkOrSedAndQuotesThePaths()
 	{
 		SystemScript withAwk = ServerCertificateCommands.ReadFiles(Server("awk", "base64"), ["/etc/a b.pem", "/etc/c.der"], asRoot: true);

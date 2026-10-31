@@ -35,6 +35,9 @@
 		<!-- The plugin takes these from its host and does not copy them; a test project is its own host. -->
 		<PackageReference Include="Mokaterm.UI.Common" />
 		<PackageReference Include="System.Security.Cryptography.Pkcs" />
+
+		<!-- The render harness for the render tests below: draws the views with the services they inject, faked. -->
+		<PackageReference Include="Mokaterm.Plugin.TestHost" PrivateAssets="all" />
 	</ItemGroup>
 
 	<ItemGroup>

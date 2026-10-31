@@ -113,6 +113,72 @@ public sealed class TlsReportBuilderTests
 		Assert.False(ChainProblems.IsClean(X509ChainStatusFlags.PartialChain));
 	}
 
+	[Fact]
+	public void Build_WithoutVersionProbes_SaysNothingAboutVersions()
+	{
+		using TestChain chain = TestMaterial.Chain();
+		using TlsObservation observation = Observation(chain, "www.example.com", [chain.Leaf, chain.Intermediate], [chain.Leaf, chain.Intermediate, chain.Root]);
+
+		TlsReport report = TlsReportBuilder.Build(observation, TestMaterial.Now, 30);
+
+		Assert.Empty(report.Versions);
+		Assert.Null(report.VersionSummary);
+		Assert.Equal(StartTlsMode.Plain, report.StartTls);
+	}
+
+	[Fact]
+	public void Build_ModernServer_TakesTwelveAndNewerAndSaysSo()
+	{
+		using TestChain chain = TestMaterial.Chain();
+		using TlsObservation observation = Observation(chain, "www.example.com", [chain.Leaf, chain.Intermediate], [chain.Leaf, chain.Intermediate, chain.Root]);
+
+		TlsReport report = TlsReportBuilder.Build(observation, TestMaterial.Now, 30, Versions(((SslProtocols)192, TlsVersionOutcome.Refused), ((SslProtocols)768, TlsVersionOutcome.Refused), (SslProtocols.Tls12, TlsVersionOutcome.Accepted), (SslProtocols.Tls13, TlsVersionOutcome.Accepted)));
+
+		Assert.Equal("The server takes TLS 1.2 and TLS 1.3 and refused TLS 1.0 and TLS 1.1.", report.VersionSummary);
+		Assert.Empty(report.Warnings);
+	}
+
+	[Fact]
+	public void Build_ServerThatStillTakesOldVersions_IsWarnedAbout()
+	{
+		using TestChain chain = TestMaterial.Chain();
+		using TlsObservation observation = Observation(chain, "www.example.com", [chain.Leaf, chain.Intermediate], [chain.Leaf, chain.Intermediate, chain.Root]);
+
+		TlsReport report = TlsReportBuilder.Build(observation, TestMaterial.Now, 30, Versions(((SslProtocols)192, TlsVersionOutcome.Accepted), ((SslProtocols)768, TlsVersionOutcome.Accepted), (SslProtocols.Tls12, TlsVersionOutcome.Accepted), (SslProtocols.Tls13, TlsVersionOutcome.Refused)));
+
+		Assert.Equal("The server still accepts TLS 1.0 and TLS 1.1, which browsers no longer accept.", Assert.Single(report.Warnings));
+		Assert.StartsWith("The server takes TLS 1.0, TLS 1.1 and TLS 1.2", report.VersionSummary, StringComparison.Ordinal);
+	}
+
+	[Fact]
+	public void Build_VersionsThisMachineWouldNotOffer_AreSaidHonestly()
+	{
+		using TestChain chain = TestMaterial.Chain();
+		using TlsObservation observation = Observation(chain, "www.example.com", [chain.Leaf, chain.Intermediate], [chain.Leaf, chain.Intermediate, chain.Root]);
+
+		TlsReport report = TlsReportBuilder.Build(observation, TestMaterial.Now, 30, Versions(((SslProtocols)192, TlsVersionOutcome.NotOfferedHere), ((SslProtocols)768, TlsVersionOutcome.NotOfferedHere), (SslProtocols.Tls12, TlsVersionOutcome.Accepted), (SslProtocols.Tls13, TlsVersionOutcome.Accepted)));
+
+		Assert.Equal(
+			"This machine refused to offer TLS 1.0 and TLS 1.1 even when asked, so the check cannot say whether the server would take them.",
+			Assert.Single(report.Warnings));
+		Assert.EndsWith("TLS 1.0 and TLS 1.1 could not be checked from this machine.", report.VersionSummary, StringComparison.Ordinal);
+	}
+
+	[Fact]
+	public void Build_NothingAccepted_SaysThat()
+	{
+		using TestChain chain = TestMaterial.Chain();
+		using TlsObservation observation = Observation(chain, "www.example.com", [chain.Leaf, chain.Intermediate], [chain.Leaf, chain.Intermediate, chain.Root]);
+
+		TlsReport report = TlsReportBuilder.Build(observation, TestMaterial.Now, 30, Versions(((SslProtocols)192, TlsVersionOutcome.NotOfferedHere), ((SslProtocols)768, TlsVersionOutcome.Refused), (SslProtocols.Tls12, TlsVersionOutcome.Refused), (SslProtocols.Tls13, TlsVersionOutcome.Refused)));
+
+		Assert.StartsWith("None of the TLS versions tried completed a handshake.", report.VersionSummary, StringComparison.Ordinal);
+	}
+
+	// The old versions come as numbers, as everywhere: their enum members are marked obsolete.
+	private static IReadOnlyList<TlsVersionResult> Versions(params (SslProtocols Protocol, TlsVersionOutcome Outcome)[] results) =>
+		[.. results.Select(result => new TlsVersionResult(result.Protocol, result.Outcome))];
+
 	private static TlsObservation Observation(
 		TestChain chain,
 		string host,

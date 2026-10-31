@@ -19,6 +19,7 @@ public sealed class SettingsAndModuleTests
 			ValidityDays = 0,
 			ExpiringDays = 9999,
 			ServerCheckTimeoutSeconds = 1,
+			RefreshSeconds = 99999,
 			KeyAlgorithm = (KeyAlgorithm)42,
 			RsaKeySize = (RsaKeySize)(-1),
 			Curve = (EllipticCurve)9,
@@ -32,6 +33,8 @@ public sealed class SettingsAndModuleTests
 		Assert.Equal(CertificateSettings.MinValidityDays, clamped.ValidityDays);
 		Assert.Equal(CertificateSettings.MaxExpiringDays, clamped.ExpiringDays);
 		Assert.Equal(CertificateSettings.MinServerCheckSeconds, clamped.ServerCheckTimeoutSeconds);
+		Assert.Equal(CertificateSettings.MaxRefreshSeconds, clamped.RefreshSeconds);
+		Assert.Equal(0, (new CertificateSettings { RefreshSeconds = -5 }).Clamped().RefreshSeconds);
 		Assert.Equal(KeyAlgorithm.Ecdsa, clamped.KeyAlgorithm);
 		Assert.Equal(RsaKeySize.Bits3072, clamped.RsaKeySize);
 		Assert.Equal(EllipticCurve.P256, clamped.Curve);

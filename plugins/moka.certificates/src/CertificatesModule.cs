@@ -58,11 +58,11 @@ public sealed class CertificatesModule : IMokatermModule
 		{
 			Id = CertificateSettings.SectionKey,
 			Title = "Certificates",
-			Description = "What new keys and certificates default to, when a certificate counts as expiring, the server check's time limit and extra paths for the System page.",
+			Description = "What new keys and certificates default to, when a certificate counts as expiring, the server check's time limit, and refresh and extra paths for the System page.",
 			Group = SettingsPageGroup.Plugins,
 			Icon = MokatermIcons.Plugin,
 			Component = typeof(CertificateSettingsPage),
-			Keywords = "certificate key rsa ecdsa curve validity pfx expiring tls server check certbot nginx apache",
+			Keywords = "certificate key rsa ecdsa curve validity pfx expiring tls server check starttls refresh certbot nginx apache caddy haproxy lighttpd traefik",
 		});
 	}
 }

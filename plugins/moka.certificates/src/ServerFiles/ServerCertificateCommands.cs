@@ -46,6 +46,16 @@ public static partial class ServerCertificateCommands
 		"/etc/httpd/conf.d",
 	];
 
+	/// <summary>Caddy's main file; the imports it names are out of scope.</summary>
+	public const string Caddyfile = "/etc/caddy/Caddyfile";
+
+	public const string HaproxyConfiguration = "/etc/haproxy/haproxy.cfg";
+
+	public const string LighttpdConfiguration = "/etc/lighttpd/lighttpd.conf";
+
+	/// <summary>Traefik's folder, whose static and dynamic configuration files are searched for certFile values.</summary>
+	public const string TraefikFolder = "/etc/traefik";
+
 	/// <summary>The programs the page asks about, which the System view's detection probes because the descriptor names them.</summary>
 	public static IReadOnlyList<string> Probed { get; } = [Certbot, Nginx, Apache2Ctl, ApacheCtl, Systemctl, Awk, Base64];
 
@@ -58,8 +68,9 @@ public static partial class ServerCertificateCommands
 
 	/// <summary>
 	/// One read that finds where certificates are configured: certbot's lineages (as root only, since certbot refuses
-	/// anyone else), the live folders, <c>nginx -T</c>, Apache's certificate lines, and each extra path from settings
-	/// (a folder lists its .pem, .crt, .cer and .cert files).
+	/// anyone else), the live folders, <c>nginx -T</c>, Apache's certificate lines, the tls lines of Caddy's main
+	/// Caddyfile, HAProxy's crt and crt-list settings, lighttpd's ssl.pemfile, Traefik's certFile values under
+	/// /etc/traefik, and each extra path from settings (a folder lists its .pem, .crt, .cer and .cert files).
 	/// </summary>
 	/// <exception cref="ArgumentException">An extra path is not one <see cref="PathProblem"/> accepts.</exception>
 	public static SystemScript Discover(ServerFacts server, IReadOnlyList<string> extraPaths, bool asRoot)
@@ -94,6 +105,25 @@ public static partial class ServerCertificateCommands
 		}
 
 		body.Append(" 2>/dev/null\n");
+
+		body.Append(Part("caddy"))
+			.Append("grep -Hn -E '^[[:space:]]*tls([[:space:]]|$)' ").Append(PosixShell.Quote(Caddyfile)).Append(" 2>/dev/null\n");
+
+		body.Append(Part("haproxy"))
+			.Append("grep -Hn -i -E '(^|[[:space:]])crt(-list)?([[:space:]]|$)' ").Append(PosixShell.Quote(HaproxyConfiguration)).Append(" 2>/dev/null\n");
+		if (server.HasCommand(Awk))
+		{
+			// Every crt-list file the configuration names, its lines prefixed with its own path, so the parser can
+			// tell a line of a list from a line of the configuration: grep puts the line number after the colon.
+			body.Append("awk '{for(i=1;i<NF;i++) if($i==\"crt-list\") print $(i+1)}' ").Append(PosixShell.Quote(HaproxyConfiguration))
+				.Append(" 2>/dev/null | sort -u | while IFS= read -r list; do [ -r \"$list\" ] && awk -v pre=\"$list\" '{print pre \":\" $0}' \"$list\"; done 2>/dev/null\n");
+		}
+
+		body.Append(Part("lighttpd"))
+			.Append("grep -Hn -E '^[[:space:]]*ssl\\.pemfile([[:space:]=]|$)' ").Append(PosixShell.Quote(LighttpdConfiguration)).Append(" 2>/dev/null\n");
+
+		body.Append(Part("traefik"))
+			.Append("grep -R -I -n -E 'certFile' ").Append(PosixShell.Quote(TraefikFolder)).Append(" 2>/dev/null\n");
 
 		body.Append(Part("extra"));
 		foreach (string path in extraPaths)

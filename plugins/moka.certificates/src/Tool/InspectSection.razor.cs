@@ -59,7 +59,7 @@ public sealed partial class InspectSection : CertificateViewBase
 
 	private static MokaColor DotOf(InspectedItem item) => item switch
 	{
-		{ Certificate: { } certificate } => StatusChip.ColorOf(certificate.Expiry),
+		{ Certificate: { } certificate } => ExpiryColor.Of(certificate.Expiry),
 		{ Request.SignatureValid: false } => MokaColor.Error,
 		{ Locked: true } => MokaColor.Warning,
 		{ Kind: MaterialKind.PrivateKey } => MokaColor.Primary,

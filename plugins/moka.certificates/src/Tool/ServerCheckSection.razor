@@ -19,12 +19,15 @@
 	{
 		<div class="mc-stack">
 			<div class="mc-group" @onkeydown="OnKeyAsync">
+				<span class="mc-label">TLS starts</span>
+				<EnumSegmentedControl TEnum="StartTlsMode" Value="_mode" ValueChanged="@(value => _mode = value)" Options="Modes" AriaLabel="Where TLS starts" Disabled="_busy" />
+				<span class="mc-note">@ModeHelp</span>
 				<div class="mc-form">
 					<MokaTextField Label="Host" Value="@_host" ValueChanged="@(value => _host = value ?? "")" Placeholder="example.com or https://example.com:8443" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
-					<MokaTextField Label="Port" Value="@_port" ValueChanged="@(value => _port = value ?? "")" Placeholder="443" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
+					<MokaTextField Label="Port" Value="@_port" ValueChanged="@(value => _port = value ?? "")" Placeholder="@PortPlaceholder" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
 					<MokaTextField Label="SNI name" Value="@_serverName" ValueChanged="@(value => _serverName = value ?? "")" Placeholder="the host" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
 				</div>
-				<span class="mc-note">One TLS handshake from this machine, then the connection closes: nothing is sent after it, no client certificate, no retry. Revocation is not checked. Gives up after @Settings.ServerCheckTimeoutSeconds s.</span>
+				<span class="mc-note">One handshake from this machine for the chain, then one short handshake per TLS version to learn which the server takes: nothing is sent after them, no client certificate, no retry. Revocation is not checked. Each gives up after @Settings.ServerCheckTimeoutSeconds s.</span>
 			</div>
 
 			@if (_error is { } error)
@@ -37,11 +40,25 @@
 				<ChipRow>
 					<StatusChip Text="@(report.Trusted ? "trusted" : "not trusted")" Color="@(report.Trusted ? MokaColor.Success : MokaColor.Error)" />
 					<StatusChip Text="@NameChip(report)" Color="@(report.NameMatch == HostNameResult.Matches ? MokaColor.Success : MokaColor.Error)" Glow="@(report.NameMatch != HostNameResult.Matches)" Title="@($"Checked against {report.NameChecked}")" />
-					<StatusChip Text="@CertificateReport.ExpiryName(report.Leaf.Expiry)" Color="StatusChip.ColorOf(report.Leaf.Expiry)" Glow="@(report.Leaf.Expiry != ExpiryState.Valid)" />
+					<StatusChip Text="@CertificateReport.ExpiryName(report.Leaf.Expiry)" Color="ExpiryColor.Of(report.Leaf.Expiry)" Glow="@(report.Leaf.Expiry != ExpiryState.Valid)" />
 					<span class="mc-mono">@report.Protocol</span>
 					<span class="mc-mono">@report.Cipher</span>
 				</ChipRow>
 				<span class="mc-note mc-mono">@EndpointLine(report)</span>
+
+				@if (report.Versions.Count > 0)
+				{
+					<ChipRow>
+						@foreach (TlsVersionResult version in report.Versions)
+						{
+							<StatusChip Text="@VersionChipText(version)"
+										Color="@(VersionColor(version))"
+										Glow="@(version.Outcome == TlsVersionOutcome.Refused)"
+										Title="@VersionChipTitle(version)" />
+						}
+					</ChipRow>
+					<span class="mc-note">@report.VersionSummary</span>
+				}
 
 				@foreach (string problem in report.Problems)
 				{
@@ -68,7 +85,7 @@
 								class="@(IsSelected(SentList, position) ? "mc-item mc-item--selected" : "mc-item")"
 								@key="@($"sent-{position}")"
 								@onclick="@(() => Select(SentList, position))">
-							<MokaStatusDot Size="MokaSize.Xs" Color="StatusChip.ColorOf(certificate.Expiry)" Glow="@(certificate.Expiry != ExpiryState.Valid)" />
+							<MokaStatusDot Size="MokaSize.Xs" Color="ExpiryColor.Of(certificate.Expiry)" Glow="@(certificate.Expiry != ExpiryState.Valid)" />
 							<span class="mc-item-kind">@(position == 0 ? "server" : certificate.IsSelfSigned == true ? "root" : "chain")</span>
 							<span class="mc-item-main">
 								<span class="mc-item-title">@certificate.Title</span>
@@ -95,7 +112,7 @@
 									class="@(IsSelected(BuiltList, position) ? "mc-item mc-item--selected" : "mc-item")"
 									@key="@($"built-{position}")"
 									@onclick="@(() => Select(BuiltList, position))">
-								<MokaStatusDot Size="MokaSize.Xs" Color="StatusChip.ColorOf(certificate.Expiry)" Glow="@(certificate.Expiry != ExpiryState.Valid)" />
+								<MokaStatusDot Size="MokaSize.Xs" Color="ExpiryColor.Of(certificate.Expiry)" Glow="@(certificate.Expiry != ExpiryState.Valid)" />
 								<span class="mc-item-kind">@(position == report.Chain.Count - 1 && certificate.IsSelfIssued ? "root" : position == 0 ? "server" : "intermediate")</span>
 								<span class="mc-item-main">
 									<span class="mc-item-title">@certificate.Title</span>
@@ -127,7 +144,7 @@
 		{
 			<ToolDetailPanel Title="@certificate.Title"
 							 Subtitle="@($"Issued by {certificate.IssuerTitle}")"
-							 DotColor="StatusChip.ColorOf(certificate.Expiry)"
+							 DotColor="ExpiryColor.Of(certificate.Expiry)"
 							 DotGlow="@(certificate.Expiry != ExpiryState.Valid)"
 							 OnClose="CloseDetail">
 				<CertificateDetails Info="certificate" />

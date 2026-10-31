@@ -17,6 +17,15 @@ public sealed record TlsReport
 	/// <summary>The cipher suite's IANA name, such as TLS_AES_256_GCM_SHA384.</summary>
 	public required string Cipher { get; init; }
 
+	/// <summary>How the handshake began: straight TLS, or the STARTTLS exchange that preceded it.</summary>
+	public StartTlsMode StartTls { get; init; } = StartTlsMode.Plain;
+
+	/// <summary>What a handshake pinned to each TLS version showed, oldest first. Empty when those probes did not run.</summary>
+	public IReadOnlyList<TlsVersionResult> Versions { get; init; } = [];
+
+	/// <summary>The versions the server takes, the least it takes and what could not be checked, in words; null when the pinned probes did not run.</summary>
+	public string? VersionSummary { get; init; }
+
 	public required CertificateInfo Leaf { get; init; }
 
 	/// <summary>What the server sent: its certificate first.</summary>
