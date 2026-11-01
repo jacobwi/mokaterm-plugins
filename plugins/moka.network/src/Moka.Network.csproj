@@ -10,7 +10,7 @@
 	<PropertyGroup>
 		<AssemblyName>Moka.Network</AssemblyName>
 		<RootNamespace>Moka.Network</RootNamespace>
-		<Version>1.2.1</Version>
+		<Version>1.2.2</Version>
 	</PropertyGroup>
 
 	<PropertyGroup>

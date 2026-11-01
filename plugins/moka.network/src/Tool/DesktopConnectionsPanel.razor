@@ -11,8 +11,9 @@
 	@if (_connections.Count > 0)
 	{
 		@* The heading sits outside the scrolled part: a sticky header over rows whose text changes every read left
-		   WebView2 showing a smear until something forced a repaint. Rows are keyed, so a change redraws the rows that
-		   changed instead of rewriting every row's text in place. *@
+		   WebView2 showing a smear until something forced a repaint. The rows are deliberately NOT keyed: a connection
+		   table can hold two rows with the same local end, remote end and state, and a repeated key throws when the
+		   next read diffs, which took the whole tool down. *@
 		<div class="mn-table" role="table" aria-label="TCP connections">
 			<div class="mn-tr mn-th" role="row">
 				<span role="columnheader">Local</span>
@@ -22,7 +23,7 @@
 			<div class="mn-scroll" role="rowgroup">
 				@foreach (LocalConnectionRow row in _connections)
 				{
-					<div class="mn-tr" role="row" @key="(row.Local, row.Remote, row.State)">
+					<div class="mn-tr" role="row">
 						<span class="mn-td mn-td--mono" role="cell">@row.Local</span>
 						<span class="mn-td mn-td--mono" role="cell">@row.Remote</span>
 						<span class="mn-td" role="cell">@row.State</span>
@@ -46,7 +47,7 @@
 			<div class="mn-scroll" role="rowgroup">
 				@foreach (LocalListenerRow row in _listeners)
 				{
-					<div class="mn-tr" role="row" @key="(row.Protocol, row.Local)">
+					<div class="mn-tr" role="row">
 						<span class="mn-td mn-td--mono" role="cell">@row.Protocol</span>
 						<span class="mn-td mn-td--mono" role="cell">@row.Local</span>
 					</div>
