@@ -1,5 +1,12 @@
 # Next: to be planned
 
+# Built for 0.2.9: Kubernetes 1.0.0
+
+The manager the Mokaterm plan promised as the first big plugin: a session tool for SSH with a
+cluster overview, pods with describe-lite detail, tail logs that follow by polling, a one-shot
+command runner over exec (not a terminal, said plainly), and confirmed rollout restart, undo and
+status. On the kubernetes-1.0.0 branch, awaiting the gallery release.
+
 # Released: Network Toolkit 1.2.0
 
 Planned after 1.1.0 ships. The theme is the network toolkit's second identity: today every probe runs from the user's
