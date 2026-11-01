@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+	<!--
+		Kubernetes for Mokaterm: one session tool for SSH that reads the cluster through kubectl on the connected
+		server - the overview, pods and their logs, a one-shot command runner and rollouts - plus a settings page for
+		the kubectl path, the time limit and the namespace preference. Every kubectl call is a single command under a
+		per-call timeout through IRemoteCommandFeature; the readings of what came back live in plain classes (Server),
+		which the views go through and the tests cover, so the plugin brings no package of its own. Every build writes
+		bin/<configuration>/net10.0/moka.kubernetes-<version>.mokaplugin.
+	-->
+	<PropertyGroup>
+		<AssemblyName>Moka.Kubernetes</AssemblyName>
+		<RootNamespace>Moka.Kubernetes</RootNamespace>
+		<Version>1.0.0</Version>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<MokatermPluginId>moka.kubernetes</MokatermPluginId>
+		<MokatermPluginName>Kubernetes</MokatermPluginName>
+		<MokatermPluginPublisher>Moka</MokatermPluginPublisher>
+		<MokatermPluginDescription>Pods, logs, a command runner and rollouts on the cluster the session's server reaches through kubectl.</MokatermPluginDescription>
+		<MokatermPluginHosts>desktop;web</MokatermPluginHosts>
+		<MokatermPluginPackOnBuild>true</MokatermPluginPackOnBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Mokaterm.UI.Common" />
+		<PackageReference Include="Mokaterm.Plugin.Sdk" PrivateAssets="all" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<InternalsVisibleTo Include="Moka.Kubernetes.Tests" />
+	</ItemGroup>
+
+</Project>

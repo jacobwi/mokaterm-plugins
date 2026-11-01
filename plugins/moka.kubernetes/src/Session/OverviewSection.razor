@@ -1,0 +1,74 @@
+@inherits SessionSectionBase
+@using Moka.Kubernetes.Server
+@using Mokaterm.UI.Common.PluginUi
+
+<ToolPageFrame Title="Overview"
+			   Summary="@Summary"
+			   Loaded="@_read"
+			   Loading="@Busy"
+			   PrimaryText="@(Running ? "Stop" : "Read again")"
+			   PrimaryIcon="@(Running ? KubernetesIcons.Stop : KubernetesIcons.Start)"
+			   PrimaryDisabled="@(Busy && !Running)"
+			   PrimaryTitle="@PrimaryTitle"
+			   OnPrimary="PrimaryAsync">
+	<div class="mk8s-stack">
+		<div class="mk8s-group">
+			<div class="mk8s-row">
+				<SessionOriginNote Session="Session" />
+				<span class="mk8s-note">A read of the cluster through kubectl on the server: versions, context, services, nodes. Nothing on this tab changes anything.</span>
+			</div>
+		</div>
+
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+		@if (Offline)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Info" Dense>The session is not connected. Reconnect it to ask the cluster again.</MokaAlert>
+		}
+		@if (Absent)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Info" Dense>
+				This server has no kubectl where the tool looked for one, so no cluster can be asked from here. Install kubectl on the server, or set its path in Mokaterm's Kubernetes settings.
+			</MokaAlert>
+		}
+
+		@if (Facts.Count > 0)
+		{
+			<div class="mk8s-group">
+				<FactList Facts="Facts" />
+			</div>
+		}
+
+		@if (_nodes.Count > 0)
+		{
+			<div class="mk8s-results">
+				<span class="mk8s-note">The cluster's nodes, from kubectl get nodes.</span>
+				<div class="mk8s-table mk8s-table--scroll" style="--mk8s-columns: 1.6fr 110px 1fr 90px 1fr" role="table" aria-label="The cluster's nodes">
+					<div class="mk8s-tr mk8s-th" role="row">
+						<span role="columnheader">Name</span>
+						<span role="columnheader">Status</span>
+						<span role="columnheader">Roles</span>
+						<span role="columnheader">Age</span>
+						<span role="columnheader">Version</span>
+					</div>
+					@foreach (NodeRow node in _nodes)
+					{
+						<div class="mk8s-tr" role="row">
+							<span class="mk8s-td mk8s-td--mono" role="cell">@node.Name</span>
+							<span role="cell"><StatusChip Text="@(node.Ready ? "Ready" : "NotReady")" Color="@(node.Ready ? MokaColor.Success : MokaColor.Error)" Title="@node.Status" /></span>
+							<span class="mk8s-td mk8s-td--dim" role="cell">@node.Roles</span>
+							<span class="mk8s-td mk8s-td--dim" role="cell">@node.Age</span>
+							<span class="mk8s-td mk8s-td--mono" role="cell">@node.Version</span>
+						</div>
+					}
+				</div>
+			</div>
+		}
+		else if (_read && _hasKubectl && !Busy && _error is null && Connected)
+		{
+			<p class="mk8s-note">kubectl listed no nodes, which a cluster without any, or an account that may see none, answers the same way.</p>
+		}
+	</div>
+</ToolPageFrame>

@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!--
+		The plugin's readings against answers the tests build themselves: every parser (pods, deployments, nodes,
+		cluster-info, the version JSON, one pod's JSON record, log lines), the command words with hostile names in them,
+		the runner against a faked command feature, and the views rendered to HTML with the host services faked, on a
+		faked desktop or web host. Nothing here needs a cluster. xunit v3 on Microsoft.Testing.Platform, like
+		Mokaterm's own tests.
+	-->
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
+		<RootNamespace>Moka.Kubernetes.Tests</RootNamespace>
+	</PropertyGroup>
+
+	<!--
+		CA1707: Method_Scenario_Expectation names.
+		CA2000: tests create and drop disposables freely.
+		CA5394: Random is fine for test data.
+	-->
+	<PropertyGroup>
+		<NoWarn>$(NoWarn);CA1707;CA2000;CA5394</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Using Include="Xunit" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="xunit.v3" />
+		<PackageReference Include="xunit.runner.visualstudio" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" />
+		<PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+
+		<!-- The plugin takes this from its host and does not copy it; a test project is its own host. -->
+		<PackageReference Include="Mokaterm.UI.Common" />
+
+		<!-- Renders the plugin's views to HTML with the host services faked, on a faked desktop or web host. -->
+		<PackageReference Include="Mokaterm.Plugin.TestHost" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\src\Moka.Kubernetes.csproj" />
+	</ItemGroup>
+
+</Project>

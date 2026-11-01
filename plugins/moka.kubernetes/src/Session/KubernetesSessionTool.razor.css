@@ -1,0 +1,217 @@
+/* The session tool has the shape of Mokaterm's own paged tools: fixed height on a wide dialog, each tab scrolling
+   its own parts, and the mk8s-* classes, which are this plugin's contract with its sections. Scoped styles do not
+   cross components, so the shared block lives here on the tool, beside the sections that use it. The root also names
+   itself mt-tool-nav, which is what ToolNavigation's own queries follow. */
+.mk8s-session {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 360px;
+	min-width: 0;
+	padding: var(--moka-spacing-md) var(--moka-spacing-lg);
+	container-type: inline-size;
+	container-name: mk8s-session mt-tool-nav;
+}
+
+.mk8s-section {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+}
+
+/* A display of its own would otherwise show a hidden tab. */
+.mk8s-section[hidden] {
+	display: none;
+}
+
+.mk8s-session ::deep .mk8s-fields {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.mk8s-session ::deep .mk8s-field {
+	flex: 1 1 110px;
+	min-width: 96px;
+}
+
+.mk8s-session ::deep .mk8s-field--pod {
+	flex: 3 1 220px;
+}
+
+.mk8s-session ::deep .mk8s-field--command {
+	flex: 4 1 260px;
+}
+
+.mk8s-session ::deep .mk8s-stack {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.mk8s-session ::deep .mk8s-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.mk8s-session ::deep .mk8s-gap {
+	flex: 1;
+}
+
+.mk8s-session ::deep .mk8s-note {
+	color: var(--moka-color-on-surface-variant);
+	font-size: var(--moka-font-size-xs);
+}
+
+.mk8s-session ::deep .mk8s-mono {
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+}
+
+.mk8s-session ::deep .mk8s-group {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+	padding: var(--moka-spacing-sm) var(--moka-spacing-md);
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+	background: var(--moka-color-surface);
+}
+
+.mk8s-session ::deep .mk8s-results {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+}
+
+.mk8s-session ::deep .mk8s-origin {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--moka-spacing-xs);
+	color: var(--moka-color-on-surface-variant);
+	font-size: var(--moka-font-size-xs);
+	white-space: nowrap;
+}
+
+/* Result tables: one grid row per line, the columns set by each tab through --mk8s-columns. A row that picks
+   something is a button, which the tab adds through mk8s-tr--pick. */
+.mk8s-session ::deep .mk8s-table {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	border: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md);
+	background: var(--moka-color-surface);
+}
+
+.mk8s-session ::deep .mk8s-table--scroll {
+	max-height: 420px;
+	overflow-y: auto;
+}
+
+/* Newest at the bottom and kept in view while rows arrive: the rows are written newest first and laid out reversed,
+   which is also what anchors a scrolled box to its end. */
+.mk8s-session ::deep .mk8s-table--live {
+	flex-direction: column-reverse;
+}
+
+.mk8s-session ::deep .mk8s-tr {
+	display: grid;
+	grid-template-columns: var(--mk8s-columns);
+	align-items: center;
+	gap: var(--moka-spacing-sm);
+	min-width: 0;
+	min-height: 28px;
+	padding: 3px var(--moka-spacing-sm);
+	border-top: 1px solid var(--moka-color-outline-variant);
+	font-size: var(--moka-font-size-sm);
+	transition: background var(--moka-transition-fast);
+}
+
+.mk8s-session ::deep .mk8s-table:not(.mk8s-table--live) > .mk8s-tr:first-child,
+.mk8s-session ::deep .mk8s-table--live > .mk8s-tr:last-child {
+	border-top: 0;
+}
+
+.mk8s-session ::deep .mk8s-tr:hover {
+	background: var(--moka-color-surface-hover);
+}
+
+.mk8s-session ::deep .mk8s-tr--pick {
+	cursor: pointer;
+}
+
+.mk8s-session ::deep .mk8s-tr--picked {
+	background: var(--moka-color-surface-2);
+}
+
+.mk8s-session ::deep .mk8s-th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	min-height: 24px;
+	background: var(--moka-color-surface-2);
+	color: var(--moka-color-on-surface-tertiary);
+	font-size: 9px;
+	font-weight: var(--moka-font-weight-semibold);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.mk8s-session ::deep .mk8s-th:hover {
+	background: var(--moka-color-surface-2);
+}
+
+.mk8s-session ::deep .mk8s-td {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.mk8s-session ::deep .mk8s-td--mono {
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-xs);
+	letter-spacing: 0.02em;
+}
+
+.mk8s-session ::deep .mk8s-td--dim {
+	color: var(--moka-color-on-surface-variant);
+}
+
+/* The counts under a log or a listing: lines, drops, and what the follow is asking for. */
+.mk8s-session ::deep .mk8s-counts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--moka-spacing-sm);
+	align-items: baseline;
+}
+
+/* A small line of buttons over an output, such as a rollout's actions while it runs. */
+.mk8s-session ::deep .mk8s-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--moka-spacing-sm);
+	align-items: center;
+	min-width: 0;
+}
+
+@container mk8s-session (max-width: 559px) {
+	.mk8s-session {
+		padding: var(--moka-spacing-sm);
+	}
+
+	.mk8s-session ::deep .mk8s-field--pod,
+	.mk8s-session ::deep .mk8s-field--command {
+		flex-basis: 100%;
+	}
+}
