@@ -1,0 +1,87 @@
+@inherits SessionSectionBase
+@using Moka.Kubernetes.Server
+@using Moka.Kubernetes.Settings
+@using Mokaterm.UI.Common.PluginUi
+
+<ToolPageFrame Title="Command"
+			   Summary="@Summary"
+			   Loaded="true"
+			   PrimaryText="@(Running ? "Stop" : "Run")"
+			   PrimaryIcon="@(Running ? KubernetesIcons.Stop : KubernetesIcons.Start)"
+			   PrimaryDisabled="@(Busy && !Running)"
+			   PrimaryTitle="@PrimaryTitle"
+			   OnPrimary="PrimaryAsync">
+	<div class="mk8s-stack">
+		<div class="mk8s-group" @onkeydown="OnKeyAsync">
+			<div class="mk8s-fields">
+				<div class="mk8s-field mk8s-field--pod">
+					<MokaTextField Label="Pod"
+								   Value="@_pod"
+								   ValueChanged="@(value => _pod = value ?? "")"
+								   Placeholder="web-6799fc88d1-kx4t2"
+								   Size="MokaSize.Sm"
+								   spellcheck="false"
+								   autocomplete="off"
+								   Disabled="Busy" />
+				</div>
+				<div class="mk8s-field">
+					<MokaSelect TValue="string"
+								Label="Container"
+								Items="_containers"
+								Value="@Container"
+								ValueChanged="OnContainerChanged"
+								ValueSelector="ContainerLabel"
+								Placeholder="First container"
+								Searchable="@(_containers.Count > 8)"
+								Size="MokaSize.Sm"
+								Disabled="Busy" />
+				</div>
+				<div class="mk8s-field mk8s-field--command">
+					<MokaTextField Label="Command"
+								   Value="@_command"
+								   ValueChanged="@(value => _command = value ?? "")"
+								   Placeholder="ls -l /data"
+								   Size="MokaSize.Sm"
+								   spellcheck="false"
+								   autocomplete="off"
+								   Disabled="Busy" />
+				</div>
+			</div>
+			<div class="mk8s-row">
+				<SessionOriginNote Session="Session" />
+				<span class="mk8s-gap"></span>
+			</div>
+			<div class="mk8s-row">
+				<span class="mk8s-note">
+					Run a command: one command, sent with kubectl exec, run to its end inside the container and captured here. This is not a terminal - a shell, top or an editor that waits for input cannot work over it. For those, use the session's own terminal.
+				</span>
+			</div>
+		</div>
+
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+		@if (Offline)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Info" Dense>The session is not connected. Reconnect it to run commands again.</MokaAlert>
+		}
+
+		@if (_ran is { } ran)
+		{
+			<OutputBox Title="Command output"
+					   Detail="@($"{_pod}{(_container is { Length: > 0 } container ? $" ({container})" : "")}")"
+					   Text="@(ran.Output.Length > 0 || ran.Error.Length > 0 ? Combined(ran) : null)"
+					   DisplayChars="16000" />
+			<div class="mk8s-counts">
+				<span class="mk8s-note">@ran.Command</span>
+				<span class="mk8s-gap"></span>
+				<CopyButton Text="@(Combined(ran))" Label="Copy output" />
+			</div>
+		}
+		else if (!Busy)
+		{
+			<p class="mk8s-note">Name a pod and a command; the pods tab can hand a pod over with its Run a command action.</p>
+		}
+	</div>
+</ToolPageFrame>

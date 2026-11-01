@@ -1,0 +1,20 @@
+@using Mokaterm.Abstractions.Sessions
+
+@* Where every read in the session tool starts: the machine the session is logged in on, whose kubectl asks the
+   cluster. That is the whole point of this tool - the cluster it sees is the one the server's kubeconfig names,
+   not one this computer could reach. *@
+<span class="mk8s-origin" title="@Explanation">
+	<MokaStatusDot Size="MokaSize.Xs" Color="@(Connected ? MokaColor.Success : MokaColor.Error)" Glow />
+	<span>@(Connected ? "Reads through the session's kubectl" : "The session is not connected")</span>
+</span>
+
+@code {
+	[Parameter]
+	public ISessionHandle? Session { get; set; }
+
+	private bool Connected => Session is { State: SessionState.Connected };
+
+	private string Explanation => Session is { } session
+		? $"kubectl runs on {session.Host.Address}, the machine this session is logged in on, and asks the cluster its kubeconfig names."
+		: "Connect the session to ask the cluster through its server's kubectl.";
+}

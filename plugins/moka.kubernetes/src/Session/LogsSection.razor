@@ -1,0 +1,106 @@
+@inherits SessionSectionBase
+@using Moka.Kubernetes.Server
+@using Moka.Kubernetes.Settings
+
+<ToolPageFrame Title="Logs"
+			   Summary="@Summary"
+			   Loaded="true"
+			   PrimaryText="@(Running ? "Stop" : "Fetch")"
+			   PrimaryIcon="@(Running ? KubernetesIcons.Stop : KubernetesIcons.Start)"
+			   PrimaryDisabled="@(Busy && !Running)"
+			   PrimaryTitle="@PrimaryTitle"
+			   OnPrimary="PrimaryAsync">
+	<div class="mk8s-stack">
+		<div class="mk8s-group" @onkeydown="OnKeyAsync">
+			<div class="mk8s-fields">
+				<div class="mk8s-field mk8s-field--pod">
+					<MokaTextField Label="Pod"
+								   Value="@_pod"
+								   ValueChanged="@(value => _pod = value ?? "")"
+								   Placeholder="web-6799fc88d1-kx4t2"
+								   Size="MokaSize.Sm"
+								   spellcheck="false"
+								   autocomplete="off"
+								   Disabled="Busy" />
+				</div>
+				<div class="mk8s-field">
+					<MokaSelect TValue="string"
+								Label="Container"
+								Items="_containers"
+								Value="@Container"
+								ValueChanged="OnContainerChanged"
+								ValueSelector="ContainerLabel"
+								Placeholder="First container"
+								Searchable="@(_containers.Count > 8)"
+								Size="MokaSize.Sm"
+								Disabled="Busy" />
+				</div>
+			</div>
+			<div class="mk8s-row">
+				<MokaSwitch Label="Follow" Value="_following" ValueChanged="OnFollowChanged" Disabled="Busy" />
+				<MokaSwitch Label="Previous logs" Value="_previous" ValueChanged="OnPreviousChanged" Disabled="Busy" />
+				<span class="mk8s-gap"></span>
+				<SessionOriginNote Session="Session" />
+			</div>
+			<div class="mk8s-row">
+				<span class="mk8s-note">
+					The tail of one container's log, newest at the bottom. Follow asks kubectl for new lines every 3 seconds - a poll, not a stream. Previous reads what the container wrote before its latest start, when it restarted.
+				</span>
+			</div>
+		</div>
+
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
+		@if (Offline)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Info" Dense>The session is not connected. Reconnect it to read logs again.</MokaAlert>
+		}
+
+		<div class="mk8s-counts">
+			<span class="mk8s-note">@Count(_lines.Count) lines</span>
+			@if (_lines.Dropped > 0)
+			{
+				<span class="mk8s-note">The oldest @Count(_lines.Dropped) are counted but no longer listed.</span>
+			}
+			@if (_lines.Skipped > 0)
+			{
+				<span class="mk8s-note">@Count(_lines.Skipped) brought again by a poll were not listed twice.</span>
+			}
+			@if (_following)
+			{
+				<span class="mk8s-note">following every 3 s</span>
+			}
+			<span class="mk8s-gap"></span>
+			@if (_lines.Count > 0)
+			{
+				<CopyButton Text="@_lines.AllText()" Label="Copy log" />
+			}
+		</div>
+
+		@if (_rows.Count > 0)
+		{
+			<div class="mk8s-table mk8s-table--scroll mk8s-table--live" style="--mk8s-columns: 200px 1fr" role="table" aria-label="The container's log">
+				@for (int index = _rows.Count - 1; index >= 0; index--)
+				{
+					PodLogLine line = _rows[index];
+					<div class="mk8s-tr" role="row">
+						<span class="mk8s-td mk8s-td--mono mk8s-td--dim" role="cell">@(line.Time is { } time ? time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.CurrentCulture) : "-")</span>
+						<span class="mk8s-td mk8s-td--mono" role="cell">@line.Text</span>
+					</div>
+				}
+				<div class="mk8s-tr mk8s-th" role="row">
+					<span role="columnheader">Time</span>
+					<span role="columnheader">Line</span>
+				</div>
+			</div>
+		}
+		else if (!Busy)
+		{
+			<p class="mk8s-note">@(_read
+				? "The container wrote nothing in the lines kubectl brought."
+				: "Name a pod and fetch its log; the pods tab can hand one over with its Logs action.")</p>
+		}
+	</div>
+</ToolPageFrame>

@@ -1,0 +1,26 @@
+@inherits SessionViewBase
+
+@* The Kubernetes session tool: every tab runs kubectl on the server the session is logged in on, through the
+   session's command feature, one command at a time. A side menu of tabs, each kept alive while another shows, so
+   switching back finds the pod that was picked and the log that was followed. Closing the tool disposes every tab,
+   which stops whatever still runs. The pods tab can hand a pod to the log tab and to the command runner, which is
+   the one wiring between them. *@
+<div class="mk8s-tool mk8s-session">
+	<ToolNavigation Entries="Entries" Current="@_current" CurrentChanged="Show" Label="Kubernetes from the server">
+		<div class="mk8s-section" hidden="@(_current != OverviewId)">
+			<OverviewSection Session="Session" IsActive="@(_current == OverviewId)" />
+		</div>
+		<div class="mk8s-section" hidden="@(_current != PodsId)">
+			<PodsSection Session="Session" IsActive="@(_current == PodsId)" OnOpenLogs="OpenLogs" OnOpenCommand="OpenCommand" />
+		</div>
+		<div class="mk8s-section" hidden="@(_current != LogsId)">
+			<LogsSection @ref="_logs" Session="Session" IsActive="@(_current == LogsId)" />
+		</div>
+		<div class="mk8s-section" hidden="@(_current != CommandId)">
+			<ExecSection @ref="_command" Session="Session" IsActive="@(_current == CommandId)" />
+		</div>
+		<div class="mk8s-section" hidden="@(_current != RolloutsId)">
+			<RolloutsSection Session="Session" IsActive="@(_current == RolloutsId)" />
+		</div>
+	</ToolNavigation>
+</div>

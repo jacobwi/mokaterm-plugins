@@ -21,7 +21,9 @@
 	<Folder Name="/plugins/moka.network/">
 		<File Path="plugins/moka.network/listing.json" />
 		<Project Path="plugins/moka.network/src/Moka.Network.csproj" />
+		<Project Path="plugins/moka.kubernetes/src/Moka.Kubernetes.csproj" />
 		<Project Path="plugins/moka.network/tests/Moka.Network.Tests.csproj" />
+		<Project Path="plugins/moka.kubernetes/tests/Moka.Kubernetes.Tests.csproj" />
 	</Folder>
 	<Folder Name="/plugins/moka.passwords/">
 		<File Path="plugins/moka.passwords/listing.json" />

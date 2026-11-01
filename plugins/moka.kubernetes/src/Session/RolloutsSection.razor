@@ -1,0 +1,133 @@
+@inherits SessionSectionBase
+@using Moka.Kubernetes.Server
+@using Moka.Kubernetes.Settings
+@using Moka.Red.Core.Enums
+@using Mokaterm.UI.Common.PluginUi
+
+<ToolPageFrame Title="Rollouts"
+			   Summary="@Summary"
+			   Loaded="@_listed"
+			   Loading="@Busy"
+			   PrimaryText="@(Running ? "Stop" : "Read again")"
+			   PrimaryIcon="@(Running ? KubernetesIcons.Stop : KubernetesIcons.Start)"
+			   PrimaryDisabled="@(Busy && !Running)"
+			   PrimaryTitle="@PrimaryTitle"
+			   OnPrimary="PrimaryAsync"
+			   ListPage
+			   Detail="@(_selected is null ? null : DetailPanel)">
+	<ChildContent>
+		<div class="mk8s-stack">
+			<div class="mk8s-group">
+				<div class="mk8s-row">
+					<SessionOriginNote Session="Session" />
+					<span class="mk8s-gap"></span>
+					<MokaSwitch Label="All namespaces" Value="_all" ValueChanged="OnAllChanged" Disabled="Busy" />
+				</div>
+				<div class="mk8s-row">
+					<span class="mk8s-note">@ScopeNote</span>
+				</div>
+				<div class="mk8s-row">
+					<span class="mk8s-note">
+						Status reads where a rollout stands. Restart and Undo change the cluster: each asks first, with the exact kubectl command it is about to run, and shows what the command answered.
+					</span>
+				</div>
+			</div>
+
+			@if (_error is { } error)
+			{
+				<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+			}
+			@if (Offline)
+			{
+				<MokaAlert Severity="MokaToastSeverity.Info" Dense>The session is not connected. Reconnect it to read the deployments again.</MokaAlert>
+			}
+
+			@if (_rows.Count > 0)
+			{
+				<div class="mk8s-table mk8s-table--scroll" style="@Columns" role="table" aria-label="The cluster's deployments">
+					<div class="mk8s-tr mk8s-th" role="row">
+						@if (_all)
+						{
+							<span role="columnheader">Namespace</span>
+						}
+						<span role="columnheader">Name</span>
+						<span role="columnheader">Ready</span>
+						<span role="columnheader">Up to date</span>
+						<span role="columnheader">Available</span>
+						<span role="columnheader">Age</span>
+					</div>
+					@foreach (DeploymentRow row in _rows)
+					{
+						<div class="@(row.Name == _selected?.Name && row.Namespace == _selected?.Namespace ? "mk8s-tr mk8s-tr--pick mk8s-tr--picked" : "mk8s-tr mk8s-tr--pick")"
+							 role="row"
+							 title="Show this deployment's rollout"
+							 @onclick="@(() => Pick(row))">
+							@if (_all)
+							{
+								<span class="mk8s-td mk8s-td--dim" role="cell">@row.Namespace</span>
+							}
+							<span class="mk8s-td mk8s-td--mono" role="cell">@row.Name</span>
+							<span class="mk8s-td mk8s-td--mono" role="cell">@row.Ready</span>
+							<span class="mk8s-td mk8s-td--mono mk8s-td--dim" role="cell">@row.UpToDate</span>
+							<span class="mk8s-td mk8s-td--mono mk8s-td--dim" role="cell">@row.Available</span>
+							<span class="mk8s-td mk8s-td--dim" role="cell">@row.Age</span>
+						</div>
+					}
+				</div>
+			}
+			else if (_listed && !Busy && _error is null && Connected)
+			{
+				<p class="mk8s-note">kubectl listed no deployments here, which a namespace without any and an account that may see none answer the same way.</p>
+			}
+		</div>
+	</ChildContent>
+</ToolPageFrame>
+
+@* The picked deployment: its rollout's facts, the one read and the two changes, and what the last action answered. *@
+@code {
+	private RenderFragment DetailPanel => __builder =>
+	{
+		<ToolDetailPanel Title="@(_selected?.Name ?? "")"
+						 Subtitle="@(_selected is { } row && row.Namespace.Length > 0 ? row.Namespace : null)"
+						 DotColor="@DotColor"
+						 DotGlow="true"
+						 OnClose="CloseDetail">
+			<Actions>
+				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokaIcons.Action.Refresh"
+							Disabled="@(Busy || _acting)"
+							OnClick="StatusAsync">Status</MokaButton>
+				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="KubernetesIcons.Rollout"
+							Disabled="@(Busy || _acting)"
+							OnClick="RestartAsync">Restart</MokaButton>
+				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="KubernetesIcons.Rollout"
+							Disabled="@(Busy || _acting)"
+							OnClick="UndoAsync">Undo</MokaButton>
+			</Actions>
+			<ChildContent>
+				@if (_actionError is { } actionError)
+				{
+					<MokaAlert Severity="MokaToastSeverity.Error" Dense>@actionError</MokaAlert>
+				}
+				@if (_acting)
+				{
+					<p class="mk8s-note">Running kubectl on the server.</p>
+				}
+				@if (_selected is { } picked)
+				{
+					<FactList Facts="@(DetailFacts(picked))" />
+				}
+				@if (_stale)
+				{
+					<p class="mk8s-note">The listing was read before this change. Read again to see it.</p>
+				}
+				@if (_actionOutput is { Length: > 0 } output)
+				{
+					<OutputBox Title="@(_actionTitle ?? "kubectl output")"
+							   Detail="@_actionCommand"
+							   Text="@output"
+							   DisplayChars="8000" />
+				}
+			</ChildContent>
+		</ToolDetailPanel>
+	};
+}

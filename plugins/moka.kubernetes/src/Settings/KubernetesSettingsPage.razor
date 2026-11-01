@@ -1,0 +1,37 @@
+@inherits SettingsSectionBase<KubernetesSettings>
+
+@{
+	KubernetesSettings settings = Settings.Clamped();
+}
+
+@* Built from the same fields as Mokaterm's own settings pages, and found by the settings search through each row's
+   label and description. *@
+<SettingsPage Title="Kubernetes" OnReset="ResetAsync">
+	<SettingsSection Title="The server's kubectl">
+		<SettingsRow Label="kubectl path" Description="The kubectl the session tool calls on the server, as its shell reads it. Empty means kubectl from the server's PATH; a path such as /usr/local/bin/kubectl names one outright.">
+			<TextSetting Value="@settings.KubectlPath"
+						 ValueChanged="value => SaveAsync(s => s with { KubectlPath = value })"
+						 Validate="KubernetesSettings.KubectlPathProblem"
+						 AllowEmpty
+						 Placeholder="kubectl from PATH, or /usr/local/bin/kubectl"
+						 AriaLabel="kubectl path on the server" />
+		</SettingsRow>
+		<SettingsRow Label="Command time limit" Description="How long one kubectl command gets on the server before the tab stops waiting, whatever it was asking for. A cluster that takes longer needs a bigger number here.">
+			<NumberSetting TValue="int"
+						   Value="settings.CommandTimeoutSeconds"
+						   ValueChanged="value => SaveAsync(s => s with { CommandTimeoutSeconds = value })"
+						   Min="KubernetesSettings.MinCommandTimeoutSeconds"
+						   Max="KubernetesSettings.MaxCommandTimeoutSeconds"
+						   Suffix="s"
+						   AriaLabel="Command time limit in seconds" />
+		</SettingsRow>
+		<SettingsRow Label="Namespace" Description="The namespace the pods and rollouts tabs read first. Empty leaves the choice to kubectl: the current context's namespace, or default. Each tab's All-namespaces switch still asks for every one.">
+			<TextSetting Value="@settings.Namespace"
+						 ValueChanged="value => SaveAsync(s => s with { Namespace = value })"
+						 Validate="KubernetesSettings.NamespaceProblem"
+						 AllowEmpty
+						 Placeholder="production, or empty for kubectl's own choice"
+						 AriaLabel="Namespace preference" />
+		</SettingsRow>
+	</SettingsSection>
+</SettingsPage>

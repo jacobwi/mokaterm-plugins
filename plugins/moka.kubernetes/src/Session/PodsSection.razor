@@ -1,0 +1,118 @@
+@inherits SessionSectionBase
+@using Moka.Kubernetes.Server
+@using Moka.Kubernetes.Settings
+@using Moka.Red.Core.Enums
+@using Mokaterm.UI.Common.PluginUi
+
+<ToolPageFrame Title="Pods"
+			   Summary="@Summary"
+			   Loaded="@_listed"
+			   Loading="@Busy"
+			   PrimaryText="@(Running ? "Stop" : "Read again")"
+			   PrimaryIcon="@(Running ? KubernetesIcons.Stop : KubernetesIcons.Start)"
+			   PrimaryDisabled="@(Busy && !Running)"
+			   PrimaryTitle="@PrimaryTitle"
+			   OnPrimary="PrimaryAsync"
+			   ListPage
+			   Detail="@(_selected is null ? null : DetailPanel)">
+	<ChildContent>
+		<div class="mk8s-stack">
+			<div class="mk8s-group">
+				<div class="mk8s-row">
+					<SessionOriginNote Session="Session" />
+					<span class="mk8s-gap"></span>
+					<MokaSwitch Label="All namespaces" Value="_all" ValueChanged="OnAllChanged" Disabled="Busy" />
+				</div>
+				<div class="mk8s-row">
+					<span class="mk8s-note">@ScopeNote</span>
+				</div>
+			</div>
+
+			@if (_error is { } error)
+			{
+				<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+			}
+			@if (Offline)
+			{
+				<MokaAlert Severity="MokaToastSeverity.Info" Dense>The session is not connected. Reconnect it to read the pods again.</MokaAlert>
+			}
+
+			@if (_rows.Count > 0)
+			{
+				<div class="mk8s-table mk8s-table--scroll" style="@Columns" role="table" aria-label="The cluster's pods">
+					<div class="mk8s-tr mk8s-th" role="row">
+						@if (_all)
+						{
+							<span role="columnheader">Namespace</span>
+						}
+						<span role="columnheader">Name</span>
+						<span role="columnheader">Ready</span>
+						<span role="columnheader">Status</span>
+						<span role="columnheader">Restarts</span>
+						<span role="columnheader">Age</span>
+						<span role="columnheader">Node</span>
+					</div>
+					@foreach (PodRow row in _rows)
+					{
+						<div class="@(row.Name == _selected?.Name ? "mk8s-tr mk8s-tr--pick mk8s-tr--picked" : "mk8s-tr mk8s-tr--pick")"
+							 role="row"
+							 title="Show this pod's details"
+							 @onclick="@(() => PickAsync(row))">
+							@if (_all)
+							{
+								<span class="mk8s-td mk8s-td--dim" role="cell">@row.Namespace</span>
+							}
+							<span class="mk8s-td mk8s-td--mono" role="cell">@row.Name</span>
+							<span class="mk8s-td mk8s-td--mono mk8s-td--dim" role="cell">@row.Ready</span>
+							<span role="cell"><StatusChip Text="@row.Status" Color="@(PodTone(row.Status))" /></span>
+							<span class="mk8s-td mk8s-td--mono mk8s-td--dim" role="cell">@row.Restarts</span>
+							<span class="mk8s-td mk8s-td--dim" role="cell">@row.Age</span>
+							<span class="mk8s-td mk8s-td--mono mk8s-td--dim" role="cell">@row.Node</span>
+						</div>
+					}
+				</div>
+			}
+			else if (_listed && !Busy && _error is null && Connected)
+			{
+				<p class="mk8s-note">@(_all
+					? "kubectl listed no pods in any namespace, which an empty cluster and an account that may see none answer the same way."
+					: "kubectl listed no pods here. Only the namespace shown above was asked; turn on All namespaces for every one.")</p>
+			}
+		</div>
+	</ChildContent>
+</ToolPageFrame>
+
+@* The picked pod, beside the list: what kubectl's JSON says about it, with the two doors out of this tab. *@
+@code {
+	private RenderFragment DetailPanel => __builder =>
+	{
+		<ToolDetailPanel Title="@(_selected?.Name ?? "")"
+						 Subtitle="@Subtitle"
+						 DotColor="DotColor"
+						 DotGlow="true"
+						 OnClose="CloseDetail">
+			<Actions>
+				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="KubernetesIcons.Logs"
+							Disabled="@(_detailBusy || _detail is null)"
+							OnClick="LogsAsync">Logs</MokaButton>
+				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="KubernetesIcons.Command"
+							Disabled="@(_detailBusy || _detail is null)"
+							OnClick="CommandAsync">Run a command</MokaButton>
+			</Actions>
+			<ChildContent>
+				@if (_detailError is { } detailError)
+				{
+					<MokaAlert Severity="MokaToastSeverity.Error" Dense>@detailError</MokaAlert>
+				}
+				@if (_detailBusy)
+				{
+					<p class="mk8s-note">Reading the pod's record.</p>
+				}
+				else if (_detail is { } detail)
+				{
+					<FactList Facts="@(DetailFacts(detail))" />
+				}
+			</ChildContent>
+		</ToolDetailPanel>
+	};
+}
