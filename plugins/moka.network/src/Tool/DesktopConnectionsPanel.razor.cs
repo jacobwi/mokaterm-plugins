@@ -72,6 +72,13 @@ public sealed partial class DesktopConnectionsPanel : ComponentBase, IDisposable
 					return;
 				}
 
+				// A read that says the same thing draws nothing: a repaint every two seconds of unchanged rows is
+				// what smeared them in the WebView until a scroll cleared it.
+				if (_connections.SequenceEqual(table.Connections) && _listeners.SequenceEqual(table.Listeners))
+				{
+					return;
+				}
+
 				_connections = table.Connections;
 				_listeners = table.Listeners;
 				StateHasChanged();
