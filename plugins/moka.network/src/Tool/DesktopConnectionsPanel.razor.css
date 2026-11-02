@@ -1,19 +1,29 @@
-/* A self-contained panel: it ships unwired, so it styles itself rather than relying on the tool's sheet. */
-.mn-panel {
+/* The class names are this panel's own: the Network Toolkit styles every .mn-table, .mn-tr and .mn-th inside it through
+   ::deep, and its sheet comes later in the bundle at the same specificity, so with the shared names its rules won. That
+   took the rows' columns away (no --mn-columns here), stacked each row's cells over the next row and made the headings
+   sticky. */
+.mn-conn {
 	display: flex;
+	flex: 1;
 	flex-direction: column;
 	gap: var(--moka-spacing-sm);
 	min-width: 0;
+	min-height: 0;
+	overflow-y: auto;
 }
 
-.mn-panel-head {
+.mn-conn > * {
+	flex-shrink: 0;
+}
+
+.mn-conn-head {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: baseline;
 	gap: var(--moka-spacing-sm);
 }
 
-.mn-panel .mn-label {
+.mn-conn .mn-label {
 	color: var(--moka-color-on-surface-tertiary);
 	font-size: 10px;
 	font-weight: var(--moka-font-weight-semibold);
@@ -21,12 +31,12 @@
 	text-transform: uppercase;
 }
 
-.mn-panel .mn-note {
+.mn-conn .mn-note {
 	color: var(--moka-color-on-surface-variant);
 	font-size: var(--moka-font-size-xs);
 }
 
-.mn-panel .mn-table {
+.mn-conn-table {
 	display: flex;
 	flex-direction: column;
 	min-width: 0;
@@ -35,18 +45,17 @@
 	background: var(--moka-color-surface);
 }
 
-/* Only the rows scroll; the heading stays above them, so nothing is stuck over changing text. */
-.mn-panel .mn-scroll {
-	display: flex;
-	flex-direction: column;
+/* Only the rows scroll; the heading stays above them, so nothing is stuck over changing text. A block, not a flex
+   column, because flex items shrink to fit the height cap and a two-line row would then overlap the next one. */
+.mn-conn-rows {
 	min-width: 0;
 	max-height: 320px;
 	overflow-y: auto;
 }
 
-.mn-panel .mn-tr {
+.mn-conn-row {
 	display: grid;
-	grid-template-columns: 1fr 1fr 140px;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 120px;
 	align-items: center;
 	gap: var(--moka-spacing-sm);
 	min-width: 0;
@@ -56,21 +65,23 @@
 	font-size: var(--moka-font-size-sm);
 }
 
-.mn-panel .mn-table[aria-label="Listening ports"] .mn-tr {
-	grid-template-columns: 80px 1fr;
+.mn-conn-table--listening .mn-conn-row {
+	grid-template-columns: 80px minmax(0, 1fr);
 }
 
-.mn-panel .mn-tr:first-child,
-.mn-panel .mn-scroll .mn-tr:first-child {
+.mn-conn-row--head,
+.mn-conn-rows > .mn-conn-row:first-child {
 	border-top: 0;
 }
 
-.mn-panel .mn-tr:hover {
+.mn-conn-rows > .mn-conn-row:hover {
 	background: var(--moka-color-surface-hover);
 }
 
-.mn-panel .mn-th {
+.mn-conn-row--head {
 	min-height: 24px;
+	border-bottom: 1px solid var(--moka-color-outline-variant);
+	border-radius: var(--moka-radius-md) var(--moka-radius-md) 0 0;
 	background: var(--moka-color-surface-2);
 	color: var(--moka-color-on-surface-tertiary);
 	font-size: 9px;
@@ -79,12 +90,12 @@
 	text-transform: uppercase;
 }
 
-.mn-panel .mn-td {
+.mn-conn-cell {
 	min-width: 0;
 	overflow-wrap: anywhere;
 }
 
-.mn-panel .mn-td--mono {
+.mn-conn-cell--mono {
 	font-family: var(--moka-font-family-mono);
 	font-size: var(--moka-font-size-xs);
 	letter-spacing: 0.02em;

@@ -56,7 +56,7 @@ public sealed class NetworkSessionToolRenderTests
 			});
 }
 
-/// <summary>The desktop panel, delivered unwired: it draws on its own, honest note included.</summary>
+/// <summary>The desktop panel draws on its own, honest note included.</summary>
 public sealed class DesktopConnectionsPanelRenderTests
 {
 	[Fact]
@@ -64,7 +64,7 @@ public sealed class DesktopConnectionsPanelRenderTests
 	{
 		string html = await StaticRender.RenderAsync<DesktopConnectionsPanel>([]);
 
-		Assert.Contains("mn-panel", html, StringComparison.Ordinal);
+		Assert.Contains("mn-conn", html, StringComparison.Ordinal);
 		Assert.Contains("do not say which process owns a connection", html, StringComparison.Ordinal);
 	}
 }

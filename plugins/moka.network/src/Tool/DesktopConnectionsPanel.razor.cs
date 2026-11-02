@@ -7,8 +7,7 @@ namespace Moka.Network.Tool;
 /// <summary>
 /// This machine's connection table, refreshed while the panel is on screen: the TCP connections it holds and the
 /// ports it listens on, state names in words, IPv6 ends in brackets. It says plainly that no owning process can be
-/// named, because the .NET table it reads does not carry one. Delivered unwired: the app tool places this panel on a
-/// tab of its own.
+/// named, because the .NET table it reads does not carry one. The Network Toolkit shows it on its Connections tab.
 /// </summary>
 public sealed partial class DesktopConnectionsPanel : ComponentBase, IDisposable
 {

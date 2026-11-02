@@ -1,8 +1,7 @@
-@* The desktop half of the connection table: this machine's own TCP connections and the ports it listens on, read
-   again every few seconds while the panel is on screen. Not wired anywhere yet: the Network Toolkit app tool places
-   it when its tab is added. *@
-<div class="mn-panel">
-	<div class="mn-panel-head">
+@* This machine's own TCP connections and the ports it listens on, read again every few seconds while the
+   Connections tab is on screen. *@
+<div class="mn-conn">
+	<div class="mn-conn-head">
 		<span class="mn-label">This machine's connections</span>
 		<span class="mn-note">@Read</span>
 	</div>
@@ -14,19 +13,19 @@
 		   WebView2 showing a smear until something forced a repaint. The rows are deliberately NOT keyed: a connection
 		   table can hold two rows with the same local end, remote end and state, and a repeated key throws when the
 		   next read diffs, which took the whole tool down. *@
-		<div class="mn-table" role="table" aria-label="TCP connections">
-			<div class="mn-tr mn-th" role="row">
+		<div class="mn-conn-table" role="table" aria-label="TCP connections">
+			<div class="mn-conn-row mn-conn-row--head" role="row">
 				<span role="columnheader">Local</span>
 				<span role="columnheader">Remote</span>
 				<span role="columnheader">State</span>
 			</div>
-			<div class="mn-scroll" role="rowgroup">
+			<div class="mn-conn-rows" role="rowgroup">
 				@foreach (LocalConnectionRow row in _connections)
 				{
-					<div class="mn-tr" role="row">
-						<span class="mn-td mn-td--mono" role="cell">@row.Local</span>
-						<span class="mn-td mn-td--mono" role="cell">@row.Remote</span>
-						<span class="mn-td" role="cell">@row.State</span>
+					<div class="mn-conn-row" role="row">
+						<span class="mn-conn-cell mn-conn-cell--mono" role="cell">@row.Local</span>
+						<span class="mn-conn-cell mn-conn-cell--mono" role="cell">@row.Remote</span>
+						<span class="mn-conn-cell" role="cell">@row.State</span>
 					</div>
 				}
 			</div>
@@ -39,17 +38,17 @@
 
 	@if (_listeners.Count > 0)
 	{
-		<div class="mn-table" role="table" aria-label="Listening ports">
-			<div class="mn-tr mn-th" role="row">
+		<div class="mn-conn-table mn-conn-table--listening" role="table" aria-label="Listening ports">
+			<div class="mn-conn-row mn-conn-row--head" role="row">
 				<span role="columnheader">Protocol</span>
 				<span role="columnheader">Listening on</span>
 			</div>
-			<div class="mn-scroll" role="rowgroup">
+			<div class="mn-conn-rows" role="rowgroup">
 				@foreach (LocalListenerRow row in _listeners)
 				{
-					<div class="mn-tr" role="row">
-						<span class="mn-td mn-td--mono" role="cell">@row.Protocol</span>
-						<span class="mn-td mn-td--mono" role="cell">@row.Local</span>
+					<div class="mn-conn-row" role="row">
+						<span class="mn-conn-cell mn-conn-cell--mono" role="cell">@row.Protocol</span>
+						<span class="mn-conn-cell mn-conn-cell--mono" role="cell">@row.Local</span>
 					</div>
 				}
 			</div>
