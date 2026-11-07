@@ -16,7 +16,7 @@ public sealed class ToolRenderTests
 	[InlineData(HostKind.Web)]
 	public async Task Tool_ShowsTheThreeModesAndThePasswordOptions(HostKind host)
 	{
-		string html = await StaticRender.RenderAsync<PasswordGeneratorTool>([], host);
+		string html = await StaticRender.RenderAsync<PasswordGeneratorTool>([], host, TestNavigation.Add);
 
 		foreach (string tab in new[] { "Password", "Passphrase", "PIN" })
 		{
@@ -36,7 +36,11 @@ public sealed class ToolRenderTests
 		settings.Set(new PasswordSettings { Mode = GenerationMode.Passphrase, ShortWords = true });
 
 		string html = await StaticRender.RenderAsync<PasswordGeneratorTool>(
-			services => services.AddSingleton<ISettingsService>(settings),
+			services =>
+			{
+				services.AddSingleton<ISettingsService>(settings);
+				TestNavigation.Add(services);
+			},
 			[]);
 
 		foreach (string label in new[] { "Words", "Shorter words", "Separator", "Extras" })
@@ -55,7 +59,11 @@ public sealed class ToolRenderTests
 		settings.Set(new PasswordSettings { Mode = GenerationMode.Pin });
 
 		string html = await StaticRender.RenderAsync<PasswordGeneratorTool>(
-			services => services.AddSingleton<ISettingsService>(settings),
+			services =>
+			{
+				services.AddSingleton<ISettingsService>(settings);
+				TestNavigation.Add(services);
+			},
 			[]);
 
 		Assert.Contains("Digits", html, StringComparison.Ordinal);

@@ -24,8 +24,8 @@
 		its own copy, which the plugin loader prefers.
 	-->
 	<ItemGroup>
-		<PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
-		<PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
+		<PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
+		<PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.14" />
 	</ItemGroup>
 
 	<!-- moka.devtools: YAML reading and writing for its JSON and YAML tools (MIT). -->
@@ -35,10 +35,10 @@
 
 	<!-- Tests: the versions Mokaterm's own tests use (xunit v3 on Microsoft.Testing.Platform, see global.json). -->
 	<ItemGroup>
-		<PackageVersion Include="xunit.v3" Version="4.0.1" />
-		<PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
-		<PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
-		<PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.4.1" />
+		<PackageVersion Include="xunit.v3" Version="4.0.2" />
+		<PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
+		<PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+		<PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.5.2" />
 	</ItemGroup>
 
 </Project>

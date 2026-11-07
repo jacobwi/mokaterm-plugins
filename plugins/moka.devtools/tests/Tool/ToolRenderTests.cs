@@ -12,7 +12,7 @@ public sealed class ToolRenderTests
 	[InlineData(HostKind.Web)]
 	public async Task Tool_RendersEverySection(HostKind host)
 	{
-		string html = await StaticRender.RenderAsync<DevToolsTool>([], host);
+		string html = await StaticRender.RenderAsync<DevToolsTool>([], host, TestNavigation.Add);
 
 		foreach (string title in new[] { "JWT", "Encode and decode", "Hashes", "IDs", "Time", "JSON and YAML", "Regex" })
 		{
