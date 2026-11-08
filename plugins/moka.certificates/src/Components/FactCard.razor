@@ -1,0 +1,31 @@
+@* Moka's data list in an inner card. Its keys are drawn as micro labels, the way fact keys are everywhere else on Red,
+   and a long value wraps inside the card instead of widening it. *@
+<div class="mc-facts">
+	<MokaCard Inner Outlined="Outlined" Title="@Title" Subtitle="@Subtitle" HeaderActions="Actions">
+		@if (Items.Count > 0)
+		{
+			<MokaDataList Items="Items" Dense Orientation="MokaDirection.Row" />
+		}
+		@ChildContent
+	</MokaCard>
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Title { get; set; } = "";
+
+	[Parameter]
+	public string? Subtitle { get; set; }
+
+	[Parameter]
+	public IReadOnlyList<MokaDataListItem> Items { get; set; } = [];
+
+	[Parameter]
+	public bool Outlined { get; set; }
+
+	[Parameter]
+	public RenderFragment? Actions { get; set; }
+
+	[Parameter]
+	public RenderFragment? ChildContent { get; set; }
+}

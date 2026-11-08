@@ -1,0 +1,20 @@
+.mc-cell {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+}
+
+.mc-cell-text,
+.mc-cell-detail {
+	overflow-wrap: anywhere;
+}
+
+.mc-cell-detail {
+	color: var(--moka-color-on-surface-variant);
+	font-size: var(--moka-font-size-xxs);
+}
+
+.mc-cell-detail--mono {
+	font-family: var(--moka-font-family-mono);
+	letter-spacing: 0.02em;
+}

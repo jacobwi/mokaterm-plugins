@@ -41,6 +41,12 @@ public sealed record TlsReport
 	/// <summary>This machine trusts the chain, the name matches and the certificate is in date.</summary>
 	public required bool Trusted { get; init; }
 
+	/// <summary>
+	/// This machine builds the chain to a root it trusts, whatever the name and the server certificate's own dates say:
+	/// the trust step of the check on its own.
+	/// </summary>
+	public bool ChainTrusted { get; init; }
+
 	/// <summary>What would make a client refuse the connection.</summary>
 	public required IReadOnlyList<string> Problems { get; init; }
 

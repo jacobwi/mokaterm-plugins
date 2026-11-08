@@ -18,6 +18,7 @@ public sealed class TlsReportBuilderTests
 		TlsReport report = TlsReportBuilder.Build(observation, TestMaterial.Now, 30);
 
 		Assert.True(report.Trusted);
+		Assert.True(report.ChainTrusted);
 		Assert.Empty(report.Problems);
 		Assert.Empty(report.Warnings);
 		Assert.Equal(HostNameResult.Matches, report.NameMatch);
@@ -38,6 +39,7 @@ public sealed class TlsReportBuilderTests
 		TlsReport report = TlsReportBuilder.Build(observation, TestMaterial.Now, 30);
 
 		Assert.False(report.Trusted);
+		Assert.True(report.ChainTrusted);
 		Assert.Equal("The certificate is not for shop.example.net. It is for www.example.com, example.com, 192.0.2.10.", Assert.Single(report.Problems));
 	}
 
@@ -50,6 +52,7 @@ public sealed class TlsReportBuilderTests
 		TlsReport report = TlsReportBuilder.Build(observation, TestMaterial.Now, 30);
 
 		Assert.False(report.Trusted);
+		Assert.False(report.ChainTrusted);
 		Assert.Contains("an intermediate certificate is missing", report.Problems[0], StringComparison.Ordinal);
 		Assert.Contains("fullchain.pem", report.Problems[1], StringComparison.Ordinal);
 	}
@@ -79,6 +82,7 @@ public sealed class TlsReportBuilderTests
 		TlsReport soon = TlsReportBuilder.Build(expiring, TestMaterial.Now.AddDays(80), 30);
 
 		Assert.StartsWith("The certificate expired on ", Assert.Single(late.Problems), StringComparison.Ordinal);
+		Assert.True(late.ChainTrusted);
 		Assert.True(soon.Trusted);
 		Assert.StartsWith("The certificate expires in 9 days", Assert.Single(soon.Warnings), StringComparison.Ordinal);
 	}
@@ -98,6 +102,7 @@ public sealed class TlsReportBuilderTests
 		TlsReport report = TlsReportBuilder.Build(observation, TestMaterial.Now, 30);
 
 		Assert.False(report.Trusted);
+		Assert.False(report.ChainTrusted);
 		Assert.Equal("The chain ends at a root this machine does not trust.", Assert.Single(report.Problems));
 		Assert.Contains("TLS 1.0", Assert.Single(report.Warnings), StringComparison.Ordinal);
 	}

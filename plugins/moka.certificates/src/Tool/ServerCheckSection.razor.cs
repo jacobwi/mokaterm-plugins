@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Components.Web;
 using Moka.Certificates.Components;
 using Moka.Certificates.Crypto;
 using Moka.Certificates.Tls;
-using Moka.Red.Core.Enums;
 using Mokaterm.Abstractions.Platform;
 using Mokaterm.UI.Common.Components;
 
@@ -18,9 +17,6 @@ namespace Moka.Certificates.Tool;
 /// </summary>
 public sealed partial class ServerCheckSection : CertificateViewBase, IDisposable
 {
-	private const string SentList = "sent";
-	private const string BuiltList = "built";
-
 	private static readonly IReadOnlyList<EnumOption<StartTlsMode>> Modes =
 	[
 		new(StartTlsMode.Plain, "Plain"),
@@ -36,7 +32,6 @@ public sealed partial class ServerCheckSection : CertificateViewBase, IDisposabl
 	private bool _busy;
 	private string? _error;
 	private TlsReport? _report;
-	private (string List, int Position)? _selected;
 	private CancellationTokenSource? _check;
 
 	[Inject]
@@ -46,13 +41,6 @@ public sealed partial class ServerCheckSection : CertificateViewBase, IDisposabl
 	public EventCallback<string> OnInspect { get; set; }
 
 	private string Summary => _busy ? "connecting" : _report is { } report ? report.Endpoint : "TLS chain, protocol and cipher";
-
-	private CertificateInfo? SelectedCertificate => (_report, _selected) switch
-	{
-		({ } report, (SentList, int position)) when position < report.Sent.Count => report.Sent[position],
-		({ } report, (BuiltList, int position)) when position < report.Chain.Count => report.Chain[position],
-		_ => null,
-	};
 
 	private string PortPlaceholder => TlsTarget.DefaultPort(_mode).ToString(CultureInfo.InvariantCulture);
 
@@ -78,59 +66,6 @@ public sealed partial class ServerCheckSection : CertificateViewBase, IDisposabl
 		_check?.Cancel();
 		_check?.Dispose();
 	}
-
-	private static string NameChip(TlsReport report) => report.NameMatch switch
-	{
-		HostNameResult.Matches => "name matches",
-		HostNameResult.CommonNameOnly => "common name only",
-		_ => "wrong name",
-	};
-
-	private static string EndpointLine(TlsReport report) => string.Create(
-		CultureInfo.CurrentCulture,
-		$"{report.Endpoint}, {ModeName(report.StartTls)}, {(report.ServerName is { } sni ? $"SNI {sni}" : "no SNI")}, {report.Elapsed.TotalMilliseconds:N0} ms");
-
-	private static string ModeName(StartTlsMode mode) => mode switch
-	{
-		StartTlsMode.Smtp => "STARTTLS after an SMTP greeting",
-		StartTlsMode.Imap => "STARTTLS after an IMAP greeting",
-		StartTlsMode.Ftp => "TLS after an FTP AUTH TLS",
-		_ => "plain TLS",
-	};
-
-	private static string VersionChipText(TlsVersionResult version) => version.Outcome switch
-	{
-		TlsVersionOutcome.Refused => $"{TlsReportBuilder.ProtocolName(version.Protocol)} refused",
-		TlsVersionOutcome.NotOfferedHere => $"{TlsReportBuilder.ProtocolName(version.Protocol)} unknown",
-		_ => TlsReportBuilder.ProtocolName(version.Protocol),
-	};
-
-	private static MokaColor VersionColor(TlsVersionResult version) => version.Outcome switch
-	{
-		TlsVersionOutcome.Refused => MokaColor.Error,
-		TlsVersionOutcome.NotOfferedHere => MokaColor.Surface,
-		_ => MokaColor.Success,
-	};
-
-	private static string VersionChipTitle(TlsVersionResult version) => version.Outcome switch
-	{
-		TlsVersionOutcome.Accepted => $"The server takes {TlsReportBuilder.ProtocolName(version.Protocol)}.",
-		TlsVersionOutcome.Refused => $"The server refused or did not answer {TlsReportBuilder.ProtocolName(version.Protocol)}.",
-		_ => $"This machine would not offer {TlsReportBuilder.ProtocolName(version.Protocol)}, so the check cannot say whether the server would take it.",
-	};
-
-	private static string DaysText(CertificateInfo certificate) => certificate.Expiry switch
-	{
-		ExpiryState.Expired => "expired",
-		ExpiryState.NotYetValid => "not yet valid",
-		_ => string.Create(CultureInfo.CurrentCulture, $"{certificate.DaysLeft:N0} d"),
-	};
-
-	private bool IsSelected(string list, int position) => _selected is { } selected && selected.List == list && selected.Position == position;
-
-	private void Select(string list, int position) => _selected = (list, position);
-
-	private void CloseDetail() => _selected = null;
 
 	private async Task OnKeyAsync(KeyboardEventArgs args)
 	{
@@ -167,7 +102,6 @@ public sealed partial class ServerCheckSection : CertificateViewBase, IDisposabl
 			// The chain report comes from the unpinned handshake alone; these throw nothing away but which versions the server takes.
 			IReadOnlyList<TlsVersionResult> versions = await TlsProbe.ProbeVersionsAsync(target, timeout, check.Token);
 			_report = TlsReportBuilder.Build(observation, Now, Settings.ExpiringDays, versions);
-			_selected = (SentList, 0);
 		}
 		catch (CertificateException ex)
 		{

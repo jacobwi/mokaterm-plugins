@@ -1,0 +1,98 @@
+@inherits CertificateViewBase
+@using Moka.Certificates.Tls
+
+@* What a server check found: each step judged, the connection's figures, the versions the server takes, the problems
+   in words, what the server sent and what this machine built from it, and the details of the certificate picked. *@
+<MokaFlexbox Gap="MokaSpacingScale.Md">
+	<MokaCard Inner Title="@(Report.Trusted ? "A client would accept it" : "A client would refuse it")" Subtitle="@EndpointLine">
+		<MokaChainCheck Steps="Steps" Label="@($"The check of {Report.NameChecked}, step by step")" FindingsLabel="What each step found" />
+	</MokaCard>
+
+	<MokaGrid MinColumn="9rem" Gap="MokaSpacingScale.Sm">
+		<MokaStat Tile Value="@Report.Protocol" Label="Protocol" Color="@(OldProtocol ? MokaColor.Warning : null)" />
+		<MokaStat Tile Value="@DaysLeft" Label="Days left" HelpText="@($"On {Report.Leaf.Title}")" Color="ExpiryColor.Of(Report.Leaf.Expiry)" />
+		<MokaStat Tile Value="@Report.Sent.Count.ToString(CultureInfo.CurrentCulture)" Label="Certificates sent" />
+		<MokaStat Tile Value="@Report.Elapsed.TotalMilliseconds.ToString("N0", CultureInfo.CurrentCulture)" Suffix="ms" Label="Handshake" />
+	</MokaGrid>
+
+	@foreach (string problem in Report.Problems)
+	{
+		<MokaAlert Severity="MokaToastSeverity.Error" Dense>@problem</MokaAlert>
+	}
+	@foreach (string warning in Report.Warnings)
+	{
+		<MokaCallout Type="MokaCalloutType.Warning">@warning</MokaCallout>
+	}
+	@if (Report.Problems.Count == 0 && Report.Warnings.Count == 0)
+	{
+		<MokaAlert Severity="MokaToastSeverity.Success" Dense>The certificate is for @Report.NameChecked, in date, and its chain is trusted on this machine.</MokaAlert>
+	}
+
+	<MokaGrid MinColumn="20rem" Gap="MokaSpacingScale.Md">
+		<FactCard Title="Connection" Items="ConnectionFacts" />
+		@if (Report.Versions.Count > 0)
+		{
+			<MokaCard Inner Title="TLS versions" Subtitle="@Report.VersionSummary">
+				<MokaTable TItem="TlsVersionResult"
+						   Items="Report.Versions"
+						   ItemKey="@(version => version.Protocol)"
+						   Dense
+						   ShowToolbar="false"
+						   ShowPagination="false"
+						   Label="TLS versions">
+					<MokaColumn TItem="TlsVersionResult" Title="Version" Field="@(version => TlsReportBuilder.ProtocolName(version.Protocol))" Width="90px" Mono />
+					<MokaColumn TItem="TlsVersionResult" Title="Server" Field="@(version => version.Outcome)" Width="120px">
+						<CellTemplate>
+							<MokaTag Text="@OutcomeWord(context)" Color="@OutcomeColor(context)" />
+						</CellTemplate>
+					</MokaColumn>
+					<MokaColumn TItem="TlsVersionResult" Title="What it means" Sortable="false">
+						<CellTemplate>@OutcomeSentence(context)</CellTemplate>
+					</MokaColumn>
+				</MokaTable>
+			</MokaCard>
+		}
+	</MokaGrid>
+
+	<MokaCard Inner Title="Sent by the server" Subtitle="@Report.SentOrder?.Summary">
+		<MokaFlexbox Gap="MokaSpacingScale.Md">
+			@if (Report.Sent.Count > 1)
+			{
+				<ChainView Certificates="Report.Sent" Check="Report.SentOrder" Label="The certificates the server sent, in its order" />
+			}
+			<CertificateTable Rows="_sentRows" Selected="SelectedIn(_sentRows)" OnSelect="Select" Label="Certificates the server sent" />
+		</MokaFlexbox>
+	</MokaCard>
+
+	@if (Report.Chain.Count > 0)
+	{
+		<MokaCard Inner Title="Chain on this machine" Subtitle="The chain this machine built from what was sent, up to a root it trusts or as far as it got.">
+			<MokaFlexbox Gap="MokaSpacingScale.Md">
+				<ChainView Certificates="Report.Chain" Trusted="Report.ChainTrusted" Label="The chain this machine built" />
+				<CertificateTable Rows="_builtRows" Selected="SelectedIn(_builtRows)" OnSelect="Select" Label="The chain this machine built" />
+			</MokaFlexbox>
+		</MokaCard>
+	}
+
+	@if (_selected is { } row)
+	{
+		<MokaCard Outlined Title="@row.Certificate.Title" Subtitle="@($"{row.Role}, issued by {row.Certificate.IssuerTitle}")">
+			<HeaderActions>
+				<IconButton Icon="MokaIcons.Navigation.Close" Label="Close the details" Size="MokaSize.Xs" Position="MokaTooltipPosition.BottomEnd" OnClick="CloseDetail" />
+			</HeaderActions>
+			<ChildContent>
+				<CertificateDetails Info="row.Certificate" />
+			</ChildContent>
+		</MokaCard>
+	}
+
+	<OutputCard Title="Chain as sent" Detail="@CertificateCount(Report.Sent.Count)" Text="@Report.SentPem" FileName="@FileNameFrom(Report.NameChecked, "-chain.pem")" CopyName="Chain">
+		<Actions>
+			<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="CertificateIcons.Inspect" OnClick="@(() => OnInspect.InvokeAsync(Report.SentPem))">Inspect</MokaButton>
+		</Actions>
+	</OutputCard>
+	@if (Report.Chain.Count > 0)
+	{
+		<OutputCard Title="Chain on this machine" Detail="@($"{CertificateCount(Report.Chain.Count)}, root included")" Text="@Report.ChainPem" FileName="@FileNameFrom(Report.NameChecked, "-fullchain-root.pem")" CopyName="Chain" />
+	}
+</MokaFlexbox>

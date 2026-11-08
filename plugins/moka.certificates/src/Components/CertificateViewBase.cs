@@ -115,6 +115,9 @@ public abstract class CertificateViewBase : ComponentBase
 	protected static bool IsPageFailure(Exception exception) =>
 		exception is IOException or InvalidOperationException or Microsoft.JSInterop.JSException or Microsoft.JSInterop.JSDisconnectedException;
 
+	/// <summary>The text with its first letter in upper case, for a phrase the report writes in lower case: "expires in 3 days".</summary>
+	protected static string Sentence(string text) => text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text[1..];
+
 	/// <summary>A file name made from a certificate's title: letters, digits, dots and dashes.</summary>
 	protected static string FileNameFrom(string title, string extension)
 	{

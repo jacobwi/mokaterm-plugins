@@ -265,9 +265,6 @@ public sealed partial class SignSection : CertificateViewBase
 
 	internal static string BytesNote(byte[] bytes) => string.Create(CultureInfo.CurrentCulture, $"{bytes.Length:N0} bytes, not text");
 
-	private static string SignerNote(CmsSignerResult signer) =>
-		signer.SigningTime is { } time ? $"{signer.DigestAlgorithm}, signed {CertificateReport.Date(time)}" : signer.DigestAlgorithm;
-
 	private static void RequireData(InputContent data)
 	{
 		if (data.IsEmpty)

@@ -1,0 +1,21 @@
+@* A data list value: mono for data, wrapping anywhere so a hash never widens its card, with a copy button that goes
+   through the host's clipboard. *@
+<span class="mc-value">
+	<span class="@(Mono ? "mc-value-text mc-value-text--mono" : "mc-value-text")">@Text</span>
+	@if (CopyLabel is { Length: > 0 } label)
+	{
+		<CopyButton Text="@Text" Label="@label" />
+	}
+</span>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Text { get; set; } = "";
+
+	[Parameter]
+	public bool Mono { get; set; }
+
+	/// <summary>The copy button's name, such as "Copy SHA-256"; null shows none.</summary>
+	[Parameter]
+	public string? CopyLabel { get; set; }
+}

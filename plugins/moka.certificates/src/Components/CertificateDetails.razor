@@ -1,38 +1,65 @@
 @inherits CertificateViewBase
 
-@* Everything about one certificate, the same in the Inspect view, a server's chain and the System page. *@
-<div class="mc-details">
-	<ChipRow>
-		<StatusChip Text="@CertificateReport.ExpiryName(Info.Expiry)" Color="ExpiryColor.Of(Info.Expiry)" Glow="@(Info.Expiry != ExpiryState.Valid)" />
-		<span class="mc-details-when">@CertificateReport.ExpiryText(Info)</span>
-		@if (Info.IsCertificateAuthority)
-		{
-			<StatusChip Text="CA" Color="MokaColor.Info" Glow="false" />
-		}
-		@if (Info.IsSelfSigned == true)
-		{
-			<StatusChip Text="self-signed" Color="MokaColor.Surface" Glow="false" />
-		}
-		@if (!Info.Key.Usable)
-		{
-			<StatusChip Text="@Info.Key.Algorithm" Color="MokaColor.Warning" Glow="false" Title="@Info.Key.Limitation" />
-		}
-	</ChipRow>
+@* Everything about one certificate, the same in the Inspect view, a server's chain and the System page, which draws it
+   in a narrow panel: every grid here fits its columns to the room it has. *@
+<div class="mc-cert">
+	<MokaFlexbox Gap="MokaSpacingScale.Md">
+		<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Xs" Wrap>
+			<MokaTag Text="@ExpiryWord" Color="ExpiryColor.Of(Info.Expiry)" />
+			@if (Info.IsCertificateAuthority)
+			{
+				<MokaTag Text="Certificate authority" Color="MokaColor.Info" />
+			}
+			@if (Info.IsSelfSigned == true)
+			{
+				<MokaTag Text="Self-signed" Color="MokaColor.Surface" />
+			}
+			@if (!Info.Key.Usable)
+			{
+				<Hint Text="@Info.Key.Limitation">
+					<MokaTag Text="@($"{Info.Key.Algorithm} key, not usable here")" Color="MokaColor.Warning" />
+				</Hint>
+			}
+		</MokaFlexbox>
 
-	@if (ShowExports)
-	{
-		<ActionRow>
-			<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokaIcons.Content.Copy" OnClick="CopyPemAsync">Copy PEM</MokaButton>
-			<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokatermIcons.Download" OnClick="SavePemAsync">Save PEM</MokaButton>
-			<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokatermIcons.Download" OnClick="SaveDerAsync">Save DER</MokaButton>
-			<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" OnClick="CopyTextAsync">Copy as text</MokaButton>
-			<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" OnClick="SaveJsonAsync">Save JSON</MokaButton>
-			<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" OnClick="CopyPublicKeyAsync">Copy public key</MokaButton>
-		</ActionRow>
-	}
+		<div class="mc-cert-head">
+			<MokaGauge Value="ShareLeft"
+					   Max="100"
+					   Word="@GaugeWord"
+					   Color="ExpiryColor.Of(Info.Expiry)"
+					   SizeValue="104px"
+					   Label="Share of its validity left" />
+			<MokaGrid MinColumn="9rem" Gap="MokaSpacingScale.Sm">
+				<MokaStat Tile Value="@Info.Title" Label="Subject" HelpText="@IssuedBy" />
+				<MokaStat Tile Value="@DaysValue" Label="@DaysLabel" HelpText="@DaysHelp" Color="ExpiryColor.Of(Info.Expiry)" />
+				<MokaStat Tile Value="@Info.Key.Description" Label="Key" Color="@(Info.Key.Usable ? null : MokaColor.Warning)" />
+				<MokaStat Tile Value="@Info.SignatureAlgorithm" Label="Signature" />
+			</MokaGrid>
+		</div>
 
-	<FactList Facts="Facts" />
-	<ExtensionList Extensions="Info.Extensions" />
+		@if (ShowExports)
+		{
+			<ActionRow>
+				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokaIcons.Content.Copy" OnClick="CopyPemAsync">Copy PEM</MokaButton>
+				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokatermIcons.Download" OnClick="SavePemAsync">Save PEM</MokaButton>
+				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokatermIcons.Download" OnClick="SaveDerAsync">Save DER</MokaButton>
+				<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" OnClick="CopyTextAsync">Copy as text</MokaButton>
+				<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" OnClick="SaveJsonAsync">Save JSON</MokaButton>
+				<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" OnClick="CopyPublicKeyAsync">Copy public key</MokaButton>
+			</ActionRow>
+		}
+
+		<MokaGrid MinColumn="22rem" Gap="MokaSpacingScale.Sm">
+			<FactCard Title="Subject" Items="Facts.NameParts(Info.SubjectParts)" />
+			<FactCard Title="Issuer" Items="IssuerFacts" />
+			<FactCard Title="Validity" Items="ValidityFacts" />
+			<FactCard Title="Names" Subtitle="@NamesCount" Items="Facts.Names(Info.AlternativeNames)" />
+			<FactCard Title="Key and signature" Items="KeyFacts" />
+			<FactCard Title="Fingerprints" Items="FingerprintFacts" />
+		</MokaGrid>
+
+		<ExtensionList Extensions="Info.Extensions" />
+	</MokaFlexbox>
 </div>
 
 @code {
@@ -42,22 +69,88 @@
 	[Parameter]
 	public bool ShowExports { get; set; } = true;
 
-	private IReadOnlyList<Fact> Facts =>
+	private string ExpiryWord => Info.Expiry switch
+	{
+		ExpiryState.Expiring => "Expiring",
+		ExpiryState.Expired => "Expired",
+		ExpiryState.NotYetValid => "Not yet valid",
+		_ => "Valid",
+	};
+
+	/// <summary>The share of the validity period still ahead, from 0 to 100.</summary>
+	private double ShareLeft
+	{
+		get
+		{
+			double total = (Info.NotAfter - Info.NotBefore).TotalSeconds;
+			return total <= 0 ? 0 : Math.Clamp(Math.Floor((Info.NotAfter - Now).TotalSeconds / total * 100), 0, 100);
+		}
+	}
+
+	private string GaugeWord => Info.Expiry switch
+	{
+		ExpiryState.Expired => "expired",
+		ExpiryState.NotYetValid => "not yet valid",
+		_ => "% left",
+	};
+
+	private string IssuedBy => Info.IsSelfIssued ? "Issued by itself" : $"Issued by {Info.IssuerTitle}";
+
+	private string DaysValue => Info.Expiry switch
+	{
+		ExpiryState.Expired => (-Info.DaysLeft).ToString("N0", CultureInfo.CurrentCulture),
+		ExpiryState.NotYetValid => Math.Max(1, (int)Math.Ceiling((Info.NotBefore - Now).TotalDays)).ToString("N0", CultureInfo.CurrentCulture),
+		_ => Info.DaysLeft.ToString("N0", CultureInfo.CurrentCulture),
+	};
+
+	private string DaysLabel => Info.Expiry switch
+	{
+		ExpiryState.Expired => "Days since it expired",
+		ExpiryState.NotYetValid => "Days until it is valid",
+		_ => "Days left",
+	};
+
+	private string DaysHelp => Info.Expiry == ExpiryState.NotYetValid ? $"From {ShortDate(Info.NotBefore)}" : $"Until {ShortDate(Info.NotAfter)}";
+
+	private string NamesCount => Info.AlternativeNames.Count == 1 ? "1 name" : string.Create(CultureInfo.CurrentCulture, $"{Info.AlternativeNames.Count} names");
+
+	private IReadOnlyList<MokaDataListItem> IssuerFacts =>
 	[
-		new("Subject", Info.Subject.Length > 0 ? Info.Subject : "(empty)", mono: true),
-		new("Issuer", Info.Issuer, mono: true),
-		new("Serial", Info.SerialNumber, mono: true, copyable: true),
-		new("Valid from", CertificateReport.Date(Info.NotBefore), mono: true),
-		new("Valid until", CertificateReport.Date(Info.NotAfter), mono: true),
-		new("Names", [.. Info.AlternativeNames.Select(name => name.ToString())], Mono: true),
-		new("Key", Info.Key.Description),
-		new("Signature", Info.SignatureAlgorithm),
-		new("Self-signed", Info.IsSelfSigned switch { true => "Yes", false => Info.IsSelfIssued ? "Self-issued, but its signature does not verify" : "No", null => "Self-issued; the signature could not be checked here" }),
-		new("SHA-256", Info.Sha256, mono: true, copyable: true),
-		new("SHA-1", Info.Sha1, mono: true, copyable: true),
-		new("Key SHA-256", Info.Key.SpkiSha256, mono: true, copyable: true),
-		new("Key pin", Info.Key.Pin, mono: true, copyable: true),
+		.. Facts.NameParts(Info.IssuerParts),
+		Facts.Text("Signed by", Info.IsSelfSigned switch
+		{
+			true => "Itself: its own key verifies its signature",
+			false => Info.IsSelfIssued ? "Self-issued, but its signature does not verify" : Info.IssuerTitle,
+			null => "Self-issued; the signature could not be checked here",
+		}),
 	];
+
+	private IReadOnlyList<MokaDataListItem> ValidityFacts =>
+	[
+		Facts.Mono("Valid from", CertificateReport.Date(Info.NotBefore)),
+		Facts.Mono("Valid until", CertificateReport.Date(Info.NotAfter)),
+		Facts.Text("Now", Sentence(CertificateReport.ExpiryText(Info))),
+		Facts.Mono("Serial", Info.SerialNumber, "Copy the serial number"),
+		Facts.Text("Version", string.Create(CultureInfo.InvariantCulture, $"X.509 v{Info.Version}")),
+	];
+
+	private IReadOnlyList<MokaDataListItem> KeyFacts =>
+	[
+		Facts.Text("Key", Info.Key.Description),
+		.. Info.Key.Limitation is { } limitation ? [Facts.Text("Limitation", limitation)] : Array.Empty<MokaDataListItem>(),
+		Facts.Text("Signature", Info.SignatureAlgorithm),
+		Facts.Mono("Signature OID", Info.SignatureAlgorithmOid),
+		Facts.Mono("Key SHA-256", Info.Key.SpkiSha256, "Copy the key's SHA-256"),
+		Facts.Mono("Key pin", Info.Key.Pin, "Copy the key pin"),
+	];
+
+	private IReadOnlyList<MokaDataListItem> FingerprintFacts =>
+	[
+		Facts.Mono("SHA-256", Info.Sha256, "Copy the SHA-256 fingerprint"),
+		Facts.Mono("SHA-1", Info.Sha1, "Copy the SHA-1 fingerprint"),
+	];
+
+	private static string ShortDate(DateTimeOffset value) => value.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
 	private string Name(string extension) => FileNameFrom(Info.Title, extension);
 

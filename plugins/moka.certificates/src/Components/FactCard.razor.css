@@ -1,0 +1,17 @@
+.mc-facts {
+	min-width: 0;
+}
+
+.mc-facts ::deep .moka-data-list-term {
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.mc-facts ::deep .moka-data-list--row .moka-data-list-term {
+	min-width: 6.5rem;
+}
+
+.mc-facts ::deep .moka-data-list-description {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}

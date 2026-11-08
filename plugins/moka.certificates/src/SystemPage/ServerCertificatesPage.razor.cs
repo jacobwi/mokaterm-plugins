@@ -1,6 +1,5 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Moka.Certificates.Crypto;
 using Moka.Certificates.ServerFiles;
 using Moka.Certificates.Settings;
@@ -24,7 +23,6 @@ public sealed partial class ServerCertificatesPage : SystemPageBase
 	private List<ServerCertificateFile> _shown = [];
 	private string _filter = "";
 	private string? _selected;
-	private int _certificateIndex;
 	private CertificateSettings _settings = new();
 
 	/// <summary>certbot and the live folders answer root only, so root mode brings more.</summary>
@@ -60,12 +58,15 @@ public sealed partial class ServerCertificatesPage : SystemPageBase
 		}
 	}
 
-	private IEnumerable<(string Label, int Count, bool Alert)> Counts =>
+	private IEnumerable<(string Label, int Count, MokaColor? Color)> Counts =>
 	[
-		("Expired", _files.Count(file => file.Leaf?.Expiry == ExpiryState.Expired), true),
-		("Expiring", _files.Count(file => file.Leaf?.Expiry == ExpiryState.Expiring), true),
-		("Not read", _files.Count(file => file.Status != ServerFileStatus.Read), false),
+		("Read", _files.Count(file => file.Status == ServerFileStatus.Read), null),
+		("Expiring", _files.Count(file => file.Leaf?.Expiry == ExpiryState.Expiring), MokaColor.Warning),
+		("Expired", _files.Count(file => file.Leaf?.Expiry == ExpiryState.Expired), MokaColor.Error),
+		("Not read", _files.Count(file => file.Status != ServerFileStatus.Read), null),
 	];
+
+	private HashSet<ServerCertificateFile> SelectedSet => Selected is { } file ? [file] : [];
 
 	private string? RootHint
 	{
@@ -97,28 +98,34 @@ public sealed partial class ServerCertificatesPage : SystemPageBase
 				parts.Add("some files are root's");
 			}
 
-			return parts.Count == 0 ? null : $"Root mode reads more: {string.Join(", ", parts)}.";
+			if (parts.Count == 0)
+			{
+				return null;
+			}
+
+			string reasons = string.Join(", ", parts);
+			return char.ToUpperInvariant(reasons[0]) + reasons[1..] + ".";
 		}
 	}
 
-		private string LookedIn
+	private string LookedIn
+	{
+		get
 		{
-			get
-			{
-				List<string> places = [];
-				places.Add(HasCertbot ? "certbot certificates" + (Context.CanReadAsRoot ? "" : " (needs root mode)") : "certbot (not installed)");
-				places.Add("/etc/letsencrypt/live");
-				places.Add(Context.Server.HasCommand(ServerCertificateCommands.Nginx) ? "nginx -T" : "nginx (not installed)");
-				places.Add("SSLCertificateFile lines under " + string.Join(", ", ServerCertificateCommands.ApacheFolders));
-				places.Add("tls lines in " + ServerCertificateCommands.Caddyfile);
-				places.Add("crt and crt-list in " + ServerCertificateCommands.HaproxyConfiguration);
-				places.Add("ssl.pemfile in " + ServerCertificateCommands.LighttpdConfiguration);
-				places.Add("certFile values under " + ServerCertificateCommands.TraefikFolder);
-				int extra = _settings.ExtraPathList().Count;
-				places.Add(extra == 0 ? "no extra paths (add some in Settings, Plugins, Certificates)" : string.Create(CultureInfo.CurrentCulture, $"{extra} extra paths from Settings"));
-				return "Looked in " + string.Join("; ", places) + ".";
-			}
+			List<string> places = [];
+			places.Add(HasCertbot ? "certbot certificates" + (Context.CanReadAsRoot ? "" : " (needs root mode)") : "certbot (not installed)");
+			places.Add("/etc/letsencrypt/live");
+			places.Add(Context.Server.HasCommand(ServerCertificateCommands.Nginx) ? "nginx -T" : "nginx (not installed)");
+			places.Add("SSLCertificateFile lines under " + string.Join(", ", ServerCertificateCommands.ApacheFolders));
+			places.Add("tls lines in " + ServerCertificateCommands.Caddyfile);
+			places.Add("crt and crt-list in " + ServerCertificateCommands.HaproxyConfiguration);
+			places.Add("ssl.pemfile in " + ServerCertificateCommands.LighttpdConfiguration);
+			places.Add("certFile values under " + ServerCertificateCommands.TraefikFolder);
+			int extra = _settings.ExtraPathList().Count;
+			places.Add(extra == 0 ? "no extra paths (add some in Settings, Plugins, Certificates)" : string.Create(CultureInfo.CurrentCulture, $"{extra} extra paths from Settings"));
+			return "Looked in " + string.Join("; ", places) + ".";
 		}
+	}
 
 	protected override async Task LoadAsync(CancellationToken cancellationToken)
 	{
@@ -212,9 +219,6 @@ public sealed partial class ServerCertificatesPage : SystemPageBase
 
 	private static bool UsedByApache(ServerCertificateFile file) => file.Uses.Any(use => use.Source == "Apache");
 
-	private CertificateInfo? ShownCertificate(ServerCertificateFile file) =>
-		file.Certificates.Count == 0 ? null : file.Certificates[Math.Clamp(_certificateIndex, 0, file.Certificates.Count - 1)];
-
 	private void OnFilterChanged(string filter)
 	{
 		_filter = filter;
@@ -234,19 +238,7 @@ public sealed partial class ServerCertificatesPage : SystemPageBase
 				|| file.Uses.Any(use => use.Detail.Contains(filter, StringComparison.OrdinalIgnoreCase)))];
 	}
 
-	private void Select(ServerCertificateFile file)
-	{
-		_selected = file.Path == _selected ? null : file.Path;
-		_certificateIndex = 0;
-	}
-
-	private void OnRowKey(KeyboardEventArgs args, ServerCertificateFile file)
-	{
-		if (args.Key is "Enter" or " ")
-		{
-			Select(file);
-		}
-	}
+	private void Select(ServerCertificateFile file) => _selected = file.Path == _selected ? null : file.Path;
 
 	private void CloseDetail() => _selected = null;
 

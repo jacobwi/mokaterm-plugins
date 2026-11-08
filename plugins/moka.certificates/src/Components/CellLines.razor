@@ -1,0 +1,19 @@
+@* A table cell with a second, quieter line under its text: a certificate and who issued it, a file and its path. *@
+<span class="mc-cell">
+	<span class="mc-cell-text">@Text</span>
+	@if (Detail is { Length: > 0 } detail)
+	{
+		<span class="@(DetailMono ? "mc-cell-detail mc-cell-detail--mono" : "mc-cell-detail")">@detail</span>
+	}
+</span>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Text { get; set; } = "";
+
+	[Parameter]
+	public string? Detail { get; set; }
+
+	[Parameter]
+	public bool DetailMono { get; set; }
+}

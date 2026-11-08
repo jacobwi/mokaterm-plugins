@@ -1,0 +1,83 @@
+@using Moka.Certificates.ServerFiles
+
+@* One certificate file in the System page's panel: where it is used, what certbot says of it, how its certificates link
+   up, and the details of the one picked, the server's own first. *@
+<MokaFlexbox Gap="MokaSpacingScale.Md">
+	@if (File.Problem is { } problem)
+	{
+		<MokaAlert Severity="@(File.Status == ServerFileStatus.Unreadable ? MokaToastSeverity.Info : MokaToastSeverity.Warning)" Dense>@problem</MokaAlert>
+	}
+
+	<FactCard Title="Used by" Items="UseFacts" />
+
+	@if (File.Lineage is { Expires: not null } certbot)
+	{
+		<FactCard Title="certbot" Items="CertbotFacts(certbot)">
+			<Actions>
+				@if (certbot.IsTestCertificate)
+				{
+					<MokaTag Text="Staging" Color="MokaColor.Warning" />
+				}
+			</Actions>
+		</FactCard>
+	}
+
+	@if (File.Certificates.Count > 1)
+	{
+		<MokaCard Inner Title="In this file" Subtitle="@File.Chain?.Summary">
+			<MokaFlexbox Gap="MokaSpacingScale.Md">
+				<ChainView Certificates="File.Certificates" Check="File.Chain" Label="The file's certificates, in the order written" />
+				<CertificateTable Rows="_rows" Selected="Shown" OnSelect="Select" Label="The file's certificates" />
+			</MokaFlexbox>
+		</MokaCard>
+	}
+
+	@if (Shown is { } row)
+	{
+		<CertificateDetails Info="row.Certificate" />
+	}
+</MokaFlexbox>
+
+@code {
+	private ServerCertificateFile? _file;
+	private IReadOnlyList<CertificateRow> _rows = [];
+	private int _picked;
+
+	[Parameter, EditorRequired]
+	public ServerCertificateFile File { get; set; } = default!;
+
+	private CertificateRow? Shown => _rows.Count == 0 ? null : _rows[Math.Clamp(_picked, 0, _rows.Count - 1)];
+
+	private IReadOnlyList<MokaDataListItem> UseFacts => File.Uses.Count == 0
+		? [Facts.Text("Nothing", "No configuration names this file")]
+		: [.. File.Uses.Select(use => Facts.Mono(use.Source, use.Detail))];
+
+	protected override void OnParametersSet()
+	{
+		if (ReferenceEquals(_file, File))
+		{
+			return;
+		}
+
+		// The page reads the server again on a timer, which hands over a new record for the same file: the certificate
+		// picked in it stays picked.
+		if (_file?.Path != File.Path)
+		{
+			_picked = 0;
+		}
+
+		_file = File;
+		_rows = CertificateRow.Of(File.Certificates);
+	}
+
+	private static IReadOnlyList<MokaDataListItem> CertbotFacts(CertbotCertificate certbot) =>
+	[
+		Facts.Mono("Lineage", certbot.Name),
+		Facts.Text("State", certbot.State ?? "No state"),
+		Facts.Text("Key type", certbot.KeyType ?? "Not listed"),
+		.. certbot.Expires is { } expires ? [Facts.Mono("Expires", CertificateReport.Date(expires))] : Array.Empty<MokaDataListItem>(),
+		.. certbot.Domains.Count > 0 ? [Facts.Mono("Domains", string.Join(", ", certbot.Domains))] : Array.Empty<MokaDataListItem>(),
+	];
+
+	private void Select(CertificateRow row) => _picked = row.Position;
+}

@@ -1,0 +1,53 @@
+<div class="mc-chain-table">
+	<MokaTable TItem="CertificateRow"
+			   Items="Rows"
+			   ItemKey="@(row => row.Position)"
+			   SelectedItems="SelectedSet"
+			   OnRowClick="OnSelect"
+			   Dense
+			   ShowToolbar="false"
+			   ShowPagination="false"
+			   Label="@Label">
+		<MokaColumn TItem="CertificateRow" Title="#" Field="@(row => row.Position + 1)" Width="44px" Mono Class="mc-col-wide" />
+		<MokaColumn TItem="CertificateRow" Title="Role" Field="@(row => row.Role)" Width="120px" Class="mc-col-wide" />
+		<MokaColumn TItem="CertificateRow" Title="Certificate" Field="@(row => row.Certificate.Title)">
+			<CellTemplate>
+				<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Sm">
+					<MokaStatusDot Size="MokaSize.Xs" Color="ExpiryColor.Of(context.Certificate.Expiry)" Glow="@(context.Certificate.Expiry != ExpiryState.Valid)" />
+					<CellLines Text="@context.Certificate.Title" Detail="@($"Issued by {context.Certificate.IssuerTitle}")" />
+				</MokaFlexbox>
+			</CellTemplate>
+		</MokaColumn>
+		<MokaColumn TItem="CertificateRow" Title="Left" Field="@(row => row.Certificate.DaysLeft)" Width="110px" Mono Align="MokaTextAlign.Right">
+			<CellTemplate>@DaysText(context.Certificate)</CellTemplate>
+		</MokaColumn>
+	</MokaTable>
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public IReadOnlyList<CertificateRow> Rows { get; set; } = [];
+
+	[Parameter]
+	public CertificateRow? Selected { get; set; }
+
+	[Parameter]
+	public EventCallback<CertificateRow> OnSelect { get; set; }
+
+	[Parameter]
+	public string Label { get; set; } = "Certificates";
+
+	private HashSet<CertificateRow> SelectedSet => Selected is { } row ? [row] : [];
+
+	/// <summary>"42 d", "expired", "not yet valid": the end column of every certificate list.</summary>
+	public static string DaysText(CertificateInfo certificate)
+	{
+		ArgumentNullException.ThrowIfNull(certificate);
+		return certificate.Expiry switch
+		{
+			ExpiryState.Expired => "expired",
+			ExpiryState.NotYetValid => "not yet valid",
+			_ => string.Create(CultureInfo.CurrentCulture, $"{certificate.DaysLeft:N0} d"),
+		};
+	}
+}

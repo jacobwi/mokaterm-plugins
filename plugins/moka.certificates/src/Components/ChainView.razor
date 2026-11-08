@@ -1,0 +1,104 @@
+@using Moka.Red.Core.Icons
+
+<MokaChainCheck Steps="Steps" Label="@Label" FindingsLabel="@($"{Label}, each certificate")" />
+
+@code {
+	[Parameter, EditorRequired]
+	public IReadOnlyList<CertificateInfo> Certificates { get; set; } = [];
+
+	/// <summary>How the certificates link up, each one against the next; null for a chain this machine built, which links by construction.</summary>
+	[Parameter]
+	public ChainCheck? Check { get; set; }
+
+	/// <summary>Whether this machine trusts the chain; null when that was not asked, as for a pasted bundle.</summary>
+	[Parameter]
+	public bool? Trusted { get; set; }
+
+	[Parameter]
+	public string Label { get; set; } = "The chain, from the certificate up to its root";
+
+	private IReadOnlyList<MokaChainStep> Steps
+	{
+		get
+		{
+			List<MokaChainStep> steps = [];
+			for (int index = 0; index < Certificates.Count; index++)
+			{
+				steps.Add(StepFor(index));
+			}
+
+			if (Certificates.Count > 0 && Certificates[^1] is { IsSelfIssued: false } last)
+			{
+				if (Trusted == false)
+				{
+					steps.Add(new MokaChainStep(MokatermIcons.ShieldCheck, "Root", MokaChainTone.Fail, "Not found",
+						$"No root this machine trusts was found above {last.Title}."));
+				}
+				else if (Trusted is null && Certificates.Count > 1)
+				{
+					steps.Add(new MokaChainStep(MokatermIcons.ShieldCheck, "Root", MokaChainTone.Wait, "Not included",
+						$"The root that issued {last.Title} is left out, which is what a server should send: clients bring their own."));
+				}
+			}
+
+			return steps;
+		}
+	}
+
+	private MokaChainStep StepFor(int index)
+	{
+		CertificateInfo certificate = Certificates[index];
+		bool isRoot = index == Certificates.Count - 1 && certificate.IsSelfIssued && Certificates.Count > 1;
+		string role = Certificates.Count == 1 ? "Certificate" : index == 0 ? "Leaf" : isRoot ? "Root" : "Intermediate";
+		MokaIconDefinition icon = isRoot ? MokatermIcons.ShieldCheck : CertificateIcons.Certificate;
+		string issued = certificate.IsSelfIssued ? $"{certificate.Title}, issued by itself." : $"{certificate.Title}, issued by {certificate.IssuerTitle}.";
+		string sentence = $"{issued} It {CertificateReport.ExpiryText(certificate)}.";
+
+		(MokaChainTone tone, string word, string? detail) = Judge(index, certificate, isRoot);
+		return new MokaChainStep(icon, role, tone, word, sentence, detail);
+	}
+
+	private (MokaChainTone Tone, string Word, string? Detail) Judge(int index, CertificateInfo certificate, bool isRoot)
+	{
+		if (index > 0 && Check?.Links.FirstOrDefault(link => link.Child == index - 1 && link.Parent == index) is { } link)
+		{
+			CertificateInfo child = Certificates[index - 1];
+			if (!link.NamesMatch)
+			{
+				return (MokaChainTone.Fail, "Not the issuer", $"It did not issue {child.Title}: {child.Title} names {child.IssuerTitle} as its issuer.");
+			}
+
+			if (link.SignatureValid == false)
+			{
+				return (MokaChainTone.Fail, "Bad signature", $"It is named as the issuer of {child.Title}, but its key does not verify that signature.");
+			}
+
+			if (link.SignatureValid is null)
+			{
+				return (MokaChainTone.Warn, "Not checked", $"Its signature on {child.Title} uses an algorithm that cannot be checked here.");
+			}
+		}
+
+		switch (certificate.Expiry)
+		{
+			case ExpiryState.Expired:
+				return (MokaChainTone.Fail, "Expired", null);
+			case ExpiryState.NotYetValid:
+				return (MokaChainTone.Fail, "Not yet valid", null);
+		}
+
+		if (isRoot && Trusted == false)
+		{
+			return (MokaChainTone.Fail, "Not trusted", "This machine does not trust this root.");
+		}
+
+		if (certificate.Expiry == ExpiryState.Expiring)
+		{
+			return (MokaChainTone.Warn, "Expiring", null);
+		}
+
+		return isRoot
+			? (MokaChainTone.Ok, Trusted == true ? "Trusted" : certificate.IsSelfSigned == true ? "Self-signed" : "Self-issued", null)
+			: (MokaChainTone.Ok, index == 0 ? "Valid" : "Verified", null);
+	}
+}

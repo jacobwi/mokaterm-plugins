@@ -7,140 +7,158 @@
 			   PrimaryIcon="CertificateIcons.Sign"
 			   PrimaryDisabled="_busy"
 			   OnPrimary="RunAsync">
-	<div class="mc-group">
-		<EnumSegmentedControl TEnum="SignMode" Value="_mode" ValueChanged="OnModeChanged" Options="Modes" AriaLabel="Sign or verify" Disabled="_busy" />
-		<span class="mc-note">@ModeHelp</span>
-	</div>
+	<MokaFlexbox Gap="MokaSpacingScale.Md">
+		<MokaCard Inner Outlined Title="What to do" Subtitle="@ModeHelp">
+			<EnumSegmentedControl TEnum="SignMode" Value="_mode" ValueChanged="OnModeChanged" Options="Modes" AriaLabel="Sign or verify" Disabled="_busy" />
+		</MokaCard>
 
-	@if (_mode != SignMode.CmsVerify)
-	{
-		<div class="mc-group">
-			<InputBox Label="Data"
-					  Value="_data"
-					  ValueChanged="@(value => { _data = value; _result = null; })"
-					  Placeholder="Type or paste the text, or open the file. Text is signed as UTF-8, exactly as it is here."
-					  Rows="4"
-					  FileWhat="the data"
-					  KeepFilesAsBytes />
-		</div>
-	}
-
-	@switch (_mode)
-	{
-		case SignMode.Sign:
-		case SignMode.CmsSign:
-			<div class="mc-group">
-				<InputBox Label="@(_mode == SignMode.Sign ? "Private key (or a PFX)" : "Signer: certificate and private key, or a PFX")"
-						  Value="_key"
-						  ValueChanged="@(value => { _key = value; _result = null; })"
-						  Placeholder="@(_mode == SignMode.Sign ? "Paste a private key as PEM, or open a key or PFX file" : "Paste the certificate, its key and any chain as PEM, or open a PFX")"
-						  Rows="4"
-						  FileWhat="a key or PFX" />
-				<MokaPasswordField Value="@_password" ValueChanged="@(value => _password = value ?? "")" Placeholder="The key's or PFX's password, if it has one" Size="MokaSize.Sm" autocomplete="off" aria-label="Key password" />
-			</div>
-			break;
-		case SignMode.Verify:
-			<div class="mc-group">
-				<InputBox Label="Signature"
-						  Value="_signature"
-						  ValueChanged="@(value => { _signature = value; _result = null; })"
-						  Placeholder="Paste the signature as base64 or hex, or open the signature file"
-						  Rows="3"
-						  FileWhat="a signature"
-						  KeepFilesAsBytes />
-				<InputBox Label="Certificate or public key"
-						  Value="_key"
-						  ValueChanged="@(value => { _key = value; _result = null; })"
-						  Placeholder="Paste the signer's certificate or public key"
-						  Rows="3" />
-			</div>
-			break;
-		case SignMode.CmsVerify:
-			<div class="mc-group">
-				<InputBox Label="CMS signature"
-						  Value="_signature"
-						  ValueChanged="@(value => { _signature = value; _result = null; })"
-						  Placeholder="Paste a CMS or PKCS7 PEM block or base64, or open a .p7s or .p7m file"
-						  Rows="4"
-						  FileWhat="a CMS signature" />
-				<InputBox Label="Signed content (for a detached signature)"
-						  Value="_data"
-						  ValueChanged="@(value => { _data = value; _result = null; })"
-						  Placeholder="Leave empty when the content is inside the signature"
-						  Rows="3"
-						  FileWhat="the signed content"
-						  KeepFilesAsBytes />
-				<InputBox Label="Expected signer (optional)"
-						  Value="_key"
-						  ValueChanged="@(value => { _key = value; _result = null; })"
-						  Placeholder="Paste the certificate the signer must be; it is also used when the signature does not include one"
-						  Rows="3" />
-			</div>
-			break;
-	}
-
-	<div class="mc-group">
-		<div class="mc-row">
+		<MokaGrid MinColumn="22rem" Gap="MokaSpacingScale.Md">
 			@if (_mode != SignMode.CmsVerify)
 			{
-				<EnumSegmentedControl TEnum="SignatureHash" Value="_hash" ValueChanged="@(value => _hash = value)" Options="Hashes" AriaLabel="Hash" Disabled="_busy" />
+				<InputBox Label="Data"
+						  Hint="Text is signed as UTF-8, exactly as it is here."
+						  Value="_data"
+						  ValueChanged="@(value => { _data = value; _result = null; })"
+						  Placeholder="Type or paste the text, or open the file"
+						  Rows="4"
+						  FileWhat="the data"
+						  KeepFilesAsBytes />
 			}
-			@if (_mode is SignMode.Sign or SignMode.Verify)
+
+			@switch (_mode)
 			{
-				<EnumSegmentedControl TEnum="RsaSignatureScheme" Value="_scheme" ValueChanged="@(value => _scheme = value)" Options="Schemes" AriaLabel="RSA padding" Disabled="_busy" />
+				case SignMode.Sign:
+				case SignMode.CmsSign:
+					<InputBox Label="@(_mode == SignMode.Sign ? "Private key (or a PFX)" : "Signer")"
+							  Hint="@(_mode == SignMode.Sign ? null : "Its certificate and private key, or a PFX.")"
+							  Value="_key"
+							  ValueChanged="@(value => { _key = value; _result = null; })"
+							  Placeholder="@(_mode == SignMode.Sign ? "Paste a private key as PEM, or open a key or PFX file" : "Paste the certificate, its key and any chain as PEM, or open a PFX")"
+							  Rows="4"
+							  FileWhat="a key or PFX">
+						<MokaPasswordField Label="Password" Optional Value="@_password" ValueChanged="@(value => _password = value ?? "")" Placeholder="The key's or PFX's password" Size="MokaSize.Sm" autocomplete="off" />
+					</InputBox>
+					break;
+				case SignMode.Verify:
+					<InputBox Label="Signature"
+							  Value="_signature"
+							  ValueChanged="@(value => { _signature = value; _result = null; })"
+							  Placeholder="Paste the signature as base64 or hex, or open the signature file"
+							  Rows="4"
+							  FileWhat="a signature"
+							  KeepFilesAsBytes />
+					<InputBox Label="Certificate or public key"
+							  Value="_key"
+							  ValueChanged="@(value => { _key = value; _result = null; })"
+							  Placeholder="Paste the signer's certificate or public key"
+							  Rows="4" />
+					break;
+				case SignMode.CmsVerify:
+					<InputBox Label="CMS signature"
+							  Value="_signature"
+							  ValueChanged="@(value => { _signature = value; _result = null; })"
+							  Placeholder="Paste a CMS or PKCS7 PEM block or base64, or open a .p7s or .p7m file"
+							  Rows="4"
+							  FileWhat="a CMS signature" />
+					<InputBox Label="Signed content (for a detached signature)"
+							  Value="_data"
+							  ValueChanged="@(value => { _data = value; _result = null; })"
+							  Placeholder="Leave empty when the content is inside the signature"
+							  Rows="4"
+							  FileWhat="the signed content"
+							  KeepFilesAsBytes />
+					<InputBox Label="Expected signer (optional)"
+							  Hint="It is also used when the signature does not include one."
+							  Value="_key"
+							  ValueChanged="@(value => { _key = value; _result = null; })"
+							  Placeholder="Paste the certificate the signer must be"
+							  Rows="4" />
+					break;
 			}
-			@if (_mode == SignMode.Sign)
-			{
-				<EnumSegmentedControl TEnum="BinaryEncoding" Value="_encoding" ValueChanged="@(value => _encoding = value)" Options="Encodings" AriaLabel="Signature encoding" Disabled="_busy" />
-			}
-			@if (_mode == SignMode.CmsSign)
-			{
-				<MokaCheckbox Label="Detached (the signature travels beside the content)" Value="_detached" ValueChanged="@(value => _detached = value)" />
-			}
-		</div>
-		@if (_mode is SignMode.Sign or SignMode.Verify)
+		</MokaGrid>
+
+		@if (_mode != SignMode.CmsVerify)
 		{
-			<span class="mc-note">The RSA padding is ignored for ECDSA keys, whose signatures are DER like OpenSSL's; verifying also takes the raw form JOSE uses.</span>
+			<MokaCard Inner Outlined Title="Options" Subtitle="@(_mode is SignMode.Sign or SignMode.Verify ? "The RSA padding is ignored for ECDSA keys, whose signatures are DER like OpenSSL's; verifying also takes the raw form JOSE uses." : null)">
+				<MokaGrid MinColumn="13rem" Gap="MokaSpacingScale.Md" AlignItems="MokaAlign.Start">
+					<MokaFieldWrapper Label="Hash" Size="MokaSize.Sm" CustomControl>
+						<EnumSegmentedControl TEnum="SignatureHash" Value="_hash" ValueChanged="@(value => _hash = value)" Options="Hashes" AriaLabel="Hash" Disabled="_busy" />
+					</MokaFieldWrapper>
+					@if (_mode is SignMode.Sign or SignMode.Verify)
+					{
+						<MokaFieldWrapper Label="RSA padding" Size="MokaSize.Sm" CustomControl>
+							<EnumSegmentedControl TEnum="RsaSignatureScheme" Value="_scheme" ValueChanged="@(value => _scheme = value)" Options="Schemes" AriaLabel="RSA padding" Disabled="_busy" />
+						</MokaFieldWrapper>
+					}
+					@if (_mode == SignMode.Sign)
+					{
+						<MokaFieldWrapper Label="Write the signature as" Size="MokaSize.Sm" CustomControl>
+							<EnumSegmentedControl TEnum="BinaryEncoding" Value="_encoding" ValueChanged="@(value => _encoding = value)" Options="Encodings" AriaLabel="Signature encoding" Disabled="_busy" />
+						</MokaFieldWrapper>
+					}
+					@if (_mode == SignMode.CmsSign)
+					{
+						<MokaFieldWrapper Label="Content" Size="MokaSize.Sm" CustomControl>
+							<MokaCheckbox Label="Detached (the signature travels beside the content)" Value="_detached" ValueChanged="@(value => _detached = value)" />
+						</MokaFieldWrapper>
+					}
+				</MokaGrid>
+			</MokaCard>
 		}
-	</div>
 
-	@if (_error is { } error)
-	{
-		<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
-	}
+		@if (_error is { } error)
+		{
+			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
+		}
 
-	@if (_result is { } result)
-	{
-		<div class="mc-results">
+		@if (_result is { } result)
+		{
 			@if (result.Verdict is { } verdict)
 			{
-				<div class="@(verdict ? "mc-result-line mc-result-line--good" : "mc-result-line mc-result-line--bad")">
-					<StatusChip Text="@(verdict ? "valid" : "not valid")" Color="@(verdict ? MokaColor.Success : MokaColor.Error)" />
-					<span>@result.Summary</span>
-				</div>
+				<MokaAlert Severity="@(verdict ? MokaToastSeverity.Success : MokaToastSeverity.Error)" Title="@(verdict ? "Valid" : "Not valid")">@result.Summary</MokaAlert>
 			}
 
-			@foreach (CmsSignerResult signer in result.Signers)
+			@if (result.Signers.Count > 0)
 			{
-				<div class="@(signer.Valid ? "mc-result-line mc-result-line--good" : "mc-result-line mc-result-line--bad")">
-					<StatusChip Text="@(signer.Valid ? "signature ok" : "bad signature")" Color="@(signer.Valid ? MokaColor.Success : MokaColor.Error)" Glow="!signer.Valid" />
-					<span class="mc-mono">@signer.Signer</span>
-					<span class="mc-note">@SignerNote(signer)</span>
-					@if (signer.Problem is { } problem)
-					{
-						<span class="mc-note">@problem</span>
-					}
-				</div>
+				<MokaCard Inner Title="Signers" Subtitle="Each signature is checked against its signer's key. Trust in the signer is not judged.">
+					<MokaTable TItem="CmsSignerResult"
+							   Items="result.Signers"
+							   Dense
+							   ShowToolbar="false"
+							   ShowPagination="false"
+							   Label="Signers">
+						<MokaColumn TItem="CmsSignerResult" Title="Signature" Field="@(signer => signer.Valid)" Width="150px">
+							<CellTemplate>
+								<MokaFlexbox Direction="MokaDirection.Row" Gap="MokaSpacingScale.Xxs" Wrap>
+									<MokaTag Text="@(context.Valid ? "Signature ok" : "Bad signature")" Color="@(context.Valid ? MokaColor.Success : MokaColor.Error)" />
+									@if (context.IsExpectedSigner is { } expected)
+									{
+										<MokaTag Text="@(expected ? "Expected signer" : "Someone else")" Color="@(expected ? MokaColor.Success : MokaColor.Warning)" />
+									}
+								</MokaFlexbox>
+							</CellTemplate>
+						</MokaColumn>
+						<MokaColumn TItem="CmsSignerResult" Title="Signer" Field="@(signer => signer.Signer)">
+							<CellTemplate>
+								<CellLines Text="@context.Signer" Detail="@context.Problem" />
+							</CellTemplate>
+						</MokaColumn>
+						<MokaColumn TItem="CmsSignerResult" Title="Digest" Field="@(signer => signer.DigestAlgorithm)" Width="120px" Mono />
+						<MokaColumn TItem="CmsSignerResult" Title="Signed" Field="@(signer => signer.SigningTime)" Width="210px" Mono>
+							<CellTemplate>@(context.SigningTime is { } time ? CertificateReport.Date(time) : "Not stated")</CellTemplate>
+						</MokaColumn>
+					</MokaTable>
+				</MokaCard>
 			}
 
 			@if (result.Text is { } text)
 			{
-				<OutputBox Title="@result.TextTitle" Text="@text" FileName="@result.TextFileName" Bytes="@result.Bytes" BytesFileName="@result.BytesFileName" BytesLabel="@result.BytesLabel" CopyName="@result.TextTitle" />
+				<OutputCard Title="@result.TextTitle" Text="@text" FileName="@result.TextFileName" Bytes="@result.Bytes" BytesFileName="@result.BytesFileName" BytesLabel="@result.BytesLabel" CopyName="@result.TextTitle" />
 			}
 			else if (result.Bytes is { } bytes)
 			{
-				<OutputBox Title="@result.TextTitle" Detail="@BytesNote(bytes)" Bytes="@bytes" BytesFileName="@result.BytesFileName" BytesLabel="Save" />
+				<OutputCard Title="@result.TextTitle" Detail="@BytesNote(bytes)" Bytes="@bytes" BytesFileName="@result.BytesFileName" BytesLabel="Save" />
 			}
-		</div>
-	}
+		}
+	</MokaFlexbox>
 </ToolPageFrame>

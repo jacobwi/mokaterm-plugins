@@ -1,0 +1,17 @@
+.mc-value {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--moka-spacing-xxs);
+	min-width: 0;
+	max-width: 100%;
+}
+
+.mc-value-text {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.mc-value-text--mono {
+	font-family: var(--moka-font-family-mono);
+	letter-spacing: 0.02em;
+}

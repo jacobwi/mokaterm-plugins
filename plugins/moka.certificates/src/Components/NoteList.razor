@@ -1,17 +1,17 @@
-@* The reader's notes and an operation's own, as alerts by their weight. *@
+@* The reader's notes and an operation's own: a failure as an alert, anything else as a callout to read. *@
 @foreach (ReadNote note in Notes)
 {
-	<MokaAlert Severity="SeverityOf(note.Level)" Dense>@note.Message</MokaAlert>
+	@if (note.Level == NoteLevel.Error)
+	{
+		<MokaAlert Severity="MokaToastSeverity.Error" Dense>@note.Message</MokaAlert>
+	}
+	else
+	{
+		<MokaCallout Type="@(note.Level == NoteLevel.Warning ? MokaCalloutType.Warning : MokaCalloutType.Note)">@note.Message</MokaCallout>
+	}
 }
 
 @code {
 	[Parameter, EditorRequired]
 	public IReadOnlyList<ReadNote> Notes { get; set; } = [];
-
-	private static MokaToastSeverity SeverityOf(NoteLevel level) => level switch
-	{
-		NoteLevel.Error => MokaToastSeverity.Error,
-		NoteLevel.Warning => MokaToastSeverity.Warning,
-		_ => MokaToastSeverity.Info,
-	};
 }

@@ -1,13 +1,21 @@
-.mc-details {
-	display: flex;
-	flex-direction: column;
-	gap: var(--moka-spacing-sm);
+.mc-cert {
 	min-width: 0;
-	container-type: inline-size;
 }
 
-.mc-details-when {
-	color: var(--moka-color-on-surface-variant);
-	font-family: var(--moka-font-family-mono);
-	font-size: var(--moka-font-size-xs);
+/* The ring and its tiles share a row while there is room, and the tiles go under the ring in a narrow panel. */
+.mc-cert-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--moka-spacing-md);
+}
+
+.mc-cert-head ::deep .moka-grid {
+	flex: 1 1 18rem;
+	min-width: 0;
+}
+
+/* A subject or an algorithm can be one long word, which would push a tile past its column. */
+.mc-cert ::deep .moka-stat__value {
+	overflow-wrap: anywhere;
 }

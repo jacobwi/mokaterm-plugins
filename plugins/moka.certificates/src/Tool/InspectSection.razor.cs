@@ -28,6 +28,11 @@ public sealed partial class InspectSection : CertificateViewBase
 
 	private InspectedItem? Selected => _inspection.Items.FirstOrDefault(item => item.Number == _selected);
 
+	private HashSet<InspectedItem> SelectedSet => Selected is { } item ? [item] : [];
+
+	/// <summary>The certificates in the order given, which is the order the chain check's positions count in.</summary>
+	private IReadOnlyList<CertificateInfo> Certificates => [.. _inspection.Items.Select(item => item.Certificate).OfType<CertificateInfo>()];
+
 	private string Summary
 	{
 		get
@@ -71,12 +76,12 @@ public sealed partial class InspectSection : CertificateViewBase
 
 	private static string KindOf(InspectedItem item) => item switch
 	{
-		{ Locked: true } => "locked",
-		{ Kind: MaterialKind.Certificate, Certificate.IsCertificateAuthority: true } => "CA cert",
-		{ Kind: MaterialKind.Certificate } => "cert",
-		{ Kind: MaterialKind.CertificateRequest } => "request",
-		{ Kind: MaterialKind.PrivateKey } => "private key",
-		_ => "public key",
+		{ Locked: true } => "Locked",
+		{ Kind: MaterialKind.Certificate, Certificate.IsCertificateAuthority: true } => "CA certificate",
+		{ Kind: MaterialKind.Certificate } => "Certificate",
+		{ Kind: MaterialKind.CertificateRequest } => "Request",
+		{ Kind: MaterialKind.PrivateKey } => "Private key",
+		_ => "Public key",
 	};
 
 	private static string EndOf(InspectedItem item) => item switch

@@ -115,6 +115,8 @@ public sealed partial class GenerateSection : CertificateViewBase, IDisposable
 		(_names, _nameProblems) = SubjectNames.Parse(_namesText);
 	}
 
+	private void OnValidityChanged(int days) => _validityDays = Math.Clamp(days, CertificateSpec.MinValidityDays, CertificateSpec.MaxValidityDays);
+
 	private void OnCaChanged(InputContent content) => _ca = content;
 
 	private void OnRequestChanged(InputContent content) => _request = content;

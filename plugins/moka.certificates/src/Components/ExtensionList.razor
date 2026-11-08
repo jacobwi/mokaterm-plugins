@@ -1,28 +1,50 @@
-@* Every extension in words: its name, CRITICAL when it is, and what it says. *@
+@* Every extension in words: its name and OID, whether it is critical, and what it says, a line per fact. *@
 @if (Extensions.Count > 0)
 {
-	<div class="mc-ext">
-		<span class="mc-ext-title">Extensions</span>
-		@foreach (ExtensionInfo extension in Extensions)
-		{
-			<div class="mc-ext-item">
-				<div class="mc-ext-head">
-					<span class="mc-ext-name" title="@extension.Oid">@extension.Name</span>
-					@if (extension.Critical)
+	<MokaCard Inner Title="Extensions" Subtitle="@Summary">
+		<MokaTable Items="Extensions"
+				   ItemKey="@(extension => extension.Oid)"
+				   Dense
+				   ShowToolbar="false"
+				   ShowPagination="false"
+				   Label="Extensions">
+			<MokaColumn TItem="ExtensionInfo" Title="Extension" Field="@(extension => extension.Name)" Width="34%">
+				<CellTemplate>
+					<MokaFlexbox Gap="MokaSpacingScale.Xxs">
+						<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Xs" Wrap>
+							<MokaText Element="span" Size="MokaSize.Xs" Weight="MokaFontWeight.Semibold">@context.Name</MokaText>
+							@if (context.Critical)
+							{
+								<MokaTag Text="Critical" Color="MokaColor.Warning" Size="MokaSize.Xs" />
+							}
+						</MokaFlexbox>
+						<span class="mc-ext-oid">@context.Oid</span>
+					</MokaFlexbox>
+				</CellTemplate>
+			</MokaColumn>
+			<MokaColumn TItem="ExtensionInfo" Title="Says" Sortable="false" Mono>
+				<CellTemplate>
+					@foreach (string line in context.Lines)
 					{
-						<span class="mc-ext-critical">critical</span>
+						<div class="mc-ext-line">@line</div>
 					}
-				</div>
-				@foreach (string line in extension.Lines)
-				{
-					<span class="mc-ext-line">@line</span>
-				}
-			</div>
-		}
-	</div>
+				</CellTemplate>
+			</MokaColumn>
+		</MokaTable>
+	</MokaCard>
 }
 
 @code {
 	[Parameter, EditorRequired]
 	public IReadOnlyList<ExtensionInfo> Extensions { get; set; } = [];
+
+	private string Summary
+	{
+		get
+		{
+			int critical = Extensions.Count(extension => extension.Critical);
+			string count = Extensions.Count == 1 ? "1 extension" : string.Create(CultureInfo.CurrentCulture, $"{Extensions.Count} extensions");
+			return critical == 0 ? count : string.Create(CultureInfo.CurrentCulture, $"{count}, {critical} critical");
+		}
+	}
 }

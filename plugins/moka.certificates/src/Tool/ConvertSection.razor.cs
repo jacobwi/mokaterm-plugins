@@ -82,6 +82,10 @@ public sealed partial class ConvertSection : CertificateViewBase
 		_ => "An encrypted key as plain PKCS#8. Keep the result somewhere only you can read.",
 	};
 
+	private static string EncryptionNote => string.Create(
+		CultureInfo.CurrentCulture,
+		$"PKCS#8 with AES-256-CBC and PBKDF2 (HMAC-SHA256, {CertificateConverter.KeyEncryptionRounds:N0} rounds), which OpenSSL and every current tool read.");
+
 	protected override void OnInitialized() => _pfxEncryption = Settings.PfxEncryption;
 
 	private static string KindLabel(ConvertKind kind) => kind switch

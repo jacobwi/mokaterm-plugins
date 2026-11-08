@@ -1,0 +1,12 @@
+.mc-chain-table {
+	min-width: 0;
+	container-type: inline-size;
+	container-name: mc-chain-table;
+}
+
+/* In the System page's panel the position and the role give way to the names, which the chain above says already. */
+@container mc-chain-table (max-width: 480px) {
+	.mc-chain-table ::deep .mc-col-wide {
+		display: none;
+	}
+}

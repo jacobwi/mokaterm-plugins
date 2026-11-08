@@ -132,6 +132,7 @@ public static class TlsReportBuilder
 			}
 		}
 
+		bool chainTrusted = ChainProblems.IsClean(status) && (observation.PolicyErrors & SslPolicyErrors.RemoteCertificateNotAvailable) == 0;
 		bool trusted = problems.Count == 0
 			&& ChainProblems.IsClean(observation.ChainStatus)
 			&& (observation.PolicyErrors & SslPolicyErrors.RemoteCertificateNotAvailable) == 0;
@@ -150,6 +151,7 @@ public static class TlsReportBuilder
 			NameChecked = name,
 			NameMatch = match,
 			Trusted = trusted,
+			ChainTrusted = chainTrusted,
 			Problems = problems,
 			Warnings = warnings,
 			SentOrder = order,
