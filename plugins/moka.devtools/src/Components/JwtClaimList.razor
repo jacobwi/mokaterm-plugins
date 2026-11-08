@@ -1,73 +1,85 @@
 @inherits DevToolViewBase
 @implements IDisposable
 
-@* A token's payload as JSON with every claim's value hidden until shown, one at a time or all at once. Values are copied
+@* A token's claims as a table with every value hidden until shown, one at a time or all at once. Values are copied
    through the host's secret copy. *@
-<section class="dt-claims" aria-label="Payload">
-	<div class="dt-claims-head">
-		<span class="dt-claims-title">Payload</span>
-		<span class="dt-claims-count">@(Claims.Count == 1 ? "1 claim" : string.Create(CultureInfo.CurrentCulture, $"{Claims.Count} claims"))</span>
-		<span class="dt-claims-gap"></span>
-		<MokaButton Variant="MokaVariant.Text"
-					Color="MokaColor.Surface"
-					Size="MokaSize.Xs"
-					StartIcon="@(AllShown ? MokaIcons.Toggle.EyeOff : MokaIcons.Toggle.Eye)"
-					OnClick="ToggleAll">
-			@(AllShown ? "Hide all" : "Show all")
-		</MokaButton>
-		@if (PayloadJson is { } payload)
-		{
-			<MokaButton Variant="MokaVariant.Outlined"
+<MokaCard Inner Outlined Title="Claims" Subtitle="@CountText">
+	<HeaderActions>
+		<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Xs">
+			<MokaButton Variant="MokaVariant.Text"
+						Color="MokaColor.Surface"
 						Size="MokaSize.Xs"
-						StartIcon="MokaIcons.Content.Copy"
-						OnClick="@(() => CopySecretAsync(payload, "Payload"))">
-				Copy
+						StartIcon="@(AllShown ? MokaIcons.Toggle.EyeOff : MokaIcons.Toggle.Eye)"
+						OnClick="ToggleAll">
+				@(AllShown ? "Hide all" : "Show all")
 			</MokaButton>
-		}
-	</div>
-	<div class="dt-claims-body">
-		<div class="dt-claim-brace">{</div>
-		@for (int index = 0; index < Claims.Count; index++)
-		{
-			JwtClaim claim = Claims[index];
-			bool shown = _shown.Contains(index);
-			bool last = index == Claims.Count - 1;
-			int number = index;
-			<div class="dt-claim" @key="index">
-				<button type="button"
-						class="dt-claim-button"
-						title="@((shown ? "Hide " : "Show ") + claim.Name)"
-						aria-label="@((shown ? "Hide " : "Show ") + claim.Name)"
-						aria-pressed="@(shown ? "true" : "false")"
-						@onclick="() => Toggle(number)">
-					<MokaIcon Icon="@(shown ? MokaIcons.Toggle.EyeOff : MokaIcons.Toggle.Eye)" Size="MokaSize.Xs" />
-				</button>
-				<span class="dt-claim-text">
-					<span class="dt-claim-name">"@claim.Name"</span><span>: </span>
-					@if (shown)
+			@if (PayloadJson is { } payload)
+			{
+				<IconButton Icon="MokaIcons.Content.Copy"
+							Label="Copy the payload"
+							Color="MokaColor.Primary"
+							Size="MokaSize.Xs"
+							Position="MokaTooltipPosition.BottomEnd"
+							OnClick="@(() => CopySecretAsync(payload, "Payload"))" />
+			}
+		</MokaFlexbox>
+	</HeaderActions>
+	<ChildContent>
+		<MokaTable TItem="ClaimRow"
+				   Items="_rows"
+				   ItemKey="@(row => row.Index)"
+				   ShowToolbar="false"
+				   ShowPagination="false"
+				   Dense
+				   Bleed
+				   Label="Claims"
+				   ActionsColumnTitle=""
+				   ActionsColumnWidth="72px">
+			<ChildContent>
+				<MokaColumn Title="Claim" Field="row => row.Index" Sortable="false" Width="140px">
+					<CellTemplate Context="row">
+						<MokaText Element="span" Size="MokaSize.Sm" Mono Weight="MokaFontWeight.Semibold">@row.Claim.Name</MokaText>
+					</CellTemplate>
+				</MokaColumn>
+				<MokaColumn Title="Meaning" Field="row => row.Index" Sortable="false" Width="160px">
+					<CellTemplate Context="row">
+						<MokaCaption>@(JwtClaimNames.Describe(row.Claim.Name) ?? "")</MokaCaption>
+					</CellTemplate>
+				</MokaColumn>
+				<MokaColumn Title="Value" Field="row => row.Index" Sortable="false">
+					<CellTemplate Context="row">
+						@if (_shown.Contains(row.Index))
+						{
+							<MokaText Element="span" Size="MokaSize.Sm" Mono><span class="dt-claim-value">@row.Claim.Json</span></MokaText>
+						}
+						else
+						{
+							<MokaText Element="span" Size="MokaSize.Sm" Mono><span class="dt-claim-mask" aria-label="Hidden">@Mask</span></MokaText>
+						}
+					</CellTemplate>
+				</MokaColumn>
+			</ChildContent>
+			<RowActions Context="row">
+				<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Justify="MokaJustify.End" Gap="MokaSpacingScale.Xxs">
+					@if (_shown.Contains(row.Index))
 					{
-						<span class="dt-claim-value">@Indent(claim.Json)</span>
+						<IconButton Icon="MokaIcons.Content.Copy"
+									Label="@($"Copy {row.Claim.Name}")"
+									Color="MokaColor.Primary"
+									Size="MokaSize.Xs"
+									OnClick="@(() => CopyClaimAsync(row.Claim))" />
 					}
-					else
-					{
-						<span class="dt-claim-mask" title="Hidden">@Mask</span>
-					}
-					@if (!last)
-					{
-						<span>,</span>
-					}
-				</span>
-				@if (shown)
-				{
-					<button type="button" class="dt-claim-button" title="@("Copy " + claim.Name)" aria-label="@("Copy " + claim.Name)" @onclick="() => CopyClaimAsync(claim)">
-						<MokaIcon Icon="MokaIcons.Content.Copy" Size="MokaSize.Xs" />
-					</button>
-				}
-			</div>
-		}
-		<div class="dt-claim-brace">}</div>
-	</div>
-</section>
+					<IconButton Icon="@(_shown.Contains(row.Index) ? MokaIcons.Toggle.EyeOff : MokaIcons.Toggle.Eye)"
+								Label="@((_shown.Contains(row.Index) ? "Hide " : "Show ") + row.Claim.Name)"
+								Pressed="@_shown.Contains(row.Index)"
+								Size="MokaSize.Xs"
+								Position="MokaTooltipPosition.BottomEnd"
+								OnClick="@(() => Toggle(row.Index))" />
+				</MokaFlexbox>
+			</RowActions>
+		</MokaTable>
+	</ChildContent>
+</MokaCard>
 
 @code {
 	/// <summary>What a hidden value shows: the same width whatever it hides, so its length gives nothing away.</summary>
@@ -75,6 +87,7 @@
 
 	private readonly HashSet<int> _shown = [];
 	private IReadOnlyList<JwtClaim>? _shownFor;
+	private IReadOnlyList<ClaimRow> _rows = [];
 
 	[Parameter, EditorRequired]
 	public IReadOnlyList<JwtClaim> Claims { get; set; } = [];
@@ -85,6 +98,14 @@
 
 	private bool AllShown => Claims.Count > 0 && _shown.Count == Claims.Count;
 
+	private string CountText => (Claims.Count, _shown.Count) switch
+	{
+		(1, 0) => "1 claim, hidden until shown",
+		(_, 0) => string.Create(CultureInfo.CurrentCulture, $"{Claims.Count} claims, hidden until shown"),
+		(1, _) => "1 claim, shown",
+		var (total, shown) => string.Create(CultureInfo.CurrentCulture, $"{total} claims, {shown} shown"),
+	};
+
 	public void Dispose() => _shown.Clear();
 
 	protected override void OnParametersSet()
@@ -94,11 +115,9 @@
 		{
 			_shown.Clear();
 			_shownFor = Claims;
+			_rows = [.. Claims.Select((claim, index) => new ClaimRow(index, claim))];
 		}
 	}
-
-	// A nested value keeps its own indentation under the claim's name.
-	private static string Indent(string json) => json.Replace("\n", "\n  ", StringComparison.Ordinal);
 
 	private void Toggle(int index)
 	{
@@ -124,4 +143,6 @@
 	private Task CopyClaimAsync(JwtClaim claim) => CopySecretAsync(
 		claim.Kind == System.Text.Json.JsonValueKind.String ? System.Text.Json.JsonSerializer.Deserialize<string>(claim.Json) ?? "" : claim.Json,
 		claim.Name);
+
+	private sealed record ClaimRow(int Index, JwtClaim Claim);
 }

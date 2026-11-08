@@ -1,4 +1,4 @@
-/* The tool is wide, so the dialog has a fixed height and this fills it; each section scrolls its own parts. The root
+/* The tool is wide, so the dialog has a fixed height and this fills it; each section scrolls its own body. The root
    names itself mt-tool-nav as well, which is what ToolNavigation's own queries follow. */
 .dt-tool {
 	display: flex;
@@ -24,74 +24,24 @@
 	display: none;
 }
 
-/* Shared by every section. */
-.dt-tool ::deep .dt-stack {
-	display: flex;
-	flex-direction: column;
-	gap: var(--moka-spacing-sm);
-	min-width: 0;
-}
-
-.dt-tool ::deep .dt-row {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: var(--moka-spacing-sm);
-	min-width: 0;
-}
-
-.dt-tool ::deep .dt-row > .dt-grow {
-	flex: 1 1 200px;
-	min-width: 0;
-}
-
-.dt-tool ::deep .dt-pair {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-	gap: var(--moka-spacing-sm);
-	align-items: start;
-	min-width: 0;
-}
-
-.dt-tool ::deep .dt-label {
-	color: var(--moka-color-on-surface-tertiary);
-	font-size: 10px;
-	font-weight: var(--moka-font-weight-semibold);
+/* Fact keys are micro labels on Red, as table headers are; Moka's data list leaves its terms in the case written. */
+.dt-tool ::deep .moka-data-list-term {
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
 }
 
-.dt-tool ::deep .dt-note {
-	color: var(--moka-color-on-surface-variant);
-	font-size: var(--moka-font-size-xs);
+/* Moka's bleeding table reaches out by a full card's padding, but an inner card is padded less, so the overhang would cut
+   off the last row. Reach out by the inner card's own padding instead. */
+.dt-tool ::deep .moka-card--inner > .moka-card-body > .moka-table-wrapper--bleed {
+	margin: 0 calc(-1 * var(--moka-inner-padding)) calc(-1 * var(--moka-inner-padding));
 }
 
-.dt-tool ::deep .dt-group {
-	display: flex;
-	flex-direction: column;
-	gap: var(--moka-spacing-sm);
-	min-width: 0;
-	padding: var(--moka-spacing-sm) var(--moka-spacing-md);
-	border: 1px solid var(--moka-color-outline-variant);
-	border-radius: var(--moka-radius-md);
-	background: var(--moka-color-surface);
+.dt-tool ::deep .moka-card--inner > .moka-card-body > .moka-table-wrapper--bleed > .moka-table-container > .moka-table > thead > tr > th:first-child,
+.dt-tool ::deep .moka-card--inner > .moka-card-body > .moka-table-wrapper--bleed > .moka-table-container > .moka-table > tbody > tr > td:first-child {
+	padding-inline-start: var(--moka-inner-padding) !important;
 }
 
-.dt-tool ::deep .dt-results {
-	display: flex;
-	flex-direction: column;
-	gap: var(--moka-spacing-sm);
-	min-width: 0;
-}
-
-.dt-tool ::deep .dt-mono {
-	font-family: var(--moka-font-family-mono);
-	font-size: var(--moka-font-size-xs);
-	letter-spacing: 0.02em;
-}
-
-.dt-tool ::deep .dt-field-mono input {
-	font-family: var(--moka-font-family-mono);
-	font-size: var(--moka-font-size-xs);
-	letter-spacing: 0.02em;
+.dt-tool ::deep .moka-card--inner > .moka-card-body > .moka-table-wrapper--bleed > .moka-table-container > .moka-table > thead > tr > th:last-child,
+.dt-tool ::deep .moka-card--inner > .moka-card-body > .moka-table-wrapper--bleed > .moka-table-container > .moka-table > tbody > tr > td:last-child {
+	padding-inline-end: var(--moka-inner-padding) !important;
 }

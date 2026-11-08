@@ -1,6 +1,9 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Moka.DevTools.Hashing;
 
-internal enum HashKind
+[SuppressMessage("Naming", "CA1707:Identifiers should not contain underscores", Justification = "The SHA-3 names follow .NET's own HashAlgorithmName.SHA3_256, where 3 and 256 would otherwise run together.")]
+public enum HashKind
 {
 	Md5,
 	Sha1,

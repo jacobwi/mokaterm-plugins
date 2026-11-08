@@ -1,0 +1,183 @@
+@* One run of the regex tester: the verdict, what terminal triggers would make of the pattern, the sample with its
+   matches marked, and the matches as a table with a column for each capture group. *@
+@switch (Result.Status)
+{
+	case RegexRunStatus.Ok:
+		<ResultLine Title="@(Result.Total == 0 ? "No match" : "Matches")" Tone="@(Result.Total == 0 ? ResultTone.Plain : ResultTone.Good)">@MatchText</ResultLine>
+		break;
+	case RegexRunStatus.Syntax:
+		<ResultLine Title="Not a valid pattern" Tone="ResultTone.Bad">@Result.Error</ResultLine>
+		break;
+	case RegexRunStatus.Timeout:
+		<ResultLine Title="Took too long" Tone="ResultTone.Bad">Stopped after @RegexRequest.DefaultTimeoutMs ms. On text like this the pattern backtracks for far longer, and it would freeze whatever runs it.</ResultLine>
+		break;
+	default:
+		<ResultLine Title="Not run" Tone="ResultTone.Warning">@Result.Error</ResultLine>
+		break;
+}
+
+@if (Result.Trigger is { Refused: true } refused)
+{
+	<MokaAlert Severity="MokaToastSeverity.Warning" Title="Terminal triggers would refuse this pattern" Dense>@refused.Reason</MokaAlert>
+}
+else if (Result.Trigger is { Refused: false } && IgnoredFlags.Length > 0)
+{
+	<MokaCaption>Terminal triggers would take this pattern, but run it with g and, when set, i; @IgnoredFlags would not carry over.</MokaCaption>
+}
+
+@if (Result.Status == RegexRunStatus.Ok && Result.Matches is { Count: > 0 } matches)
+{
+	<MokaCard Inner Outlined Title="Highlighted" Subtitle="@(Text.Length > TextLimits.DisplayChars ? "The start of the text; the table has every match" : null)">
+		<div class="dt-highlight">
+			<HighlightedText Segments="RegexHighlight.Segments(Text, matches, TextLimits.DisplayChars)" />
+		</div>
+	</MokaCard>
+
+	<MokaCard Inner Outlined Title="Matches" Subtitle="@ListedText">
+		<MokaTable @key="_columnsKey"
+				   TItem="MatchRow"
+				   Items="_rows"
+				   ItemKey="@(row => row.Number)"
+				   ShowToolbar="false"
+				   ShowPagination="@(_rows.Count > PageSize)"
+				   PageSize="PageSize"
+				   PageSizeOptions="PageSizes"
+				   Dense
+				   Bleed
+				   Label="Matches"
+				   Expandable="_groupsInDetail"
+				   DetailTemplate="@(_groupsInDetail ? GroupDetail : null)">
+			<ChildContent>
+				<MokaColumn Title="#" Field="row => row.Number" Width="56px" Mono />
+				<MokaColumn Title="At" Field="row => row.Match.Index" Width="120px" Mono>
+					<CellTemplate Context="row">@Range(row.Match.Index, row.Match.End)</CellTemplate>
+				</MokaColumn>
+				<MokaColumn Title="Match" Field="row => row.Match.Length" Sortable="false">
+					<CellTemplate Context="row">
+						<MokaText Element="span" Size="MokaSize.Sm" Mono><span class="dt-quote">@Quote(row.Match.Index, row.Match.End)</span></MokaText>
+					</CellTemplate>
+				</MokaColumn>
+				@if (!_groupsInDetail)
+				{
+					@foreach ((int number, string title) in _groupColumns)
+					{
+						<MokaColumn @key="number" Title="@title" Field="row => row.Number" Sortable="false">
+							<CellTemplate Context="row">
+								@if (GroupOf(row, number) is { Matched: true } group)
+								{
+									<MokaText Element="span" Size="MokaSize.Sm" Mono><span class="dt-quote">@Quote(group.Start, group.End)</span></MokaText>
+								}
+								else
+								{
+									<MokaCaption>@(GroupOf(row, number) is null ? "Over the limit" : "Did not take part")</MokaCaption>
+								}
+							</CellTemplate>
+						</MokaColumn>
+					}
+				}
+			</ChildContent>
+		</MokaTable>
+		@if (matches.Count > MaxListed)
+		{
+			<MokaCaption>@string.Create(CultureInfo.CurrentCulture, $"{matches.Count - MaxListed:N0} more matches are marked above but not listed.")</MokaCaption>
+		}
+	</MokaCard>
+}
+
+@code {
+	/// <summary>The most matches the table lists; every one is still marked in the text.</summary>
+	public const int MaxListed = 200;
+
+	/// <summary>Past this many capture groups the groups move from columns into each row's detail.</summary>
+	public const int MaxGroupColumns = 6;
+
+	private const int QuoteChars = 160;
+
+	private const int PageSize = 50;
+
+	private static readonly IReadOnlyList<int> PageSizes = [50, 100, 200];
+
+	private RegexRunResult? _rowsFor;
+	private IReadOnlyList<MatchRow> _rows = [];
+	private IReadOnlyList<(int Number, string Title)> _groupColumns = [];
+	private bool _groupsInDetail;
+	private string _columnsKey = "";
+
+	[Parameter, EditorRequired]
+	public RegexRunResult Result { get; set; } = default!;
+
+	/// <summary>The sample the run searched; only offsets came back from the page.</summary>
+	[Parameter, EditorRequired]
+	public string Text { get; set; } = "";
+
+	/// <summary>The flags a terminal trigger would not use, "m, s"; empty when it would use them all.</summary>
+	[Parameter]
+	public string IgnoredFlags { get; set; } = "";
+
+	private string MatchText
+	{
+		get
+		{
+			string count = Result.Truncated
+				? string.Create(CultureInfo.CurrentCulture, $"More than {Result.Total:N0} matches; the first {Result.Total:N0} are shown")
+				: Result.Total == 1 ? "1 match" : string.Create(CultureInfo.CurrentCulture, $"{Result.Total:N0} matches");
+			return string.Create(CultureInfo.CurrentCulture, $"{count}, found in {Result.Elapsed:0.#} ms.");
+		}
+	}
+
+	private string ListedText => _groupColumns.Count switch
+	{
+		0 => _rows.Count == 1 ? "1 match" : string.Create(CultureInfo.CurrentCulture, $"{_rows.Count:N0} matches"),
+		1 => string.Create(CultureInfo.CurrentCulture, $"{_rows.Count:N0} listed, 1 group"),
+		var groups => string.Create(CultureInfo.CurrentCulture, $"{_rows.Count:N0} listed, {groups} groups"),
+	};
+
+	private RenderFragment<MatchRow> GroupDetail => row => @<MokaDataList Dense Orientation="MokaDirection.Row" Items="@GroupItems(row)" />;
+
+	protected override void OnParametersSet()
+	{
+		if (ReferenceEquals(_rowsFor, Result))
+		{
+			return;
+		}
+
+		_rowsFor = Result;
+		IReadOnlyList<RegexMatchSpan> matches = Result.Matches ?? [];
+		_rows = [.. matches.Take(MaxListed).Select((match, index) => new MatchRow(index + 1, match))];
+
+		// Every match of one pattern has the same groups, but the page stops sending them past its budget, so the
+		// columns come from the first match that has any.
+		IReadOnlyList<RegexGroupSpan> groups = matches.FirstOrDefault(match => match.Groups is { Count: > 0 })?.Groups ?? [];
+		_groupColumns = [.. groups.Select(group => (group.Number, group.Name ?? string.Create(CultureInfo.InvariantCulture, $"Group {group.Number}")))];
+		_groupsInDetail = _groupColumns.Count > MaxGroupColumns;
+		_columnsKey = string.Join('|', _groupColumns.Select(column => column.Title)) + (_groupsInDetail ? "|detail" : "");
+	}
+
+	private static RegexGroupSpan? GroupOf(MatchRow row, int number) => row.Match.Groups?.FirstOrDefault(group => group.Number == number);
+
+	private IReadOnlyList<MokaDataListItem> GroupItems(MatchRow row) =>
+	[
+		.. _groupColumns.Select(column => GroupOf(row, column.Number) is { Matched: true } group
+			? new MokaDataListItem(column.Title, ValueContent: @<MonoValue Text="@Quote(group.Start, group.End)" />)
+			: new MokaDataListItem(column.Title, GroupOf(row, column.Number) is null ? "Over the limit" : "Did not take part")),
+	];
+
+	private static string Range(int start, int end) => start == end
+		? string.Create(CultureInfo.InvariantCulture, $"at {start}, empty")
+		: string.Create(CultureInfo.InvariantCulture, $"{start} to {end}");
+
+	private string Quote(int start, int end)
+	{
+		string? text = RegexHighlight.Slice(Text, start, end);
+		if (text is null)
+		{
+			return "(outside the text)";
+		}
+
+		return text.Length > QuoteChars
+			? string.Create(CultureInfo.CurrentCulture, $"{text[..QuoteChars]}... ({text.Length:N0} chars)")
+			: text;
+	}
+
+	private sealed record MatchRow(int Number, RegexMatchSpan Match);
+}

@@ -1,0 +1,27 @@
+/* The sample keeps its own line breaks, in mono, with the marks inline. */
+.dt-highlight ::deep pre {
+	max-height: 280px;
+	margin: 0;
+	overflow: auto;
+	color: var(--moka-color-on-surface-variant);
+	font-family: var(--moka-font-family-mono);
+	font-size: var(--moka-font-size-sm);
+	line-height: 1.7;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+/* An empty match has no text to colour, so it shows as a thin bar where it matched. */
+.dt-highlight ::deep .dt-mark-empty {
+	display: inline-block;
+	width: 2px;
+	height: 1.1em;
+	padding: 0;
+	vertical-align: text-bottom;
+	background: var(--moka-color-primary);
+}
+
+.dt-quote {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}

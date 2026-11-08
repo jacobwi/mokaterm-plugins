@@ -1,47 +1,54 @@
 @inherits DevToolViewBase
 
-<ToolPageFrame Title="JSON and YAML"
-			   Summary="@Summary"
-			   Loaded="true"
-			   PrimaryText="@PrimaryText"
-			   PrimaryIcon="DevToolIcons.Run"
-			   PrimaryDisabled="_busy"
-			   OnPrimary="RunPrimaryAsync">
-	<Chips>
+<SectionFrame Title="JSON and YAML" Said="@Summary">
+	<Actions>
+		<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="DevToolIcons.Run" Disabled="_busy" OnClick="RunPrimaryAsync">@PrimaryText</MokaButton>
+	</Actions>
+	<Tabs>
 		<ViewTabs Tabs="Tabs" Active="@_tab" ActiveChanged="OnTabChanged" Label="JSON and YAML" />
-	</Chips>
+	</Tabs>
 	<ChildContent>
 		@switch (_tab)
 		{
 			case FormatTab:
-				<div class="dt-group">
-					<div class="dt-row">
-						<EnumSegmentedControl TEnum="JsonIndent" Value="_indent" ValueChanged="@(value => _indent = value)" Options="Indents" AriaLabel="Indent" Disabled="_busy" />
-						<MokaCheckbox Label="Sort keys" Value="_sortKeys" ValueChanged="@(value => _sortKeys = value)" Disabled="_busy" />
-						<span class="dt-grow"></span>
-						<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" Disabled="_busy" OnClick="MinifyAsync">Minify</MokaButton>
-						<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" Disabled="_busy" OnClick="ValidateAsync">Validate</MokaButton>
-					</div>
-				</div>
+				<MokaCard Inner Outlined Title="Options">
+					<HeaderActions>
+						<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Xs">
+							<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" Disabled="_busy" OnClick="MinifyAsync">Minify</MokaButton>
+							<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" Disabled="_busy" OnClick="ValidateAsync">Validate</MokaButton>
+						</MokaFlexbox>
+					</HeaderActions>
+					<ChildContent>
+						<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Md" Wrap>
+							<EnumSegmentedControl TEnum="JsonIndent" Value="_indent" ValueChanged="@(value => _indent = value)" Options="Indents" AriaLabel="Indent" Disabled="_busy" />
+							<MokaCheckbox Label="Sort keys" Value="_sortKeys" ValueChanged="@(value => _sortKeys = value)" Disabled="_busy" />
+						</MokaFlexbox>
+					</ChildContent>
+				</MokaCard>
 				<TextInput Label="JSON" Value="_formatInput" ValueChanged="@(value => { _formatInput = value; _result = null; })" Placeholder="Paste JSON, or open a file" Rows="10" AllowFile FileWhat="a JSON file" Disabled="_busy" />
 				break;
 			case ConvertTab:
-				<div class="dt-group">
-					<div class="dt-row">
-						<EnumSegmentedControl TEnum="ConvertDirection" Value="_direction" ValueChanged="OnDirectionChanged" Options="Directions" AriaLabel="Direction" Disabled="_busy" />
-						<MokaCheckbox Label="Sort keys" Value="_sortKeys" ValueChanged="@(value => _sortKeys = value)" Disabled="_busy" />
-						@if (_direction == ConvertDirection.YamlToJson)
-						{
-							<EnumSegmentedControl TEnum="JsonIndent" Value="_indent" ValueChanged="@(value => _indent = value)" Options="Indents" AriaLabel="Indent" Disabled="_busy" />
-						}
-						<span class="dt-grow"></span>
+				<MokaCard Inner Outlined Title="Options">
+					<HeaderActions>
 						@if (_direction == ConvertDirection.YamlToJson)
 						{
 							<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" Disabled="_busy" OnClick="ValidateYamlAsync">Validate YAML</MokaButton>
 						}
-					</div>
-					<span class="dt-note">@ConvertHelp</span>
-				</div>
+					</HeaderActions>
+					<ChildContent>
+						<MokaFlexbox Gap="MokaSpacingScale.Sm">
+							<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Md" Wrap>
+								<EnumSegmentedControl TEnum="ConvertDirection" Value="_direction" ValueChanged="OnDirectionChanged" Options="Directions" AriaLabel="Direction" Disabled="_busy" />
+								@if (_direction == ConvertDirection.YamlToJson)
+								{
+									<EnumSegmentedControl TEnum="JsonIndent" Value="_indent" ValueChanged="@(value => _indent = value)" Options="Indents" AriaLabel="Indent" Disabled="_busy" />
+								}
+								<MokaCheckbox Label="Sort keys" Value="_sortKeys" ValueChanged="@(value => _sortKeys = value)" Disabled="_busy" />
+							</MokaFlexbox>
+							<MokaCaption>@ConvertHelp</MokaCaption>
+						</MokaFlexbox>
+					</ChildContent>
+				</MokaCard>
 				<TextInput Label="@(_direction == ConvertDirection.JsonToYaml ? "JSON" : "YAML")"
 						   Value="_convertInput"
 						   ValueChanged="@(value => { _convertInput = value; _result = null; })"
@@ -52,55 +59,39 @@
 						   Disabled="_busy" />
 				break;
 			default:
-				<div class="dt-group">
-					<div class="dt-row">
-						<MokaCheckbox Label="Format both as JSON first" Value="_diffAsJson" ValueChanged="@(value => _diffAsJson = value)" Disabled="_busy" />
-						<MokaCheckbox Label="Sort keys" Value="_sortKeys" ValueChanged="@(value => _sortKeys = value)" Disabled="@(_busy || !_diffAsJson)" />
-					</div>
-					<span class="dt-note">Line by line, with 3 lines of context around each change. Formatting first compares the data rather than its layout.</span>
-				</div>
-				<div class="dt-pair">
+				<MokaCard Inner Outlined Title="Options">
+					<MokaFlexbox Gap="MokaSpacingScale.Sm">
+						<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Md" Wrap>
+							<MokaCheckbox Label="Format both as JSON first" Value="_diffAsJson" ValueChanged="@(value => _diffAsJson = value)" Disabled="_busy" />
+							<MokaCheckbox Label="Sort keys" Value="_sortKeys" ValueChanged="@(value => _sortKeys = value)" Disabled="@(_busy || !_diffAsJson)" />
+						</MokaFlexbox>
+						<MokaCaption>Line by line, with 3 lines of context around each change. Formatting first compares the data rather than its layout.</MokaCaption>
+					</MokaFlexbox>
+				</MokaCard>
+				<MokaGrid MinColumn="300px" Gap="MokaSpacingScale.Md" AlignItems="MokaAlign.Start">
 					<TextInput Label="Before" Value="_before" ValueChanged="@(value => { _before = value; _result = null; })" Placeholder="The old text" Rows="10" AllowFile FileWhat="a text file" Disabled="_busy" />
 					<TextInput Label="After" Value="_after" ValueChanged="@(value => { _after = value; _result = null; })" Placeholder="The new text" Rows="10" AllowFile FileWhat="a text file" Disabled="_busy" />
-				</div>
+				</MokaGrid>
 				break;
 		}
 
 		@if (_busy)
 		{
-			<div class="dt-row">
-				<div class="dt-grow">
+			<MokaCard Inner Outlined>
+				<MokaGrid ColumnsValue="minmax(0, 1fr) auto" Gap="MokaSpacingScale.Md" AlignItems="MokaAlign.Center">
 					<MokaProgress />
-				</div>
-				<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="MokaIcons.Navigation.Close" OnClick="Cancel">Cancel</MokaButton>
-			</div>
+					<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="MokaIcons.Navigation.Close" OnClick="Cancel">Cancel</MokaButton>
+				</MokaGrid>
+			</MokaCard>
 		}
 
 		@if (_result is { } result)
 		{
-			@if (result.Verdict is { } verdict)
-			{
-				<ResultLine Chip="@(result.VerdictChip ?? "")" Tone="result.Tone">@verdict</ResultLine>
-			}
-
-			@foreach (string note in result.Notes)
-			{
-				<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@note</MokaAlert>
-			}
-
-			@if (result.Text is { } text)
-			{
-				<OutputBox Title="@result.Title" Detail="@Lines(text)" Text="@text" FileName="@result.FileName" CopyName="@result.Title" DisplayChars="TextLimits.DisplayChars">
-					<Actions>
-						<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="DevToolIcons.Swap" OnClick="() => UseAsInput(text)" title="Put the output in the box">Use as input</MokaButton>
-					</Actions>
-				</OutputBox>
-			}
-
-			@if (result.Diff is { } diff)
-			{
-				<DiffView Diff="diff" />
-			}
+			<DataResultView Result="result" UseAsInput="UseAsInput" />
+		}
+		else if (!_busy)
+		{
+			<MokaEmptyState Compact Icon="DevToolIcons.Data" Title="Nothing run yet" Description="@EmptyText" />
 		}
 	</ChildContent>
-</ToolPageFrame>
+</SectionFrame>

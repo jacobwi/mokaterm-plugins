@@ -1,57 +1,75 @@
-@* A line diff as rows: old and new line numbers, a mark, the line. Runs of unchanged lines between changes fold into one
-   row, and past MaxRows the rest is counted rather than drawn. *@
-<section class="dt-diff" aria-label="Differences">
-	<div class="dt-diff-head">
-		<span class="dt-diff-title">Differences</span>
-		<span class="dt-diff-removed">-@Diff.Removed.ToString("N0", CultureInfo.CurrentCulture)</span>
-		<span class="dt-diff-added">+@Diff.Added.ToString("N0", CultureInfo.CurrentCulture)</span>
-	</div>
-	<div class="dt-diff-body" role="table" aria-label="Changed lines">
-		@foreach (DiffLine line in Diff.Lines.Take(MaxRows))
-		{
-			@if (line.Kind == DiffKind.Skipped)
+@* A line diff as diff prints it: one hunk per run of changes, each under its header, with the unchanged lines between
+   them counted rather than drawn, and past MaxRows the rest counted too. *@
+<MokaCard Inner Outlined Title="Differences" Subtitle="@HunkCount">
+	<HeaderActions>
+		<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Xs">
+			<MokaTag Text="@Removed" Color="MokaColor.Error" Size="MokaSize.Xs" />
+			<MokaTag Text="@Added" Color="MokaColor.Success" Size="MokaSize.Xs" />
+		</MokaFlexbox>
+	</HeaderActions>
+	<ChildContent>
+		<MokaFlexbox Gap="MokaSpacingScale.Sm">
+			@foreach ((DiffHunk hunk, IReadOnlyList<MokaDiffLine> lines) in _hunks)
 			{
-				<div class="dt-diff-row dt-diff-row--skipped" role="row">
-					<span class="dt-diff-skip" role="cell">@Skipped(line.Count)</span>
-				</div>
+				@if (hunk.SkippedBefore > 0)
+				{
+					<MokaCaption>@Unchanged(hunk.SkippedBefore)</MokaCaption>
+				}
+				<MokaFlexbox Gap="MokaSpacingScale.Xxs">
+					<MokaText Element="span" Size="MokaSize.Xs" Mono Color="MokaColor.Info">@hunk.Header</MokaText>
+					<MokaDiffViewer Lines="lines" Wrap />
+				</MokaFlexbox>
 			}
-			else
+			@if (_layout.SkippedAfter > 0)
 			{
-				<div class="@RowClass(line.Kind)" role="row">
-					<span class="dt-diff-number" role="cell">@(line.OldNumber > 0 ? line.OldNumber.ToString(CultureInfo.InvariantCulture) : "")</span>
-					<span class="dt-diff-number" role="cell">@(line.NewNumber > 0 ? line.NewNumber.ToString(CultureInfo.InvariantCulture) : "")</span>
-					<span class="dt-diff-mark" role="cell">@Mark(line.Kind)</span>
-					<span class="dt-diff-text" role="cell">@line.Text</span>
-				</div>
+				<MokaCaption>@Unchanged(_layout.SkippedAfter)</MokaCaption>
 			}
-		}
-	</div>
-	@if (Diff.Lines.Count > MaxRows)
-	{
-		<span class="dt-diff-more">@(Diff.Lines.Count - MaxRows) more rows are not drawn.</span>
-	}
-</section>
+			@if (_layout.RowsLeftOut > 0)
+			{
+				<MokaCaption>@string.Create(CultureInfo.CurrentCulture, $"{_layout.RowsLeftOut:N0} more changed or nearby lines are not drawn.")</MokaCaption>
+			}
+		</MokaFlexbox>
+	</ChildContent>
+</MokaCard>
 
 @code {
 	/// <summary>Rows drawn at most: past this a page of rows costs more to lay out than anyone reads.</summary>
 	public const int MaxRows = 3000;
 
+	private DiffResult? _laidOut;
+	private DiffLayout _layout = new([], 0, 0);
+	private IReadOnlyList<(DiffHunk Hunk, IReadOnlyList<MokaDiffLine> Lines)> _hunks = [];
+
 	[Parameter, EditorRequired]
 	public DiffResult Diff { get; set; } = default!;
 
-	private static string RowClass(DiffKind kind) => kind switch
-	{
-		DiffKind.Added => "dt-diff-row dt-diff-row--added",
-		DiffKind.Removed => "dt-diff-row dt-diff-row--removed",
-		_ => "dt-diff-row",
-	};
+	private string Removed => string.Create(CultureInfo.CurrentCulture, $"-{Diff.Removed:N0}");
 
-	private static string Mark(DiffKind kind) => kind switch
-	{
-		DiffKind.Added => "+",
-		DiffKind.Removed => "-",
-		_ => "",
-	};
+	private string Added => string.Create(CultureInfo.CurrentCulture, $"+{Diff.Added:N0}");
 
-	private static string Skipped(int count) => count == 1 ? "1 unchanged line" : string.Create(CultureInfo.CurrentCulture, $"{count:N0} unchanged lines");
+	private string HunkCount => _layout.Hunks.Count == 1 ? "1 change" : string.Create(CultureInfo.CurrentCulture, $"{_layout.Hunks.Count:N0} changes");
+
+	protected override void OnParametersSet()
+	{
+		if (!ReferenceEquals(_laidOut, Diff))
+		{
+			_laidOut = Diff;
+			_layout = DiffLayout.Of(Diff, MaxRows);
+			_hunks = [.. _layout.Hunks.Select(hunk => (hunk, ToMoka(hunk)))];
+		}
+	}
+
+	private static IReadOnlyList<MokaDiffLine> ToMoka(DiffHunk hunk) =>
+	[
+		.. hunk.Lines.Select(line => new MokaDiffLine(
+			line.Kind switch
+			{
+				DiffKind.Added => MokaDiffLineKind.Added,
+				DiffKind.Removed => MokaDiffLineKind.Removed,
+				_ => MokaDiffLineKind.Unchanged,
+			},
+			line.Text)),
+	];
+
+	private static string Unchanged(int count) => count == 1 ? "1 unchanged line" : string.Create(CultureInfo.CurrentCulture, $"{count:N0} unchanged lines");
 }

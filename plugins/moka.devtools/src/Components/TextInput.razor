@@ -1,15 +1,9 @@
 @inherits DevToolViewBase
 
-@* A labelled text box with Clear and, when asked, Open file. A file too long for the box (or not text, where bytes are
-   taken) stays a file and shows as a chip, since every keystroke in a box sends all of it. *@
-<div class="dt-input">
-	<div class="dt-input-head">
-		<span class="dt-input-label">@Label</span>
-		@if (!Value.IsEmpty && !Value.IsFile)
-		{
-			<span class="dt-input-count">@Count</span>
-		}
-		<span class="dt-input-gap"></span>
+@* A text box in a card of its own, with Clear and, when asked, Open file. A file too long for the box (or not text,
+   where bytes are taken) stays a file and shows as a tag, since every keystroke in a box sends all of it. *@
+<MokaCard Inner Outlined Title="@Label" Subtitle="@Detail">
+	<HeaderActions>
 		@Actions
 		@if (AllowFile)
 		{
@@ -33,36 +27,36 @@
 				Clear
 			</MokaButton>
 		}
-	</div>
-
-	@if (Value.IsFile)
-	{
-		<div class="dt-input-file">
-			<MokaIcon Icon="MokaIcons.File.Document" Size="MokaSize.Xs" />
-			<span class="dt-input-file-name" title="@Value.FileName">@Value.FileName</span>
-			<span class="dt-input-file-size">@FileDetail</span>
-		</div>
-	}
-	else
-	{
-		<MokaTextArea Class="@(Mono ? "dt-input-text dt-input-text--mono" : "dt-input-text")"
-					  Value="@Value.Text"
-					  ValueChanged="OnTextChangedAsync"
-					  Rows="Rows"
-					  Placeholder="@Placeholder"
-					  Disabled="Disabled"
-					  Size="MokaSize.Sm"
-					  spellcheck="false"
-					  autocomplete="off"
-					  autocapitalize="off"
-					  aria-label="@Label" />
-	}
-
-	@if (Hint is { Length: > 0 } hint)
-	{
-		<span class="dt-input-hint">@hint</span>
-	}
-</div>
+	</HeaderActions>
+	<ChildContent>
+		@if (Value.IsFile)
+		{
+			<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Sm" Wrap>
+				<MokaTag Text="@(Value.FileName ?? "")" Icon="MokaIcons.File.Document" />
+				<MokaTag Text="@FileDetail" Color="MokaColor.Surface" />
+			</MokaFlexbox>
+			@if (Hint is { Length: > 0 } hint)
+			{
+				<MokaCaption>@hint</MokaCaption>
+			}
+		}
+		else
+		{
+			<MokaTextArea Mono="Mono"
+						  Value="@Value.Text"
+						  ValueChanged="OnTextChangedAsync"
+						  Rows="Rows"
+						  Placeholder="@Placeholder"
+						  HelperText="@Hint"
+						  Disabled="Disabled"
+						  Size="MokaSize.Sm"
+						  spellcheck="false"
+						  autocomplete="off"
+						  autocapitalize="off"
+						  aria-label="@Label" />
+		}
+	</ChildContent>
+</MokaCard>
 
 @code {
 	[Parameter, EditorRequired]
@@ -104,7 +98,10 @@
 	[Parameter]
 	public RenderFragment? Actions { get; set; }
 
-	private string Count => Value.Text.Length == 1 ? "1 char" : string.Create(CultureInfo.CurrentCulture, $"{Value.Text.Length:N0} chars");
+	/// <summary>The size beside the label: characters typed, or nothing while the box is empty or holds a file.</summary>
+	private string? Detail => Value.IsEmpty || Value.IsFile
+		? null
+		: Value.Text.Length == 1 ? "1 char" : string.Create(CultureInfo.CurrentCulture, $"{Value.Text.Length:N0} chars");
 
 	private string FileDetail => Value.Bytes is not null ? $"{Size(Value.Length)}, not text" : string.Create(CultureInfo.CurrentCulture, $"{Value.Text.Length:N0} chars");
 

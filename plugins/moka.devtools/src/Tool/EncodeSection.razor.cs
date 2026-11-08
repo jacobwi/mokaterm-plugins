@@ -54,7 +54,7 @@ public sealed partial class EncodeSection : DevToolViewBase, IDisposable
 
 	private bool TakesBytes => _direction == CodecDirection.Encode && _kind is CodecKind.Base64 or CodecKind.Base64Url or CodecKind.Hex;
 
-	private string Summary => $"{Kinds.First(kind => kind.Value == _kind).Text}, {(_direction == CodecDirection.Encode ? "encode" : "decode")}";
+	private string Summary => $"{(_direction == CodecDirection.Encode ? "Encode to" : "Decode from")} {Kinds.First(kind => kind.Value == _kind).Text}, as the input changes";
 
 	private string InputLabel => _direction == CodecDirection.Encode ? (TakesBytes ? "Text or a file" : "Text") : $"{Kinds.First(kind => kind.Value == _kind).Text} to decode";
 

@@ -1,12 +1,9 @@
-@* One verdict: a chip and a sentence, with a colored edge for good, bad or a warning. *@
-<div class="dt-result dt-result--@ToneClass" role="status">
-	<StatusChip Text="@Chip" Color="@ChipColor" Glow="@(Tone != ResultTone.Plain)" />
-	<span class="dt-result-text">@ChildContent</span>
-</div>
+@* One verdict: a short title and a sentence, coloured for good, bad, a warning or plain news. *@
+<MokaAlert Severity="Severity" Title="@Title" Dense>@ChildContent</MokaAlert>
 
 @code {
 	[Parameter, EditorRequired]
-	public string Chip { get; set; } = "";
+	public string Title { get; set; } = "";
 
 	[Parameter]
 	public ResultTone Tone { get; set; }
@@ -14,13 +11,11 @@
 	[Parameter]
 	public RenderFragment? ChildContent { get; set; }
 
-	private string ToneClass => Tone.ToString().ToLowerInvariant();
-
-	private MokaColor ChipColor => Tone switch
+	private MokaToastSeverity Severity => Tone switch
 	{
-		ResultTone.Good => MokaColor.Success,
-		ResultTone.Bad => MokaColor.Error,
-		ResultTone.Warning => MokaColor.Warning,
-		_ => MokaColor.Surface,
+		ResultTone.Good => MokaToastSeverity.Success,
+		ResultTone.Bad => MokaToastSeverity.Error,
+		ResultTone.Warning => MokaToastSeverity.Warning,
+		_ => MokaToastSeverity.Info,
 	};
 }

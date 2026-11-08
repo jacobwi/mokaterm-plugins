@@ -1,0 +1,46 @@
+@using Moka.DevTools.Tool
+
+@* What a run of the JSON and YAML section made: its verdict, its warnings, the text it wrote and the diff it found. *@
+@if (Result.Verdict is { } verdict)
+{
+	<ResultLine Title="@(Result.VerdictTitle ?? "")" Tone="Result.Tone">@verdict</ResultLine>
+}
+
+@foreach (string note in Result.Notes)
+{
+	<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@note</MokaAlert>
+}
+
+@if (Result.Text is { } text)
+{
+	<CodeOutput Title="@Result.Title" Detail="@Lines(text)" Text="@text" Language="@Result.Language" LineNumbers FileName="@Result.FileName" CopyName="@Result.Title" MaxHeight="520px">
+		<Actions>
+			@if (UseAsInput.HasDelegate)
+			{
+				<Hint Text="Put the output in the box">
+					<MokaButton Variant="MokaVariant.Text" Color="MokaColor.Surface" Size="MokaSize.Xs" StartIcon="DevToolIcons.Swap" OnClick="() => UseAsInput.InvokeAsync(text)">Use as input</MokaButton>
+				</Hint>
+			}
+		</Actions>
+	</CodeOutput>
+}
+
+@if (Result.Diff is { } diff)
+{
+	<DiffView Diff="diff" />
+}
+
+@code {
+	[Parameter, EditorRequired]
+	public DataResult Result { get; set; } = default!;
+
+	/// <summary>Puts the output back in the input box; without it there is no Use as input.</summary>
+	[Parameter]
+	public EventCallback<string> UseAsInput { get; set; }
+
+	private static string Lines(string text)
+	{
+		int lines = text.Length == 0 ? 0 : text.Count(c => c == '\n') + (text[^1] == '\n' ? 0 : 1);
+		return lines == 1 ? "1 line" : string.Create(CultureInfo.CurrentCulture, $"{lines:N0} lines");
+	}
+}

@@ -18,13 +18,6 @@ public sealed partial class HashSection : DevToolViewBase, IDisposable
 
 	private static readonly IReadOnlyList<EnumOption<HashSource>> Sources = [new(HashSource.Text, "Text"), new(HashSource.File, "File")];
 
-	private static readonly IReadOnlyList<EnumOption<HashFormat>> Formats =
-	[
-		new(HashFormat.Hex, "hex"),
-		new(HashFormat.UpperHex, "HEX"),
-		new(HashFormat.Base64, "Base64"),
-	];
-
 	private static readonly IReadOnlyList<EnumOption<KeyFormat>> KeyFormats =
 	[
 		new(KeyFormat.Text, "Text"),
@@ -51,10 +44,10 @@ public sealed partial class HashSection : DevToolViewBase, IDisposable
 
 	private string Summary => (_source, _hmac) switch
 	{
-		(HashSource.Text, false) => "text, plain",
-		(HashSource.Text, true) => "text, HMAC",
-		(_, false) => _fileName is null ? "a file" : "file, plain",
-		_ => _fileName is null ? "a file, HMAC" : "file, HMAC",
+		(HashSource.Text, false) => "Every hash of the text at once, and a check against one pasted",
+		(HashSource.Text, true) => "Every HMAC of the text with the key",
+		(_, false) => _fileName is null ? "Every hash of a file in one pass" : $"Every hash of {_fileName}",
+		_ => _fileName is null ? "Every HMAC of a file in one pass" : $"Every HMAC of {_fileName}",
 	};
 
 	private double Percent => _fileSize is > 0 and { } size ? Math.Min(100, 100.0 * _progress.Value / size) : 0;
@@ -67,7 +60,7 @@ public sealed partial class HashSection : DevToolViewBase, IDisposable
 		? "On the web version the browser sends the file to the server, which hashes it as it arrives. Nothing is kept."
 		: string.Create(CultureInfo.CurrentCulture, $"Read from disk in one pass, up to {TextLimits.MaxHashFileBytes / (1024 * 1024 * 1024)} GB.");
 
-	private (string Chip, ResultTone Tone, string Text)? Comparison
+	private (string Title, ResultTone Tone, string Text)? Comparison
 	{
 		get
 		{
@@ -84,18 +77,18 @@ public sealed partial class HashSection : DevToolViewBase, IDisposable
 			}
 			catch (FormatException ex)
 			{
-				return ("not read", ResultTone.Warning, ex.Message);
+				return ("Not read", ResultTone.Warning, ex.Message);
 			}
 
 			if (_values is null)
 			{
-				return ("waiting", ResultTone.Plain, $"Read as {form}, {expected.Length * 8} bits. Hash something to compare.");
+				return ("Nothing to compare yet", ResultTone.Plain, $"Read as {form}, {expected.Length * 8} bits. Hash something to compare.");
 			}
 
 			List<string> names = [.. _values.Where(value => value.Bytes is { } bytes && Same(bytes, expected)).Select(value => value.Algorithm.Name)];
 			return names.Count > 0
-				? ("matches", ResultTone.Good, $"The {form} hash is the {string.Join(" and ", names)}{(_valuesAreHmac ? " HMAC" : "")}.")
-				: ("no match", ResultTone.Bad, string.Create(CultureInfo.CurrentCulture, $"No algorithm gives this {form} hash ({expected.Length * 8} bits)."));
+				? ("Matches", ResultTone.Good, $"The {form} hash is the {string.Join(" and ", names)}{(_valuesAreHmac ? " HMAC" : "")}.")
+				: ("No match", ResultTone.Bad, string.Create(CultureInfo.CurrentCulture, $"No algorithm gives this {form} hash ({expected.Length * 8} bits)."));
 		}
 	}
 
@@ -109,29 +102,26 @@ public sealed partial class HashSection : DevToolViewBase, IDisposable
 
 	private static bool Same(byte[] left, byte[] right) => left.Length == right.Length && CryptographicOperations.FixedTimeEquals(left, right);
 
-	private bool Matches(HashValue value)
+	/// <summary>The hash pasted to compare, read, for the table to mark the rows that give it.</summary>
+	private byte[]? ExpectedBytes
 	{
-		if (value.Bytes is not { } bytes || _expected.Trim().Length == 0)
+		get
 		{
-			return false;
-		}
+			if (_expected.Trim().Length == 0)
+			{
+				return null;
+			}
 
-		try
-		{
-			return Same(bytes, ExpectedHash.Parse(_expected).Bytes);
-		}
-		catch (FormatException)
-		{
-			return false;
+			try
+			{
+				return ExpectedHash.Parse(_expected).Bytes;
+			}
+			catch (FormatException)
+			{
+				return null;
+			}
 		}
 	}
-
-	private string Format(byte[] bytes) => _format switch
-	{
-		HashFormat.UpperHex => Convert.ToHexString(bytes),
-		HashFormat.Base64 => Convert.ToBase64String(bytes),
-		_ => Convert.ToHexStringLower(bytes),
-	};
 
 	private void OnExpectedChanged(string? value) => _expected = value ?? "";
 

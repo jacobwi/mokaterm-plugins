@@ -1,0 +1,5 @@
+/* A digest is one long word; it wraps anywhere rather than pushing the copy button out of the table. */
+.dt-digest {
+	overflow-wrap: anywhere;
+	user-select: all;
+}

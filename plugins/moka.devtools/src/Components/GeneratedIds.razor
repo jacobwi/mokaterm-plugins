@@ -1,0 +1,73 @@
+@inherits DevToolViewBase
+
+@* A batch of new ids as a numbered table, each with its own copy, and the whole batch copied or saved at once. *@
+<MokaCard Inner Outlined Title="Generated" Subtitle="@CountText">
+	<HeaderActions>
+		<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Xs">
+			<CopyButton Text="@All" Label="@(Ids.Count == 1 ? "Copy the id" : "Copy them all, one a line")" />
+			<IconButton Icon="MokatermIcons.Download" Label="Save as ids.txt" Size="MokaSize.Xs" Position="MokaTooltipPosition.BottomEnd" OnClick="SaveAllAsync" />
+		</MokaFlexbox>
+	</HeaderActions>
+	<ChildContent>
+		<MokaTable TItem="NumberedId"
+				   Items="_rows"
+				   ItemKey="@(row => row.Number)"
+				   ShowToolbar="false"
+				   ShowPagination="@(Ids.Count > PageSize)"
+				   PageSize="PageSize"
+				   PageSizeOptions="PageSizes"
+				   Dense
+				   Bleed
+				   Label="Generated ids"
+				   ActionsColumnTitle=""
+				   ActionsColumnWidth="48px">
+			<ChildContent>
+				<MokaColumn Title="#" Field="row => row.Number" Sortable="false" Width="64px" Mono />
+				<MokaColumn Title="Id" Field="row => row.Id" Sortable="false" Mono />
+			</ChildContent>
+			<RowActions Context="row">
+				<CopyButton Text="@row.Id" Label="@($"Copy id {row.Number}")" Position="MokaTooltipPosition.BottomEnd" />
+			</RowActions>
+		</MokaTable>
+	</ChildContent>
+</MokaCard>
+
+@code {
+	private const int PageSize = 25;
+
+	private static readonly IReadOnlyList<int> PageSizes = [25, 100, 250];
+
+	private IReadOnlyList<string>? _rowsFor;
+	private IReadOnlyList<NumberedId> _rows = [];
+
+	[Parameter, EditorRequired]
+	public IReadOnlyList<string> Ids { get; set; } = [];
+
+	/// <summary>What was made, beside the count: "UUID v7".</summary>
+	[Parameter]
+	public string? Kind { get; set; }
+
+	private string All => string.Join('\n', Ids);
+
+	private string CountText
+	{
+		get
+		{
+			string count = Ids.Count == 1 ? "1 id" : string.Create(CultureInfo.CurrentCulture, $"{Ids.Count:N0} ids");
+			return Kind is null ? count : $"{count}, {Kind}";
+		}
+	}
+
+	protected override void OnParametersSet()
+	{
+		if (!ReferenceEquals(_rowsFor, Ids))
+		{
+			_rowsFor = Ids;
+			_rows = [.. Ids.Select((id, index) => new NumberedId(index + 1, id))];
+		}
+	}
+
+	private Task SaveAllAsync() => SaveTextAsync("ids.txt", All);
+
+	private sealed record NumberedId(int Number, string Id);
+}

@@ -1,66 +1,67 @@
 @inherits DevToolViewBase
 
-<ToolPageFrame Title="IDs" Summary="UUID v4 and v7, ULID" Loaded="true">
-	<div class="dt-group">
-		<span class="dt-label">Generate</span>
-		<div class="dt-row">
-			<EnumSegmentedControl TEnum="IdKind" Value="_kind" ValueChanged="@(value => _kind = value)" Options="Kinds" AriaLabel="Kind" />
-			<div class="dt-id-count">
-				<MokaTextField Value="@_countText"
-							   ValueChanged="@(value => _countText = value ?? "")"
-							   Size="MokaSize.Sm"
-							   inputmode="numeric"
-							   autocomplete="off"
-							   aria-label="How many" />
-			</div>
-			@if (_kind == IdKind.Ulid)
-			{
-				<MokaCheckbox Label="Lower case" Value="_lowerUlid" ValueChanged="@(value => _lowerUlid = value)" />
-			}
-			else
-			{
-				<MokaCheckbox Label="Upper case" Value="_upper" ValueChanged="@(value => _upper = value)" />
-				<MokaCheckbox Label="Dashes" Value="_hyphens" ValueChanged="@(value => _hyphens = value)" />
-			}
-			<span class="dt-grow"></span>
-			<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Sm" StartIcon="DevToolIcons.Run" OnClick="Generate">Generate</MokaButton>
-		</div>
-		<span class="dt-note">@KindHelp</span>
-		@if (_countError is { } countError)
-		{
-			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@countError</MokaAlert>
-		}
-		@if (_generated is { } generated)
-		{
-			<OutputBox Title="@GeneratedTitle" Text="@generated" FileName="ids.txt" CopyName="@GeneratedTitle" DisplayChars="TextLimits.DisplayChars" />
-		}
-	</div>
+<SectionFrame Title="IDs" Said="Make UUIDs (v4, v7) and ULIDs, and take any pasted one apart">
+	<MokaCard Inner Outlined Title="New IDs">
+		<HeaderActions>
+			<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="DevToolIcons.Run" OnClick="Generate">Generate</MokaButton>
+		</HeaderActions>
+		<ChildContent>
+			<MokaFlexbox Gap="MokaSpacingScale.Sm">
+				<MokaGrid ColumnsValue="auto 6rem minmax(0, 1fr)" Gap="MokaSpacingScale.Md" AlignItems="MokaAlign.End">
+					<EnumSegmentedControl TEnum="IdKind" Value="_kind" ValueChanged="@(value => _kind = value)" Options="Kinds" AriaLabel="Kind" />
+					<MokaTextField Mono
+								   Label="How many"
+								   Value="@_countText"
+								   ValueChanged="@(value => _countText = value ?? "")"
+								   Size="MokaSize.Sm"
+								   inputmode="numeric"
+								   autocomplete="off"
+								   aria-label="How many" />
+					<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Md" Wrap>
+						@if (_kind == IdKind.Ulid)
+						{
+							<MokaCheckbox Label="Lower case" Value="_lowerUlid" ValueChanged="@(value => _lowerUlid = value)" />
+						}
+						else
+						{
+							<MokaCheckbox Label="Upper case" Value="_upper" ValueChanged="@(value => _upper = value)" />
+							<MokaCheckbox Label="Dashes" Value="_hyphens" ValueChanged="@(value => _hyphens = value)" />
+						}
+					</MokaFlexbox>
+				</MokaGrid>
+				<MokaCaption>@KindHelp</MokaCaption>
+				@if (_countError is { } countError)
+				{
+					<MokaAlert Severity="MokaToastSeverity.Error" Dense>@countError</MokaAlert>
+				}
+			</MokaFlexbox>
+		</ChildContent>
+	</MokaCard>
 
-	<div class="dt-group">
-		<span class="dt-label">Inspect</span>
-		<MokaTextField Class="dt-field-mono"
-					   Value="@_inspectText"
-					   ValueChanged="OnInspectChanged"
-					   Placeholder="Paste a UUID (any version, with or without dashes or braces) or a ULID"
-					   Size="MokaSize.Sm"
-					   spellcheck="false"
-					   autocomplete="off"
-					   aria-label="UUID or ULID to inspect" />
-		@if (_inspectError is { } inspectError)
-		{
-			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@inspectError</MokaAlert>
-		}
-		@if (_report is { } report)
-		{
-			<ChipRow>
-				<StatusChip Text="@report.Kind" Color="MokaColor.Surface" Glow="false" />
-				<span class="dt-note">@report.Summary</span>
-			</ChipRow>
-			<FactList Facts="ReportFacts(report)" />
-			@foreach (string note in report.Notes)
+	@if (_generated is { } generated)
+	{
+		<GeneratedIds Ids="generated" Kind="@_generatedKind" />
+	}
+
+	<MokaCard Inner Outlined Title="Inspect">
+		<MokaFlexbox Gap="MokaSpacingScale.Md">
+			<MokaTextField Mono
+						   Label="UUID or ULID"
+						   Value="@_inspectText"
+						   ValueChanged="OnInspectChanged"
+						   Placeholder="Any UUID version, with or without dashes or braces, or a ULID"
+						   Size="MokaSize.Sm"
+						   spellcheck="false"
+						   autocomplete="off"
+						   aria-label="UUID or ULID to inspect" />
+			@if (_inspectError is { } inspectError)
 			{
-				<span class="dt-note">@note</span>
+				<MokaAlert Severity="MokaToastSeverity.Error" Title="Not read" Dense>@inspectError</MokaAlert>
 			}
-		}
-	</div>
-</ToolPageFrame>
+			@if (_report is { } report)
+			{
+				<IdReportView Report="report" />
+			}
+		</MokaFlexbox>
+	</MokaCard>
+</SectionFrame>

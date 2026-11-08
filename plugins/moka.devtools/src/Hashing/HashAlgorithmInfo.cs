@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 namespace Moka.DevTools.Hashing;
 
 /// <summary>One algorithm the Hashes section offers, and whether this platform can run it, plain and as an HMAC.</summary>
-internal sealed record HashAlgorithmInfo(HashKind Kind, string Name, HashAlgorithmName? Algorithm, bool Weak, bool Supported, bool HmacSupported)
+public sealed record HashAlgorithmInfo(HashKind Kind, string Name, HashAlgorithmName? Algorithm, bool Weak, bool Supported, bool HmacSupported)
 {
 	/// <summary>Every algorithm in the order the section lists them. SHA-3 depends on the OS's crypto library.</summary>
 	public static IReadOnlyList<HashAlgorithmInfo> All { get; } =

@@ -22,6 +22,20 @@ public static class TimeFormats
 		return $"{time} {Offset(local.Offset)}";
 	}
 
+	/// <summary>The time of day in <paramref name="zone"/>, the fraction only as long as it needs to be: "14:00:00", "09:30:15.25".</summary>
+	public static string Clock(DateTimeOffset instant, TimeZoneInfo zone)
+	{
+		ArgumentNullException.ThrowIfNull(zone);
+		return TimeZoneInfo.ConvertTime(instant, zone).ToString("HH:mm:ss.fffffff", CultureInfo.InvariantCulture).TrimEnd('0').TrimEnd('.');
+	}
+
+	/// <summary>The date in <paramref name="zone"/> with its weekday: "Tue 2023-11-14".</summary>
+	public static string Day(DateTimeOffset instant, TimeZoneInfo zone)
+	{
+		ArgumentNullException.ThrowIfNull(zone);
+		return TimeZoneInfo.ConvertTime(instant, zone).ToString("ddd yyyy-MM-dd", CultureInfo.InvariantCulture);
+	}
+
 	/// <summary>"+02:00", "-05:30", "+00:00".</summary>
 	public static string Offset(TimeSpan offset) =>
 		(offset < TimeSpan.Zero ? "-" : "+") + offset.Duration().ToString(@"hh\:mm", CultureInfo.InvariantCulture);

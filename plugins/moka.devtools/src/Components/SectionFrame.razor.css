@@ -1,0 +1,33 @@
+.dt-frame {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: var(--moka-spacing-md);
+	min-width: 0;
+	min-height: 0;
+}
+
+/* Moka sizes the title for a page of its own; here a section sits under the dialog's own title. */
+.dt-frame ::deep .dt-frame-head .moka-page-header__title {
+	font-size: var(--moka-font-size-lg);
+}
+
+.dt-frame-body {
+	flex: 1;
+	min-height: 0;
+	padding-right: 2px;
+	overflow-y: auto;
+}
+
+/* Moka stacks its header below 720px of window, which is every narrow tool window; a section keeps its one or two
+   actions beside its title instead of stretching them across. */
+@media (max-width: 720px) {
+	.dt-frame ::deep .dt-frame-head .moka-page-header__titles {
+		flex: 1 1 0;
+	}
+
+	.dt-frame ::deep .dt-frame-head .moka-page-header__actions,
+	.dt-frame ::deep .dt-frame-head .moka-page-header__actions > * {
+		flex: none;
+	}
+}

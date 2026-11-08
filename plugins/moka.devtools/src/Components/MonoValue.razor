@@ -1,0 +1,32 @@
+@* A value that is data, in mono and free to wrap anywhere, with an optional copy button and a quiet note under it. *@
+@if (Note is { Length: > 0 } note)
+{
+	<MokaFlexbox Gap="MokaSpacingScale.None">
+		@Value
+		<MokaCaption>@note</MokaCaption>
+	</MokaFlexbox>
+}
+else
+{
+	@Value
+}
+
+@code {
+	[Parameter, EditorRequired]
+	public string Text { get; set; } = "";
+
+	/// <summary>The copy button's name, "Copy the signature"; null shows no copy button.</summary>
+	[Parameter]
+	public string? CopyLabel { get; set; }
+
+	[Parameter]
+	public string? Note { get; set; }
+
+	private RenderFragment Value => @<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Xs">
+		<MokaText Element="span" Size="MokaSize.Sm" Mono><span class="dt-mono-value">@Text</span></MokaText>
+		@if (CopyLabel is { } label)
+		{
+			<CopyButton Text="@Text" Label="@label" />
+		}
+	</MokaFlexbox>;
+}

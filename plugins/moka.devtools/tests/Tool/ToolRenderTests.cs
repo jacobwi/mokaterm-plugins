@@ -1,3 +1,4 @@
+using Moka.DevTools.Tests.Shared;
 using Moka.DevTools.Tool;
 using Mokaterm.Abstractions.Platform;
 using Mokaterm.Plugin.TestHost;

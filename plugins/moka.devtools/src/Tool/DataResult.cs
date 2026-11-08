@@ -14,9 +14,18 @@ public sealed record DataResult
 
 	public string? FileName { get; init; }
 
+	/// <summary>The language over the output, from the name it is saved under: "json" or "yaml".</summary>
+	public string? Language => Path.GetExtension(FileName) switch
+	{
+		".json" => "json",
+		".yaml" => "yaml",
+		_ => null,
+	};
+
 	public string? Verdict { get; init; }
 
-	public string? VerdictChip { get; init; }
+	/// <summary>The verdict in a few words, over its sentence: "Valid", "Cancelled".</summary>
+	public string? VerdictTitle { get; init; }
 
 	public ResultTone Tone { get; init; } = ResultTone.Good;
 
@@ -24,7 +33,7 @@ public sealed record DataResult
 
 	public DiffResult? Diff { get; init; }
 
-	public static DataResult Failed(string chip, string message) => new() { VerdictChip = chip, Verdict = message, Tone = ResultTone.Bad };
+	public static DataResult Failed(string title, string message) => new() { VerdictTitle = title, Verdict = message, Tone = ResultTone.Bad };
 
 	private bool PrintMembers(StringBuilder builder)
 	{

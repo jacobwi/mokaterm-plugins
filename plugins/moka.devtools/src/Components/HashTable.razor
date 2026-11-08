@@ -1,0 +1,116 @@
+@using System.Security.Cryptography
+@using Moka.DevTools.Tool
+
+@* Every algorithm's digest in one table, with a copy on each row. Rows that give the hash pasted to compare carry a
+   Matches tag. *@
+<MokaCard Inner Outlined Title="@(Hmac ? "HMACs" : "Hashes")" Subtitle="@CountText">
+	<HeaderActions>
+		<EnumSegmentedControl TEnum="HashFormat" Value="Format" ValueChanged="FormatChanged" Options="Formats" AriaLabel="Show hashes as" />
+	</HeaderActions>
+	<ChildContent>
+		<MokaTable TItem="HashValue"
+				   Items="Values"
+				   ItemKey="@(value => value.Algorithm.Kind)"
+				   ShowToolbar="false"
+				   ShowPagination="false"
+				   Dense
+				   Bleed
+				   Label="Hashes"
+				   ActionsColumnTitle=""
+				   ActionsColumnWidth="48px">
+			<ChildContent>
+				<MokaColumn Title="Algorithm" Field="value => value.Algorithm.Kind" Sortable="false" Width="190px">
+					<CellTemplate Context="value">
+						<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Xs" Wrap>
+							<MokaText Element="span" Size="MokaSize.Sm" Weight="MokaFontWeight.Semibold">@Name(value)</MokaText>
+							@if (_matches.Contains(value))
+							{
+								<MokaTag Text="Matches" Color="MokaColor.Success" Size="MokaSize.Xs" />
+							}
+							else if (value.Algorithm.Weak && value.Bytes is not null)
+							{
+								<Hint Text="@WeakReason(value)">
+									<MokaTag Text="@(value.Algorithm.Kind == HashKind.Crc32 ? "Checksum" : "Weak")" Size="MokaSize.Xs" />
+								</Hint>
+							}
+						</MokaFlexbox>
+					</CellTemplate>
+				</MokaColumn>
+				<MokaColumn Title="Digest" Field="value => value.Algorithm.Kind" Sortable="false">
+					<CellTemplate Context="value">
+						@if (value.Bytes is { } bytes)
+						{
+							<MokaText Element="span" Size="MokaSize.Sm" Mono><span class="dt-digest">@Show(bytes)</span></MokaText>
+						}
+						else
+						{
+							<MokaCaption>@value.Unavailable</MokaCaption>
+						}
+					</CellTemplate>
+				</MokaColumn>
+			</ChildContent>
+			<RowActions Context="value">
+				@if (value.Bytes is { } bytes)
+				{
+					<CopyButton Text="@Show(bytes)" Label="@($"Copy {Name(value)}")" Position="MokaTooltipPosition.BottomEnd" />
+				}
+			</RowActions>
+		</MokaTable>
+	</ChildContent>
+</MokaCard>
+
+@code {
+	private static readonly IReadOnlyList<EnumOption<HashFormat>> Formats =
+	[
+		new(HashFormat.Hex, "hex"),
+		new(HashFormat.UpperHex, "HEX"),
+		new(HashFormat.Base64, "Base64"),
+	];
+
+	private HashSet<HashValue> _matches = [];
+
+	[Parameter, EditorRequired]
+	public IReadOnlyList<HashValue> Values { get; set; } = [];
+
+	/// <summary>The values are HMACs with a key rather than plain hashes.</summary>
+	[Parameter]
+	public bool Hmac { get; set; }
+
+	[Parameter]
+	public HashFormat Format { get; set; }
+
+	[Parameter]
+	public EventCallback<HashFormat> FormatChanged { get; set; }
+
+	/// <summary>The hash pasted to compare, read; null when none was pasted or it could not be read.</summary>
+	[Parameter]
+	public byte[]? Expected { get; set; }
+
+	private string CountText
+	{
+		get
+		{
+			int count = Values.Count(value => value.Bytes is not null);
+			string what = count == 1 ? "1 algorithm" : string.Create(CultureInfo.CurrentCulture, $"{count} algorithms");
+			return Hmac ? $"{what}, with the key" : what;
+		}
+	}
+
+	protected override void OnParametersSet() =>
+		_matches = Expected is { } expected
+			? [.. Values.Where(value => value.Bytes is { } bytes && bytes.Length == expected.Length && CryptographicOperations.FixedTimeEquals(bytes, expected))]
+			: [];
+
+	private string Name(HashValue value) => Hmac && value.Bytes is not null ? $"HMAC-{value.Algorithm.Name}" : value.Algorithm.Name;
+
+	private static string WeakReason(HashValue value) => value.Algorithm.Kind == HashKind.Crc32
+		? "A checksum: it finds accidents, not tampering."
+		: "Broken for signatures and passwords; fine for spotting a changed file.";
+
+	private string Show(byte[] bytes) => Format switch
+	{
+		HashFormat.UpperHex => Convert.ToHexString(bytes),
+		HashFormat.Base64 => Convert.ToBase64String(bytes),
+		_ => Convert.ToHexStringLower(bytes),
+	};
+}

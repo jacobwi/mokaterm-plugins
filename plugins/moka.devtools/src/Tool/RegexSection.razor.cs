@@ -2,7 +2,6 @@ using System.Globalization;
 using Microsoft.AspNetCore.Components;
 using Moka.DevTools.Components;
 using Moka.DevTools.Patterns;
-using Moka.DevTools.Text;
 
 namespace Moka.DevTools.Tool;
 
@@ -12,10 +11,6 @@ namespace Moka.DevTools.Tool;
 /// </summary>
 public sealed partial class RegexSection : DevToolViewBase, IDisposable
 {
-	private const int MaxListed = 200;
-
-	private const int QuoteChars = 160;
-
 	private static readonly TimeSpan Settle = TimeSpan.FromMilliseconds(150);
 
 	private static readonly IReadOnlyList<(char Flag, string Meaning)> Flags =
@@ -49,9 +44,9 @@ public sealed partial class RegexSection : DevToolViewBase, IDisposable
 	private string Summary => _result switch
 	{
 		{ Status: RegexRunStatus.Ok, Total: var total } => total == 1 ? "1 match" : string.Create(CultureInfo.CurrentCulture, $"{total:N0} matches"),
-		{ Status: RegexRunStatus.Timeout } => "took too long",
-		{ Status: RegexRunStatus.Syntax } => "invalid pattern",
-		_ => "JavaScript semantics",
+		{ Status: RegexRunStatus.Timeout } => "Took too long",
+		{ Status: RegexRunStatus.Syntax } => "Not a valid pattern",
+		_ => "Test a JavaScript regex against sample text",
 	};
 
 	public void Dispose()
@@ -60,31 +55,6 @@ public sealed partial class RegexSection : DevToolViewBase, IDisposable
 		_sample = TextValue.Empty;
 		_ranText = "";
 		_result = null;
-	}
-
-	private static string MatchText(RegexRunResult result)
-	{
-		string count = result.Truncated
-			? string.Create(CultureInfo.CurrentCulture, $"More than {result.Total:N0} matches; the first {result.Total:N0} are shown")
-			: result.Total == 1 ? "1 match" : string.Create(CultureInfo.CurrentCulture, $"{result.Total:N0} matches");
-		return string.Create(CultureInfo.CurrentCulture, $"{count}, found in {result.Elapsed:0.#} ms.");
-	}
-
-	private static string Range(int start, int end) => start == end
-		? string.Create(CultureInfo.InvariantCulture, $"at {start}, empty")
-		: string.Create(CultureInfo.InvariantCulture, $"{start} to {end}");
-
-	private string Quote(int start, int end)
-	{
-		string? text = RegexHighlight.Slice(_ranText, start, end);
-		if (text is null)
-		{
-			return "(outside the text)";
-		}
-
-		return text.Length > QuoteChars
-			? string.Create(CultureInfo.CurrentCulture, $"{text[..QuoteChars]}... ({text.Length:N0} chars)")
-			: text;
 	}
 
 	private Task OnPatternChangedAsync(string? value)

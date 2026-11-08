@@ -1,0 +1,54 @@
+@* The same moment in every zone added, daylight saving included; each row can be taken out again. *@
+<MokaTable TItem="ZoneEntry"
+		   Items="Zones"
+		   ItemKey="@(entry => entry.Id)"
+		   ShowToolbar="false"
+		   ShowPagination="false"
+		   Dense
+		   Bleed
+		   Label="Time zones"
+		   EmptyIcon="MokaIcons.Status.Clock"
+		   EmptyTitle="No zones yet"
+		   EmptyText="Add zones to see the same moment there, daylight saving included."
+		   ActionsColumnTitle=""
+		   ActionsColumnWidth="48px">
+	<ChildContent>
+		<MokaColumn Title="Zone" Field="entry => entry.Id">
+			<CellTemplate Context="entry">
+				<MokaFlexbox Gap="MokaSpacingScale.None">
+					<MokaText Element="span" Size="MokaSize.Sm" Weight="MokaFontWeight.Semibold">@entry.Id</MokaText>
+					<MokaCaption>@entry.Zone.DisplayName</MokaCaption>
+				</MokaFlexbox>
+			</CellTemplate>
+		</MokaColumn>
+		<MokaColumn Title="Time" Field="entry => entry.Zone.BaseUtcOffset" Mono>
+			<CellTemplate Context="entry">
+				@(Instant is { } instant ? TimeFormats.InZone(instant, entry.Zone) : "-")
+			</CellTemplate>
+		</MokaColumn>
+		<MokaColumn Title="Name" Field="entry => entry.Zone.StandardName" Sortable="false">
+			<CellTemplate Context="entry">
+				@(Instant is { } instant ? TimeFormats.ZoneName(instant, entry.Zone) : entry.Zone.StandardName)
+			</CellTemplate>
+		</MokaColumn>
+	</ChildContent>
+	<RowActions Context="entry">
+		<IconButton Icon="MokaIcons.Navigation.Close"
+					Label="@($"Remove {entry.Id}")"
+					Size="MokaSize.Xs"
+					Position="MokaTooltipPosition.BottomEnd"
+					OnClick="@(() => OnRemove.InvokeAsync(entry.Id))" />
+	</RowActions>
+</MokaTable>
+
+@code {
+	[Parameter, EditorRequired]
+	public IReadOnlyList<ZoneEntry> Zones { get; set; } = [];
+
+	/// <summary>The moment to show; null shows the zones' names alone.</summary>
+	[Parameter]
+	public DateTimeOffset? Instant { get; set; }
+
+	[Parameter]
+	public EventCallback<string> OnRemove { get; set; }
+}

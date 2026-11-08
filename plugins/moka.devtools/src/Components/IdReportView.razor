@@ -1,0 +1,42 @@
+@inherits DevToolViewBase
+
+@* A UUID or ULID taken apart: what it is, then its fields, with the forms worth copying copyable. *@
+<MokaFlexbox Gap="MokaSpacingScale.Sm">
+	<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Sm" Wrap>
+		<MokaTag Text="@Report.Kind" Color="MokaColor.Primary" />
+		<MokaText Element="span" Size="MokaSize.Sm">@Report.Summary</MokaText>
+	</MokaFlexbox>
+	<MokaDataList Dense Orientation="MokaDirection.Row" Items="Items" />
+	@foreach (string note in Report.Notes)
+	{
+		<MokaCaption>@note</MokaCaption>
+	}
+</MokaFlexbox>
+
+@code {
+	[Parameter, EditorRequired]
+	public IdReport Report { get; set; } = default!;
+
+	private IReadOnlyList<MokaDataListItem> Items
+	{
+		get
+		{
+			List<MokaDataListItem> items = [new("Canonical", ValueContent: Mono(Report.Canonical, "Copy the canonical form"))];
+			foreach (IdFact fact in Report.Facts)
+			{
+				items.Add(fact switch
+				{
+					{ Label: "Time" } when Report.Time is { } time => new MokaDataListItem("Time", ValueContent: Mono(fact.Value, note: $"{RelativeTime.Describe(time, Now)}. Local {TimeFormats.InZone(time, TimeZoneInfo.Local)}")),
+					{ Label: var label } when label.StartsWith("As ", StringComparison.Ordinal) => new MokaDataListItem(label, ValueContent: Mono(fact.Value, $"Copy the {label[3..]} form")),
+					{ Mono: true } => new MokaDataListItem(fact.Label, ValueContent: Mono(fact.Value)),
+					_ => new MokaDataListItem(fact.Label, fact.Value),
+				});
+			}
+
+			return items;
+		}
+	}
+
+	private static RenderFragment Mono(string value, string? copyLabel = null, string? note = null) =>
+		@<MonoValue Text="@value" CopyLabel="@copyLabel" Note="@note" />;
+}

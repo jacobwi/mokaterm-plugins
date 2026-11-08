@@ -1,0 +1,109 @@
+@inherits DevToolViewBase
+
+@* One text result in a card: Moka's code block with copy and save beside it. A secret stays hidden until asked for and
+   is copied through the host's secret copy, which clears the clipboard again. *@
+<MokaCard Inner Outlined Title="@Title" Subtitle="@Detail">
+	<HeaderActions>
+		<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Xs" Wrap>
+			@Actions
+			@if (Secret)
+			{
+				<MokaButton Variant="MokaVariant.Text"
+							Color="MokaColor.Surface"
+							Size="MokaSize.Xs"
+							StartIcon="@(_shown ? MokaIcons.Toggle.EyeOff : MokaIcons.Toggle.Eye)"
+							OnClick="ToggleShown">
+					@(_shown ? "Hide" : "Show")
+				</MokaButton>
+				<IconButton Icon="MokaIcons.Content.Copy" Label="@($"Copy {Name}")" Color="MokaColor.Primary" Size="MokaSize.Xs" OnClick="CopyHiddenAsync" />
+			}
+			else
+			{
+				<CopyButton Text="@Text" Label="@($"Copy {Name}")" />
+			}
+			@if (FileName is { } fileName)
+			{
+				<IconButton Icon="MokatermIcons.Download" Label="@($"Save as {fileName}")" Size="MokaSize.Xs" Position="MokaTooltipPosition.BottomEnd" OnClick="SaveOutputAsync" />
+			}
+		</MokaFlexbox>
+	</HeaderActions>
+	<ChildContent>
+		@if (Secret && !_shown)
+		{
+			<MokaCaption>Hidden. Copy it, save it, or show it here.</MokaCaption>
+		}
+		else
+		{
+			<MokaCodeBlock Code="@Drawn"
+						   Language="@Language"
+						   ShowLineNumbers="LineNumbers"
+						   ShowCopyButton="false"
+						   Wrap="Wrap"
+						   MaxHeight="@MaxHeight" />
+			@if (IsCut)
+			{
+				<MokaCaption>Showing the first @Size(Shown.Length) of @Size(Text.Length). Copy and Save take all of it.</MokaCaption>
+			}
+		}
+	</ChildContent>
+</MokaCard>
+
+@code {
+	private bool _shown;
+
+	[Parameter, EditorRequired]
+	public string Title { get; set; } = "";
+
+	/// <summary>A short note beside the title, such as "48 chars" or "3 KB, not UTF-8 text".</summary>
+	[Parameter]
+	public string? Detail { get; set; }
+
+	[Parameter, EditorRequired]
+	public string Text { get; set; } = "";
+
+	/// <summary>The name over the code, "json" or "yaml"; null shows none.</summary>
+	[Parameter]
+	public string? Language { get; set; }
+
+	[Parameter]
+	public bool LineNumbers { get; set; }
+
+	/// <summary>The name Save offers; null shows no Save.</summary>
+	[Parameter]
+	public string? FileName { get; set; }
+
+	/// <summary>What the copy button and its notice call the text: "Payload", "Output".</summary>
+	[Parameter]
+	public string? CopyName { get; set; }
+
+	/// <summary>A payload or a key: hidden until shown, copied as a secret.</summary>
+	[Parameter]
+	public bool Secret { get; set; }
+
+	/// <summary>Long lines wrap; off for dumps, whose columns must line up.</summary>
+	[Parameter]
+	public bool Wrap { get; set; } = true;
+
+	[Parameter]
+	public string MaxHeight { get; set; } = "420px";
+
+	/// <summary>Buttons of the caller's own, drawn before Copy and Save.</summary>
+	[Parameter]
+	public RenderFragment? Actions { get; set; }
+
+	private string Name => CopyName ?? Title;
+
+	// Copy and Save always take all of it; a text node of many megabytes makes the page slow to scroll and select in.
+	private string Shown => Text.Length > TextLimits.DisplayChars ? Text[..TextLimits.DisplayChars] : Text;
+
+	private bool IsCut => Text.Length > TextLimits.DisplayChars;
+
+	// The code block numbers every piece between line breaks, so a final line break would draw an empty last line.
+	private string Drawn => Shown.EndsWith('\n') ? Shown[..^1] : Shown;
+
+	private void ToggleShown() => _shown = !_shown;
+
+	private Task CopyHiddenAsync() => CopySecretAsync(Text, Name);
+
+	private Task SaveOutputAsync() => FileName is { } name ? SaveTextAsync(name, Text) : Task.CompletedTask;
+}

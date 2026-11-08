@@ -1,0 +1,55 @@
+@inherits DevToolViewBase
+
+@* One moment: the figures to read at a glance, then every form worth copying, text forms and Unix units apart. *@
+@foreach (string note in Reading.Notes)
+{
+	<MokaAlert Severity="MokaToastSeverity.Info" Dense>@note</MokaAlert>
+}
+
+<MokaGrid MinColumn="190px" Gap="MokaSpacingScale.Md">
+	<MokaStat Tile Label="From now" Value="@RelativeTime.Describe(Instant, Now)" HelpText="@($"Read as {Reading.Source}")" />
+	<MokaStat Tile Label="UTC" Value="@TimeFormats.Clock(Instant, TimeZoneInfo.Utc)" HelpText="@TimeFormats.Day(Instant, TimeZoneInfo.Utc)" />
+	<MokaStat Tile Label="Local" Value="@TimeFormats.Clock(Instant, TimeZoneInfo.Local)" HelpText="@LocalDay" />
+	<MokaStat Tile Label="Day" Value="@Utc.DayOfWeek.ToString()" HelpText="@DayText" />
+</MokaGrid>
+
+<MokaGrid MinColumn="340px" Gap="MokaSpacingScale.Md" AlignItems="MokaAlign.Start">
+	<MokaCard Inner Outlined Title="Text forms">
+		<MokaDataList Dense Orientation="MokaDirection.Row" Items="TextItems" />
+	</MokaCard>
+	<MokaCard Inner Outlined Title="Unix time">
+		<MokaDataList Dense Orientation="MokaDirection.Row" Items="UnixItems" />
+	</MokaCard>
+</MokaGrid>
+
+@code {
+	[Parameter, EditorRequired]
+	public TimeReading Reading { get; set; } = default!;
+
+	private DateTimeOffset Instant => Reading.Instant;
+
+	private DateTime Utc => Instant.UtcDateTime;
+
+	private string LocalDay => $"{TimeFormats.Day(Instant, TimeZoneInfo.Local)}, {TimeFormats.ZoneName(Instant, TimeZoneInfo.Local)}";
+
+	private string DayText => string.Create(CultureInfo.InvariantCulture, $"Day {Utc.DayOfYear} of {Utc.Year}, ISO week {ISOWeek.GetWeekOfYear(Utc)} (UTC)");
+
+	private IReadOnlyList<MokaDataListItem> TextItems =>
+	[
+		new("UTC", ValueContent: Mono(TimeFormats.IsoUtc(Instant), "Copy the UTC time")),
+		new("Local", ValueContent: Mono(TimeFormats.InZone(Instant, TimeZoneInfo.Local), "Copy the local time", TimeFormats.ZoneName(Instant, TimeZoneInfo.Local))),
+		new("RFC 3339", ValueContent: Mono(TimeFormats.IsoUtc(Instant), "Copy the RFC 3339 form")),
+		new("RFC 1123", ValueContent: Mono(TimeFormats.Rfc1123(Instant), "Copy the RFC 1123 form")),
+	];
+
+	private IReadOnlyList<MokaDataListItem> UnixItems =>
+	[
+		new("Seconds", ValueContent: Mono(TimeFormats.UnixSeconds(Instant), "Copy the Unix seconds")),
+		new("Milliseconds", ValueContent: Mono(TimeFormats.UnixMilliseconds(Instant), "Copy the Unix milliseconds")),
+		new("Microseconds", ValueContent: Mono(TimeFormats.UnixMicroseconds(Instant), "Copy the Unix microseconds")),
+		new("Nanoseconds", ValueContent: Mono(TimeFormats.UnixNanoseconds(Instant), "Copy the Unix nanoseconds")),
+	];
+
+	private static RenderFragment Mono(string value, string copyLabel, string? note = null) =>
+		@<MonoValue Text="@value" CopyLabel="@copyLabel" Note="@note" />;
+}

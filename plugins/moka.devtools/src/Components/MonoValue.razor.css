@@ -1,0 +1,4 @@
+/* Hashes, signatures and long ids are one word; they wrap anywhere rather than run out of their cell. */
+.dt-mono-value {
+	overflow-wrap: anywhere;
+}

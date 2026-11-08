@@ -4,7 +4,6 @@ using Moka.DevTools.Components;
 using Moka.DevTools.Dates;
 using Moka.DevTools.Text;
 using Mokaterm.UI.Common.Components;
-using Mokaterm.UI.Common.PluginUi;
 
 namespace Moka.DevTools.Tool;
 
@@ -23,7 +22,8 @@ public sealed partial class TimeSection : DevToolViewBase
 		new(EpochChoice.Nanoseconds, "ns"),
 	];
 
-	private readonly List<(string Id, TimeZoneInfo Zone)> _zones = [];
+	// Replaced rather than changed, because the table only reads its rows again when it is handed a new list.
+	private IReadOnlyList<ZoneEntry> _zones = [];
 	private string _text = "";
 	private EpochChoice _unit;
 	private TimeReading? _reading;
@@ -32,30 +32,22 @@ public sealed partial class TimeSection : DevToolViewBase
 	private string _zoneText = "";
 	private string? _zoneError;
 
-	private string Summary => _reading is { } reading ? reading.Source : "Unix time and dates";
+	private string Summary => _reading is { } reading
+		? $"{reading.Source}, {RelativeTime.Describe(reading.Instant, Now)}"
+		: "Unix times and written dates, in every unit, form and zone";
+
+	private string? ReadAsText => _reading is { } reading ? ReadAs(reading) : null;
+
+	private string ZoneCount => _zones.Count switch
+	{
+		0 => "None added",
+		1 => "1 zone",
+		var count => string.Create(CultureInfo.CurrentCulture, $"{count} zones"),
+	};
 
 	private static string ReadAs(TimeReading reading) => reading.Unit is { } unit
 		? reading.UnitReason is { } reason ? $"Read as {TimeParser.UnitName(unit)}, from its {reason}." : $"Read as {TimeParser.UnitName(unit)}."
 		: reading.WrittenOffset is { } offset ? $"Read as {reading.Source}, offset {TimeFormats.Offset(offset)}." : $"Read as {reading.Source}.";
-
-	private IReadOnlyList<Fact> Facts(DateTimeOffset instant)
-	{
-		DateTime utc = instant.UtcDateTime;
-		return
-		[
-			new("UTC", [TimeFormats.IsoUtc(instant)], Mono: true, Copyable: true),
-			new("Local", [TimeFormats.InZone(instant, TimeZoneInfo.Local)], Mono: true, Copyable: true, Note: TimeFormats.ZoneName(instant, TimeZoneInfo.Local)),
-			new("From now", [RelativeTime.Describe(instant, Now)], Mono: false),
-			new("Unix s", [TimeFormats.UnixSeconds(instant)], Mono: true, Copyable: true),
-			new("Unix ms", [TimeFormats.UnixMilliseconds(instant)], Mono: true, Copyable: true),
-			new("Unix µs", [TimeFormats.UnixMicroseconds(instant)], Mono: true, Copyable: true),
-			new("Unix ns", [TimeFormats.UnixNanoseconds(instant)], Mono: true, Copyable: true),
-			new("RFC 3339", [TimeFormats.IsoUtc(instant)], Mono: true, Copyable: true),
-			new("RFC 1123", [TimeFormats.Rfc1123(instant)], Mono: true, Copyable: true),
-			new("Day", [string.Create(CultureInfo.InvariantCulture,
-				$"{utc.DayOfWeek}, day {utc.DayOfYear} of {utc.Year}, ISO week {ISOWeek.GetWeekOfYear(utc)} (UTC)")], Mono: false),
-		];
-	}
 
 	private void SetNow()
 	{
@@ -138,13 +130,13 @@ public sealed partial class TimeSection : DevToolViewBase
 			return false;
 		}
 
-		if (!_zones.Exists(entry => string.Equals(entry.Id, ianaId, StringComparison.Ordinal)))
+		if (!_zones.Any(entry => string.Equals(entry.Id, ianaId, StringComparison.Ordinal)))
 		{
-			_zones.Add((ianaId, zone));
+			_zones = [.. _zones, new ZoneEntry(ianaId, zone)];
 		}
 
 		return true;
 	}
 
-	private void Remove(string id) => _zones.RemoveAll(entry => string.Equals(entry.Id, id, StringComparison.Ordinal));
+	private void Remove(string id) => _zones = [.. _zones.Where(entry => !string.Equals(entry.Id, id, StringComparison.Ordinal))];
 }

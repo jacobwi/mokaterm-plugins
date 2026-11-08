@@ -1,10 +1,7 @@
 using System.Globalization;
 using Moka.DevTools.Components;
-using Moka.DevTools.Dates;
 using Moka.DevTools.Ids;
-using Moka.DevTools.Text;
 using Mokaterm.UI.Common.Components;
-using Mokaterm.UI.Common.PluginUi;
 
 namespace Moka.DevTools.Tool;
 
@@ -23,8 +20,8 @@ public sealed partial class IdSection : DevToolViewBase
 	private bool _upper;
 	private bool _lowerUlid;
 	private bool _hyphens = true;
-	private string? _generated;
-	private int _generatedCount;
+	private IReadOnlyList<string>? _generated;
+	private string? _generatedKind;
 	private string? _countError;
 	private string _inspectText = "";
 	private IdReport? _report;
@@ -37,8 +34,6 @@ public sealed partial class IdSection : DevToolViewBase
 		_ => "Unix time in milliseconds and 80 random bits in 26 characters; a batch made in one millisecond counts up, so it sorts in order.",
 	};
 
-	private string GeneratedTitle => _generatedCount == 1 ? "1 id" : string.Create(CultureInfo.CurrentCulture, $"{_generatedCount:N0} ids");
-
 	private void Generate()
 	{
 		if (!int.TryParse(_countText.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out int count) || count < 1 || count > IdGenerator.MaxCount)
@@ -49,8 +44,8 @@ public sealed partial class IdSection : DevToolViewBase
 
 		_countError = null;
 		IReadOnlyList<string> ids = IdGenerator.Generate(_kind, count, _kind == IdKind.Ulid ? !_lowerUlid : _upper, _hyphens, Now);
-		_generated = string.Join('\n', ids);
-		_generatedCount = ids.Count;
+		_generated = ids;
+		_generatedKind = Kinds.First(kind => kind.Value == _kind).Text;
 	}
 
 	private void OnInspectChanged(string? value)
@@ -71,18 +66,5 @@ public sealed partial class IdSection : DevToolViewBase
 		{
 			_inspectError = ex.Message;
 		}
-	}
-
-	private List<Fact> ReportFacts(IdReport report)
-	{
-		List<Fact> facts = [new("Canonical", [report.Canonical], Mono: true, Copyable: true)];
-		foreach (IdFact fact in report.Facts)
-		{
-			facts.Add(fact.Label == "Time" && report.Time is { } time
-				? new Fact("Time", [fact.Value], Mono: true, Note: $"{RelativeTime.Describe(time, Now)}. Local {TimeFormats.InZone(time, TimeZoneInfo.Local)}")
-				: new Fact(fact.Label, [fact.Value], fact.Mono, Copyable: fact.Label.StartsWith("As ", StringComparison.Ordinal)));
-		}
-
-		return facts;
 	}
 }

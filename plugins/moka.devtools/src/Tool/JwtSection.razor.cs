@@ -1,13 +1,9 @@
-using System.Globalization;
 using System.Security.Cryptography;
 using Moka.DevTools.Components;
-using Moka.DevTools.Dates;
 using Moka.DevTools.Hashing;
 using Moka.DevTools.Jwt;
 using Moka.DevTools.Text;
-using Moka.Red.Core.Enums;
 using Mokaterm.UI.Common.Components;
-using Mokaterm.UI.Common.PluginUi;
 
 namespace Moka.DevTools.Tool;
 
@@ -39,66 +35,9 @@ public sealed partial class JwtSection : DevToolViewBase, IDisposable
 
 	private string Summary => _jwt switch
 	{
-		null => _error is null ? "decode and verify" : "not read",
-		{ } jwt => $"{jwt.Algorithm ?? "no alg"}, {Validity.Text}",
+		null => _error is null ? "Decode a token, read its claims and check its signature" : "Not read",
+		{ } jwt => $"{jwt.Algorithm ?? "No alg"}, {JwtValidity.Of(jwt, Now).Text.ToLowerInvariant()}",
 	};
-
-	private (string Text, MokaColor Color) Validity
-	{
-		get
-		{
-			JwtTime? expires = _jwt?.Times.FirstOrDefault(time => time.Claim == "exp");
-			JwtTime? notBefore = _jwt?.Times.FirstOrDefault(time => time.Claim == "nbf");
-			DateTimeOffset now = Now;
-			return (expires?.When, notBefore?.When) switch
-			{
-				({ } exp, _) when exp <= now => ("expired", MokaColor.Error),
-				(_, { } nbf) when nbf > now => ("not yet valid", MokaColor.Warning),
-				({ }, _) => ("valid now", MokaColor.Success),
-				_ => ("no expiry", MokaColor.Warning),
-			};
-		}
-	}
-
-	private IReadOnlyList<Fact> TimeFacts
-	{
-		get
-		{
-			if (_jwt is not { } jwt)
-			{
-				return [];
-			}
-
-			DateTimeOffset now = Now;
-			List<Fact> facts = [];
-			foreach (JwtTime time in jwt.Times)
-			{
-				string label = time.Claim switch
-				{
-					"exp" => "exp, expires",
-					"nbf" => "nbf, not before",
-					"iat" => "iat, issued",
-					_ => "auth_time, signed in",
-				};
-
-			facts.Add(time.When is { } when
-				? new Fact(label, [TimeFormats.IsoUtc(when)], Mono: true, Note: $"{Relative(time.Claim, when, now)}. Local {TimeFormats.InZone(when, TimeZoneInfo.Local)}")
-				: new Fact(label, [time.Problem ?? ""], Mono: false));
-			}
-
-			return facts;
-		}
-	}
-
-	private IReadOnlyList<Fact> SignatureFacts => _jwt is not { } jwt
-		? []
-		:
-		[
-			new Fact("Algorithm", [jwt.Algorithm ?? "none named"], Mono: false),
-			new Fact("Length", [jwt.Signature.Length == 1 ? "1 byte" : string.Create(CultureInfo.CurrentCulture, $"{jwt.Signature.Length:N0} bytes")], Mono: false),
-			new Fact("Base64url", [jwt.SignatureText.Length > 0 ? jwt.SignatureText : "(empty)"], Mono: true, Copyable: jwt.SignatureText.Length > 0),
-			new Fact("Hex", [jwt.Signature.Length > 0 ? HexText.Format(jwt.Signature) : "(empty)"], Mono: true, Copyable: jwt.Signature.Length > 0),
-		];
 
 	private string NotCheckedText => Family switch
 	{
@@ -118,31 +57,18 @@ public sealed partial class JwtSection : DevToolViewBase, IDisposable
 		_verification = null;
 	}
 
-	private static string Relative(string claim, DateTimeOffset when, DateTimeOffset now)
-	{
-		string span = RelativeTime.Span(when - now);
-		bool past = when <= now;
-		return claim switch
-		{
-			"exp" => past ? $"Expired {span} ago" : $"Expires in {span}",
-			"nbf" => past ? $"Valid since {span} ago" : $"Not valid for another {span}",
-			"iat" => past ? $"Issued {span} ago" : $"Issued {span} in the future",
-			_ => past ? $"Signed in {span} ago" : $"{span} in the future",
-		};
-	}
-
 	private static string VerdictText(JwtVerdict verdict) => verdict switch
 	{
-		JwtVerdict.Verified => "verified",
-		JwtVerdict.Failed => "failed",
-		_ => "not checked",
+		JwtVerdict.Verified => "Signature verified",
+		JwtVerdict.Failed => "Signature does not match",
+		_ => "Not checked",
 	};
 
 	private static ResultTone VerdictTone(JwtVerdict verdict) => verdict switch
 	{
 		JwtVerdict.Verified => ResultTone.Good,
 		JwtVerdict.Failed => ResultTone.Bad,
-		_ => ResultTone.Warning,
+		_ => ResultTone.Plain,
 	};
 
 	private async Task OnTokenChangedAsync(string? value)
