@@ -19,6 +19,7 @@ namespace Moka.Passwords.Tool;
 public sealed partial class PasswordGeneratorTool : AppToolBase, IDisposable
 {
 	private readonly List<string> _values = [];
+	private IReadOnlyList<GeneratedRow> _rows = [];
 	private GenerationMode _mode;
 	private PasswordOptions _password = new();
 	private PassphraseOptions _passphrase = new();
@@ -46,6 +47,15 @@ public sealed partial class PasswordGeneratorTool : AppToolBase, IDisposable
 			GenerationMode.Passphrase => string.Create(CultureInfo.CurrentCulture, $"{_passphrase.Words} words from {_passphrase.WordList.Count}"),
 			_ => string.Create(CultureInfo.CurrentCulture, $"{_pinDigits} digits"),
 		};
+
+	private string ValuesTitle => _mode switch
+	{
+		GenerationMode.Password => "Passwords",
+		GenerationMode.Passphrase => "Passphrases",
+		_ => "PINs",
+	};
+
+	private IReadOnlyList<GeneratedRow> Rows => _rows;
 
 	private IReadOnlyList<string> Notes => _mode switch
 	{
@@ -139,6 +149,8 @@ public sealed partial class PasswordGeneratorTool : AppToolBase, IDisposable
 				_ => PinGenerator.Generate(_pinDigits),
 			});
 		}
+
+		_rows = [.. _values.Select((value, index) => new GeneratedRow(index + 1, value))];
 	}
 
 	private async Task CopyAsync(int index)
@@ -175,6 +187,7 @@ public sealed partial class PasswordGeneratorTool : AppToolBase, IDisposable
 	private void Forget()
 	{
 		_values.Clear();
+		_rows = [];
 		_copied = -1;
 	}
 }

@@ -34,7 +34,7 @@ public sealed class PasswordsModule : IMokatermModule
 			Icon = PasswordIcons.Generator,
 			Description = "Generate passwords, passphrases and PINs, and copy them so the clipboard clears",
 			Component = typeof(PasswordGeneratorTool),
-			Size = SessionToolSize.Standard,
+			Size = SessionToolSize.Wide,
 		});
 
 		// The page id, like the settings key, is plugin. and the plugin's id: the loader refuses a plugin that uses any other.

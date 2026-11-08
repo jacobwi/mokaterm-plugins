@@ -1,6 +1,6 @@
 @* The four kinds of character as check boxes. The last one chosen cannot be cleared, so a password always has something
    to be drawn from. *@
-<div class="mp-kinds" role="group" aria-label="Characters">
+<MokaFlexbox Direction="MokaDirection.Row" Wrap Align="MokaAlign.Center" GapValue="var(--moka-spacing-xs) var(--moka-spacing-md)" role="group" aria-label="Characters">
 	@foreach ((CharacterKind kind, string text) in Kinds)
 	{
 		bool on = Options.Has(kind);
@@ -10,7 +10,7 @@
 					  ValueChanged="value => OptionsChanged.InvokeAsync(Options.With(kind, value))"
 					  Disabled="@(Disabled || (on && Options.KindCount == 1))" />
 	}
-</div>
+</MokaFlexbox>
 
 @code {
 	private static readonly IReadOnlyList<(CharacterKind Kind, string Text)> Kinds =
@@ -20,6 +20,9 @@
 		(CharacterKind.Digit, "0-9"),
 		(CharacterKind.Symbol, "Symbols"),
 	];
+
+	/// <summary>The kind's name as the check boxes say it, which the alphabet's chart repeats.</summary>
+	public static string NameOf(CharacterKind kind) => Kinds.First(item => item.Kind == kind).Text;
 
 	[Parameter, EditorRequired]
 	public PasswordOptions Options { get; set; } = new();

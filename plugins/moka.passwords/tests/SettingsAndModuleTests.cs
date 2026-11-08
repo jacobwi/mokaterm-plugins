@@ -115,7 +115,7 @@ public sealed class SettingsAndModuleTests
 		AppToolDescriptor tool = Assert.Single(provider.GetServices<AppToolDescriptor>());
 		Assert.Equal("password-generator", tool.Id);
 		Assert.Equal(typeof(PasswordGeneratorTool), tool.Component);
-		Assert.Equal(SessionToolSize.Standard, tool.Size);
+		Assert.Equal(SessionToolSize.Wide, tool.Size);
 
 		SettingsPageDescriptor settings = Assert.Single(provider.GetServices<SettingsPageDescriptor>());
 		Assert.Equal(PasswordSettings.SectionKey, settings.Id);
