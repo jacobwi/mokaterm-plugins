@@ -1,0 +1,74 @@
+/* A tab fills the tool's fixed height and scrolls its own parts, so the header and its action stay in view. The page is
+   a container of its own: the side menu takes room from it, so the window's width says little. */
+.mk8s-page {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: var(--moka-spacing-md);
+	min-width: 0;
+	min-height: 0;
+	container: mk8s-page / inline-size;
+}
+
+/* Moka sizes the title for a page of its own; here a tab sits under the dialog's own title. */
+.mk8s-page ::deep .mk8s-page-head .moka-page-header__title {
+	font-size: var(--moka-font-size-lg);
+}
+
+.mk8s-page-body {
+	display: grid;
+	flex: 1;
+	grid-template-columns: minmax(0, 1fr);
+	grid-template-rows: minmax(0, 1fr);
+	gap: var(--moka-spacing-md);
+	min-height: 0;
+}
+
+.mk8s-page-body--split {
+	grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr);
+}
+
+.mk8s-page-main,
+.mk8s-page-detail {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-md);
+	min-width: 0;
+	min-height: 0;
+	padding-right: 2px;
+	overflow-y: auto;
+}
+
+/* A part that scrolls must not squeeze what it holds to fit instead, save the one part that fills it. */
+.mk8s-page-main > ::deep *:not(.mk8s-fill),
+.mk8s-page-detail > ::deep * {
+	flex-shrink: 0;
+}
+
+/* The one part of a tab that takes the height left, such as a list or a log, scrolling inside itself. */
+.mk8s-page-main > ::deep .mk8s-fill {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-height: 240px;
+	container: mk8s-list / inline-size;
+}
+
+.mk8s-page-main > ::deep .mk8s-fill > * {
+	flex: 1;
+	min-height: 0;
+}
+
+/* Too narrow for the panel beside the list: the panel goes under it and the page scrolls as one. */
+@container mk8s-page (max-width: 759px) {
+	.mk8s-page-body--split {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto;
+		overflow-y: auto;
+	}
+
+	.mk8s-page-body--split > .mk8s-page-main,
+	.mk8s-page-body--split > .mk8s-page-detail {
+		overflow: visible;
+	}
+}

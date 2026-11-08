@@ -1,0 +1,77 @@
+@* What every tab of the tool starts with: Moka's page header with the tab's one action, a line saying where the reads
+   come from, then the tab's body, with the picked row's panel beside it (or under it, when narrow) while there is one. *@
+<section class="mk8s-page" aria-label="@Title">
+	<MokaPageHeader Class="mk8s-page-head" Title="@Title" Said="@Said">
+		<Actions>
+			@Actions
+			@if (PrimaryText is { Length: > 0 } primary)
+			{
+				<Hint Text="@PrimaryTitle" Position="MokaTooltipPosition.BottomEnd">
+					<MokaButton Variant="MokaVariant.Outlined"
+								Size="MokaSize.Xs"
+								StartIcon="PrimaryIcon"
+								Disabled="PrimaryDisabled"
+								OnClick="OnPrimary">
+						@primary
+					</MokaButton>
+				</Hint>
+			}
+		</Actions>
+	</MokaPageHeader>
+
+	@if (Subhead is not null)
+	{
+		<MokaFlexbox Direction="MokaDirection.Row" Wrap Align="MokaAlign.Center" Gap="MokaSpacingScale.Md">
+			@Subhead
+		</MokaFlexbox>
+	}
+
+	<div class="@(Detail is null ? "mk8s-page-body" : "mk8s-page-body mk8s-page-body--split")">
+		<div class="mk8s-page-main">@ChildContent</div>
+		@if (Detail is not null)
+		{
+			<div class="mk8s-page-detail">@Detail</div>
+		}
+	</div>
+</section>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Title { get; set; } = "";
+
+	/// <summary>One line under the title: what the tab holds now.</summary>
+	[Parameter]
+	public string? Said { get; set; }
+
+	/// <summary>The tab's one action, such as "Read again".</summary>
+	[Parameter]
+	public string? PrimaryText { get; set; }
+
+	[Parameter]
+	public MokaIconDefinition? PrimaryIcon { get; set; }
+
+	[Parameter]
+	public bool PrimaryDisabled { get; set; }
+
+	/// <summary>Why the action is off, as its tooltip.</summary>
+	[Parameter]
+	public string? PrimaryTitle { get; set; }
+
+	[Parameter]
+	public EventCallback OnPrimary { get; set; }
+
+	/// <summary>Controls before the action, such as a switch that changes what the tab reads.</summary>
+	[Parameter]
+	public RenderFragment? Actions { get; set; }
+
+	/// <summary>A row under the header: where the reads come from and a short note.</summary>
+	[Parameter]
+	public RenderFragment? Subhead { get; set; }
+
+	/// <summary>The picked row's panel; null while nothing is picked.</summary>
+	[Parameter]
+	public RenderFragment? Detail { get; set; }
+
+	[Parameter]
+	public RenderFragment? ChildContent { get; set; }
+}

@@ -1,0 +1,106 @@
+@using Moka.Red.Primitives.Terminal
+
+@* What one command wrote, in a terminal: the command after a prompt, then stdout, then stderr in the error colour, which
+   is the honest order since the command wrote both. Copy takes all of it, the part past the display limit too. *@
+<MokaFlexbox Direction="MokaDirection.Row" Wrap Align="MokaAlign.Center" Gap="MokaSpacingScale.Sm">
+	@if (ExitCode is { } exit)
+	{
+		<MokaTag Text="@(exit == 0 ? "Exit 0" : $"Exit {exit.ToString(CultureInfo.InvariantCulture)}")" Color="@(exit == 0 ? MokaColor.Success : MokaColor.Error)" />
+	}
+	@if (Duration is { } duration)
+	{
+		<MokaText Element="span" Mono Size="MokaSize.Xs">@Seconds(duration)</MokaText>
+	}
+	@if (Note is { Length: > 0 } note)
+	{
+		<MokaText Element="span" Mono Size="MokaSize.Xs" Style="@TextStyles.Muted">@note</MokaText>
+	}
+	<span class="mk8s-gap"></span>
+	@if (All.Length > 0)
+	{
+		<CopyButton Text="@All" Label="@CopyLabel" Position="MokaTooltipPosition.BottomEnd" />
+	}
+</MokaFlexbox>
+<MokaTerminal Lines="Shown" Title="@Title" ShowCopyButton="false" MaxHeight="@MaxHeight" aria-label="@Title" />
+@if (Cut)
+{
+	<MokaCaption>Showing the first @Count(DisplayChars ?? 0) characters of @Count(All.Length). Copy takes all of it.</MokaCaption>
+}
+
+@code {
+	/// <summary>The terminal's title, such as the pod and container the command ran in.</summary>
+	[Parameter]
+	public string Title { get; set; } = "Output";
+
+	/// <summary>The command, drawn after a prompt as the first line; null draws no prompt line.</summary>
+	[Parameter]
+	public string? Command { get; set; }
+
+	[Parameter]
+	public string Output { get; set; } = "";
+
+	[Parameter]
+	public string Error { get; set; } = "";
+
+	/// <summary>The exit status as a tag; null shows none.</summary>
+	[Parameter]
+	public int? ExitCode { get; set; }
+
+	[Parameter]
+	public TimeSpan? Duration { get; set; }
+
+	/// <summary>A quiet line beside the status, such as the whole kubectl line that ran.</summary>
+	[Parameter]
+	public string? Note { get; set; }
+
+	[Parameter]
+	public string CopyLabel { get; set; } = "Copy output";
+
+	/// <summary>How much of the output the terminal draws; Copy always takes it all.</summary>
+	[Parameter]
+	public int? DisplayChars { get; set; }
+
+	[Parameter]
+	public string MaxHeight { get; set; } = "420px";
+
+	private string All => Error.Length == 0 ? Output : $"{Output}\n{Error}".Trim('\n');
+
+	private bool Cut => DisplayChars is { } limit && Output.Length + Error.Length > limit;
+
+	private IReadOnlyList<MokaTerminalLine> Shown
+	{
+		get
+		{
+			List<MokaTerminalLine> lines = [];
+			if (Command is { Length: > 0 } command)
+			{
+				lines.Add(new MokaTerminalLine(command, Prefix: "$"));
+			}
+
+			int left = DisplayChars ?? int.MaxValue;
+			left = Add(lines, Output, null, left);
+			Add(lines, Error, "var(--moka-color-error)", left);
+			return lines;
+		}
+	}
+
+	private static int Add(List<MokaTerminalLine> lines, string text, string? color, int left)
+	{
+		if (text.Length == 0 || left <= 0)
+		{
+			return left;
+		}
+
+		string shown = text.Length > left ? text[..left] : text;
+		foreach (string line in shown.TrimEnd('\n').Split('\n'))
+		{
+			lines.Add(new MokaTerminalLine(line.TrimEnd('\r'), color));
+		}
+
+		return left - shown.Length;
+	}
+
+	private static string Seconds(TimeSpan duration) => duration.TotalSeconds.ToString("0.0", CultureInfo.CurrentCulture) + " s";
+
+	private static string Count(int value) => value.ToString("N0", CultureInfo.CurrentCulture);
+}

@@ -7,9 +7,10 @@ using Mokaterm.UI.Common.ToolPages;
 namespace Moka.Kubernetes.Session;
 
 /// <summary>
-/// The log of one pod's container: the tail, <c>--tail=500 --timestamps</c>, in a table newest at the bottom, and a
-/// Follow toggle that asks kubectl every 3 seconds for what the newest line's timestamp has brought — a poll, never a
-/// stream, because every run through the session's command feature is one command to its end. The container list
+/// The log of one pod's container: the tail, <c>--tail=500 --timestamps</c>, in a terminal newest at the bottom, and a
+/// Follow toggle that asks kubectl every 3 seconds for what the newest line's timestamp has brought: a poll, never a
+/// stream, because every run through the session's command feature is one command to its end. A filter narrows the
+/// lines shown and nothing else: Follow, the counts and Copy log keep to the whole log. The container list
 /// comes from the pod's own JSON record, so the picker offers what the pod really runs. Previous reads the container's
 /// log from before its latest start, which is what a restarter wants.
 /// </summary>
@@ -29,6 +30,10 @@ public sealed partial class LogsSection : SessionSectionBase
 	private string? _error;
 	private LogLines _lines = new();
 	private IReadOnlyList<PodLogLine> _rows = [];
+	private string _filter = "";
+	private IReadOnlyList<PodLogLine>? _filteredFrom;
+	private string _filteredBy = "";
+	private IReadOnlyList<PodLogLine> _filtered = [];
 	private PagePoller? _poller;
 
 	[Inject]
@@ -37,10 +42,39 @@ public sealed partial class LogsSection : SessionSectionBase
 	private bool Offline => Session is not null && !Connected;
 
 	private string Summary => _lines.Count > 0
-		? $"{Count(_lines.Count)} lines of {_pod}{(_container is { Length: > 0 } container ? $" ({container})" : "")}{(_previous ? ", previous" : "")}"
+		? $"{Count(_lines.Count)} lines of {SourceText}"
 		: Busy ? "Reading the log" : "no log read yet";
 
 	private string? PrimaryTitle => !Connected ? "The session is not connected." : null;
+
+	private string SourceText => $"{_pod}{(_container is { Length: > 0 } container ? $" ({container})" : "")}{(_previous ? ", previous" : "")}";
+
+	private string LinesText => _filter.Length > 0
+		? $"{Count(Shown.Count)} of {Count(_rows.Count)} lines"
+		: $"{Count(_rows.Count)} lines";
+
+	private string NoMatchText => $"None of the {Count(_rows.Count)} lines holds \"{_filter}\".";
+
+	/// <summary>The lines the filter lets through, worked out again only when the lines or the filter changed.</summary>
+	private IReadOnlyList<PodLogLine> Shown
+	{
+		get
+		{
+			if (_filter.Length == 0)
+			{
+				return _rows;
+			}
+
+			if (!ReferenceEquals(_filteredFrom, _rows) || _filteredBy != _filter)
+			{
+				_filteredFrom = _rows;
+				_filteredBy = _filter;
+				_filtered = [.. _rows.Where(line => line.Raw.Contains(_filter, StringComparison.OrdinalIgnoreCase))];
+			}
+
+			return _filtered;
+		}
+	}
 
 	/// <summary>
 	/// The pods tab hands a pod over: its name and namespace land in the fields and the log is asked for at once. The
@@ -95,6 +129,8 @@ public sealed partial class LogsSection : SessionSectionBase
 	}
 
 	private static string ContainerLabel(string container) => container.Length > 0 ? container : "First container";
+
+	private void OnFilterChanged(string value) => _filter = value.Trim();
 
 	private Task OnPreviousChanged(bool value)
 	{

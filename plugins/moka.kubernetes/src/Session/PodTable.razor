@@ -1,0 +1,62 @@
+@using Moka.Kubernetes.Server
+
+@* The pods as kubectl listed them, one row each, the picked one marked. A row's status carries the dot the pods tab
+   colours it with, so a pod that needs looking at stands out without reading the word. *@
+<MokaTable TItem="PodRow"
+		   Items="Rows"
+		   ItemKey="row => (row.Namespace, row.Name)"
+		   Label="The cluster's pods"
+		   ShowToolbar="false"
+		   ShowPagination="false"
+		   Dense="true"
+		   FixedHeader="true"
+		   Height="100%"
+		   Loading="Loading"
+		   SelectedItems="SelectedSet"
+		   OnRowClick="OnPick"
+		   EmptyIcon="KubernetesIcons.Pod"
+		   EmptyTitle="No pods listed"
+		   EmptyText="@EmptyText">
+	<MokaColumn TItem="PodRow" Title="Namespace" Field="row => row.Namespace" Visible="AllNamespaces" />
+	<MokaColumn TItem="PodRow" Title="Name" Field="row => row.Name" Mono Class="mk8s-col-main">
+		<CellTemplate Context="row">
+			<span title="@row.Name">@row.Name</span>
+		</CellTemplate>
+	</MokaColumn>
+	<MokaColumn TItem="PodRow" Title="Ready" Field="row => row.Ready" Mono
+				SortComparer="@((a, b) => KubectlColumns.Compare(KubectlColumns.ReadyShare(a.Ready), KubectlColumns.ReadyShare(b.Ready)))" />
+	<MokaColumn TItem="PodRow" Title="Status" Field="row => row.Status">
+		<CellTemplate Context="row">
+			<MokaStatusDot Size="MokaSize.Xs" Color="@PodsSection.PodTone(row.Status)" Uppercase="false" Label="@row.Status" />
+		</CellTemplate>
+	</MokaColumn>
+	<MokaColumn TItem="PodRow" Title="Restarts" Field="row => row.Restarts" Mono
+				SortComparer="@((a, b) => KubectlColumns.Compare(KubectlColumns.Restarts(a.Restarts), KubectlColumns.Restarts(b.Restarts)))" />
+	<MokaColumn TItem="PodRow" Title="Age" Field="row => row.Age"
+				SortComparer="@((a, b) => KubectlColumns.Compare(KubectlColumns.AgeSeconds(a.Age), KubectlColumns.AgeSeconds(b.Age)))" />
+	<MokaColumn TItem="PodRow" Title="Node" Field="row => row.Node" Mono Class="mk8s-col-wide" />
+</MokaTable>
+
+@code {
+	[Parameter, EditorRequired]
+	public IReadOnlyList<PodRow> Rows { get; set; } = [];
+
+	/// <summary>The listing asked every namespace, so the rows carry one.</summary>
+	[Parameter]
+	public bool AllNamespaces { get; set; }
+
+	[Parameter]
+	public PodRow? Selected { get; set; }
+
+	[Parameter]
+	public EventCallback<PodRow> OnPick { get; set; }
+
+	[Parameter]
+	public bool Loading { get; set; }
+
+	private HashSet<PodRow> SelectedSet => Selected is { } row ? [row] : [];
+
+	private string EmptyText => AllNamespaces
+		? "kubectl listed no pods in any namespace, which an empty cluster and an account that may see none answer the same way."
+		: "kubectl listed no pods here. Only the namespace shown above was asked; turn on All namespaces for every one.";
+}

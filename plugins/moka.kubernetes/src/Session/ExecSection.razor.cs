@@ -23,6 +23,10 @@ public sealed partial class ExecSection : SessionSectionBase
 	private string? _error;
 	private ServerRun? _ran;
 
+	// What ran and where, as the fields were then: the fields can change while the output stays on screen.
+	private string _ranCommand = "";
+	private string _ranWhere = "";
+
 	private bool Offline => Session is not null && !Connected;
 
 	private string Summary => Busy
@@ -108,12 +112,19 @@ public sealed partial class ExecSection : SessionSectionBase
 			KubernetesSettings settings = Settings;
 			await ReadContainersAsync(run.Token);
 
+			string typed = _command;
+			string where = $"{_pod}{(_container is { Length: > 0 } container ? $" ({container})" : "")}";
 			ServerRun ended = await runner.RunAsync(
-				Kubectl.ExecCommand(settings, _pod, _container, _space, _command),
+				Kubectl.ExecCommand(settings, _pod, _container, _space, typed),
 				settings.CommandTimeout,
 				ServerRunner.RunOutputBytes,
 				cancellationToken: run.Token);
-			Post(() => _ran = ended);
+			Post(() =>
+			{
+				_ran = ended;
+				_ranCommand = typed;
+				_ranWhere = where;
+			});
 		}
 		catch (OperationCanceledException) when (run.IsCancellationRequested)
 		{
@@ -152,7 +163,4 @@ public sealed partial class ExecSection : SessionSectionBase
 			}
 		}
 	}
-
-	/// <summary>stdout and stderr of a run, one after the other, which is the honest order: the command wrote both.</summary>
-	private static string Combined(ServerRun run) => run.Error.Length == 0 ? run.Output : $"{run.Output}\n{run.Error}".Trim('\n');
 }

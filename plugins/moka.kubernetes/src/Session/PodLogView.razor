@@ -1,0 +1,31 @@
+@using Moka.Kubernetes.Server
+@using Moka.Red.Primitives.Terminal
+
+@* A container's log in a terminal, newest at the bottom and kept in view as lines arrive, each line led by its time in
+   this computer's clock. A line kubectl gave no time keeps no prefix. *@
+<MokaTerminal Lines="_shown" Title="@Title" ShowCopyButton="false" MaxHeight="none" aria-label="The container's log" />
+
+@code {
+	private IReadOnlyList<PodLogLine>? _source;
+	private IReadOnlyList<MokaTerminalLine> _shown = [];
+
+	[Parameter, EditorRequired]
+	public IReadOnlyList<PodLogLine> Lines { get; set; } = [];
+
+	[Parameter]
+	public string Title { get; set; } = "Log";
+
+	protected override void OnParametersSet()
+	{
+		if (ReferenceEquals(_source, Lines))
+		{
+			return;
+		}
+
+		_source = Lines;
+		_shown = [.. Lines.Select(line => new MokaTerminalLine(line.Text, Prefix: Stamp(line)))];
+	}
+
+	internal static string? Stamp(PodLogLine line) =>
+		line.Time is { } time ? time.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.CurrentCulture) : null;
+}

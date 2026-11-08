@@ -1,14 +1,13 @@
 using Moka.Kubernetes.Server;
 using Moka.Kubernetes.Settings;
-using Mokaterm.UI.Common.PluginUi;
 
 namespace Moka.Kubernetes.Session;
 
 /// <summary>
 /// The cluster at a glance, every part of it one kubectl answer: whether the server has kubectl, the client and
-/// server versions, the context its kubeconfig points at, the URLs <c>cluster-info</c> names, and the nodes. The tab
-/// says plainly when there is no cluster behind the kubectl — no kubeconfig, a refused API server — rather than
-/// drawing half an overview and calling it a cluster.
+/// server versions, the context its kubeconfig points at, the URLs <c>cluster-info</c> names, the nodes, and every
+/// namespace's pods for their states. The tab says plainly when there is no cluster behind the kubectl (no kubeconfig,
+/// a refused API server) rather than drawing half an overview and calling it a cluster.
 /// </summary>
 public sealed partial class OverviewSection : SessionSectionBase
 {
@@ -20,6 +19,8 @@ public sealed partial class OverviewSection : SessionSectionBase
 	private string? _context;
 	private IReadOnlyList<ClusterService> _services = [];
 	private IReadOnlyList<NodeRow> _nodes = [];
+	private IReadOnlyList<PodRow>? _pods;
+	private string? _podsProblem;
 
 	private bool Offline => Session is not null && !Connected;
 
@@ -34,31 +35,13 @@ public sealed partial class OverviewSection : SessionSectionBase
 				: _error is not null && _version.HasServer is false
 					? "kubectl answered with an error"
 					: _version.HasServer
-						? $"{_services.Count} services, {_nodes.Count} nodes"
+						? $"{_services.Count} services, {_nodes.Count} nodes{(_pods is { } pods ? $", {Count(pods.Count)} pods" : "")}"
 						: "kubectl reached no cluster";
 
 	private string? PrimaryTitle => !Connected
 		? "The session is not connected."
 		: Absent ? "This server has no kubectl."
 		: null;
-
-	/// <summary>The facts the overview shows, built from what the reads brought back.</summary>
-	private IReadOnlyList<Fact> Facts
-	{
-		get
-		{
-			List<Fact> facts =
-			[
-				new("kubectl", _version.Client is { } client ? $"kubectl {client}" : "version not reported", mono: true),
-			];
-			facts.Add(_version.HasServer
-				? new Fact("API server", _version.Server!, mono: true)
-				: new Fact("API server", [], Note: "kubectl reached no API server, so the cluster's own version is not known."));
-			facts.Add(new Fact("Context", _context is { Length: > 0 } context ? context : "not set", mono: true));
-			facts.AddRange(_services.Select(service => new Fact(service.Name, service.Url, mono: true, copyable: true)));
-			return facts;
-		}
-	}
 
 	protected override void OnSessionChange()
 	{
@@ -108,6 +91,8 @@ public sealed partial class OverviewSection : SessionSectionBase
 					_read = true;
 					_nodes = [];
 					_services = [];
+					_pods = null;
+					_podsProblem = null;
 				});
 				return;
 			}
@@ -124,6 +109,8 @@ public sealed partial class OverviewSection : SessionSectionBase
 
 			IReadOnlyList<ClusterService> services = [];
 			IReadOnlyList<NodeRow> nodes = [];
+			IReadOnlyList<PodRow>? pods = null;
+			string? podsProblem = null;
 			if (version.HasServer)
 			{
 				// Only a cluster that answered its version is worth asking for anything else.
@@ -142,6 +129,22 @@ public sealed partial class OverviewSection : SessionSectionBase
 				{
 					nodes = NodeListing.Parse(nodesRun.Output);
 				}
+
+				// Every namespace, because the states are the cluster's. An account kept to one namespace is refused
+				// this, which the pods card says rather than the tab's error line: the rest of the read stands.
+				ServerRun podsRun = await runner.RunAsync(
+					Kubectl.PodsCommand(settings, allNamespaces: true),
+					settings.CommandTimeout,
+					ServerRunner.ListingOutputBytes,
+					cancellationToken: run.Token);
+				if (podsRun.Ok)
+				{
+					pods = PodListing.Parse(podsRun.Output, hasNamespace: true);
+				}
+				else
+				{
+					podsProblem = KubectlErrors.Words(podsRun);
+				}
 			}
 
 			Post(() =>
@@ -151,6 +154,8 @@ public sealed partial class OverviewSection : SessionSectionBase
 				_context = context;
 				_services = services;
 				_nodes = nodes;
+				_pods = pods;
+				_podsProblem = podsProblem;
 				_error = problem;
 				_read = true;
 			});

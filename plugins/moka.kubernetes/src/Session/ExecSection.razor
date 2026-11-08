@@ -1,30 +1,29 @@
 @inherits SessionSectionBase
 @using Moka.Kubernetes.Server
-@using Moka.Kubernetes.Settings
-@using Mokaterm.UI.Common.PluginUi
 
-<ToolPageFrame Title="Command"
-			   Summary="@Summary"
-			   Loaded="true"
-			   PrimaryText="@(Running ? "Stop" : "Run")"
-			   PrimaryIcon="@(Running ? KubernetesIcons.Stop : KubernetesIcons.Start)"
-			   PrimaryDisabled="@(Busy && !Running)"
-			   PrimaryTitle="@PrimaryTitle"
-			   OnPrimary="PrimaryAsync">
-	<div class="mk8s-stack">
-		<div class="mk8s-group" @onkeydown="OnKeyAsync">
-			<div class="mk8s-fields">
-				<div class="mk8s-field mk8s-field--pod">
+<KubePage Title="Command"
+		  Said="@Summary"
+		  PrimaryText="@(Running ? "Stop" : "Run")"
+		  PrimaryIcon="@(Running ? KubernetesIcons.Stop : KubernetesIcons.Start)"
+		  PrimaryDisabled="@(Busy && !Running)"
+		  PrimaryTitle="@PrimaryTitle"
+		  OnPrimary="PrimaryAsync">
+	<Subhead>
+		<SessionOriginNote Session="Session" />
+	</Subhead>
+	<ChildContent>
+		<MokaCard Inner Title="Where and what" @onkeydown="OnKeyAsync">
+			<MokaFlexbox Gap="MokaSpacingScale.Md">
+				<MokaGrid MinColumn="200px" Gap="MokaSpacingScale.Sm">
 					<MokaTextField Label="Pod"
 								   Value="@_pod"
 								   ValueChanged="@(value => _pod = value ?? "")"
 								   Placeholder="web-6799fc88d1-kx4t2"
 								   Size="MokaSize.Sm"
+								   Mono
 								   spellcheck="false"
 								   autocomplete="off"
 								   Disabled="Busy" />
-				</div>
-				<div class="mk8s-field">
 					<MokaSelect TValue="string"
 								Label="Container"
 								Items="_containers"
@@ -35,28 +34,21 @@
 								Searchable="@(_containers.Count > 8)"
 								Size="MokaSize.Sm"
 								Disabled="Busy" />
-				</div>
-				<div class="mk8s-field mk8s-field--command">
-					<MokaTextField Label="Command"
-								   Value="@_command"
-								   ValueChanged="@(value => _command = value ?? "")"
-								   Placeholder="ls -l /data"
-								   Size="MokaSize.Sm"
-								   spellcheck="false"
-								   autocomplete="off"
-								   Disabled="Busy" />
-				</div>
-			</div>
-			<div class="mk8s-row">
-				<SessionOriginNote Session="Session" />
-				<span class="mk8s-gap"></span>
-			</div>
-			<div class="mk8s-row">
-				<span class="mk8s-note">
+				</MokaGrid>
+				<MokaTextField Label="Command"
+							   Value="@_command"
+							   ValueChanged="@(value => _command = value ?? "")"
+							   Placeholder="ls -l /data"
+							   Size="MokaSize.Sm"
+							   Mono
+							   spellcheck="false"
+							   autocomplete="off"
+							   Disabled="Busy" />
+				<MokaCallout Type="MokaCalloutType.Note" Title="One command, not a terminal">
 					Run a command: one command, sent with kubectl exec, run to its end inside the container and captured here. This is not a terminal - a shell, top or an editor that waits for input cannot work over it. For those, use the session's own terminal.
-				</span>
-			</div>
-		</div>
+				</MokaCallout>
+			</MokaFlexbox>
+		</MokaCard>
 
 		@if (_error is { } error)
 		{
@@ -69,19 +61,25 @@
 
 		@if (_ran is { } ran)
 		{
-			<OutputBox Title="Command output"
-					   Detail="@($"{_pod}{(_container is { Length: > 0 } container ? $" ({container})" : "")}")"
-					   Text="@(ran.Output.Length > 0 || ran.Error.Length > 0 ? Combined(ran) : null)"
-					   DisplayChars="16000" />
-			<div class="mk8s-counts">
-				<span class="mk8s-note">@ran.Command</span>
-				<span class="mk8s-gap"></span>
-				<CopyButton Text="@(Combined(ran))" Label="Copy output" />
-			</div>
+			<CommandOutputView Title="@_ranWhere"
+							   Command="@_ranCommand"
+							   Output="@ran.Output"
+							   Error="@ran.Error"
+							   ExitCode="ran.ExitCode"
+							   Duration="ran.Duration"
+							   Note="@ran.Command"
+							   DisplayChars="16000" />
 		}
-		else if (!Busy)
+		else if (Busy)
 		{
-			<p class="mk8s-note">Name a pod and a command; the pods tab can hand a pod over with its Run a command action.</p>
+			<MokaSkeleton Lines="4" />
 		}
-	</div>
-</ToolPageFrame>
+		else
+		{
+			<MokaEmptyState Icon="KubernetesIcons.Command"
+							Title="Nothing run yet"
+							Description="Name a pod and a command; the pods tab can hand a pod over with its Run a command action."
+							Compact />
+		}
+	</ChildContent>
+</KubePage>

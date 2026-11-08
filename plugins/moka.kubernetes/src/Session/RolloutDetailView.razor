@@ -1,0 +1,61 @@
+@using Moka.Kubernetes.Server
+
+@* Where one deployment's rollout stands, as kubectl's listing counted it: the pods it wants, then how many run the newest
+   revision, are available and stand ready, each step lit when it has every pod. *@
+<MokaChainCheck Steps="Steps" Label="@($"The rollout of {Row.Name}")" />
+<MokaDataList Dense Orientation="MokaDirection.Row" Items="Facts" />
+
+@code {
+	[Parameter, EditorRequired]
+	public DeploymentRow Row { get; set; } = default!;
+
+	private int? Wanted => KubectlColumns.ReadyCounts(Row.Ready)?.Wanted;
+
+	private IReadOnlyList<MokaChainStep> Steps =>
+	[
+		new(KubernetesIcons.Rollout, "Wanted", Wanted is null ? MokaChainTone.Wait : MokaChainTone.Ok, Wanted is { } wanted ? Pods(wanted) : "unknown", ""),
+		Step(KubernetesIcons.Pod, "Up to date", Count(Row.UpToDate)),
+		Step(MokaIcons.Status.CheckCircle, "Available", Count(Row.Available)),
+		Step(MokaIcons.Status.Check, "Ready", KubectlColumns.ReadyCounts(Row.Ready)?.Ready),
+	];
+
+	private IReadOnlyList<MokaDataListItem> Facts
+	{
+		get
+		{
+			List<MokaDataListItem> facts =
+			[
+				new("Ready", ValueContent: Mono(Row.Ready)),
+				new("Up to date", ValueContent: Mono(Row.UpToDate)),
+				new("Available", ValueContent: Mono(Row.Available)),
+				new("Age", Row.Age),
+			];
+			if (Row.Namespace.Length > 0)
+			{
+				facts.Insert(0, new("Namespace", ValueContent: Mono(Row.Namespace)));
+			}
+
+			return facts;
+		}
+	}
+
+	private MokaChainStep Step(MokaIconDefinition icon, string label, int? have)
+	{
+		if (have is not { } count || Wanted is not { } wanted)
+		{
+			return new(icon, label, MokaChainTone.Wait, "unknown", "");
+		}
+
+		return new(icon, label, count >= wanted ? MokaChainTone.Ok : MokaChainTone.Warn, $"{count} of {wanted}", "");
+	}
+
+	private static int? Count(string text) =>
+		int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out int count) ? count : null;
+
+	private static string Pods(int count) => count == 1 ? "1 pod" : $"{count.ToString(CultureInfo.CurrentCulture)} pods";
+
+	private static RenderFragment Mono(string text) => __builder =>
+	{
+		<MokaText Element="span" Mono Size="MokaSize.Xs">@text</MokaText>
+	};
+}

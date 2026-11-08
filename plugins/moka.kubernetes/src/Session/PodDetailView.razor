@@ -1,0 +1,104 @@
+@using Moka.Kubernetes.Server
+
+@* One pod's record as kubectl's JSON tells it, exactly as far as it goes: its facts, its conditions, then each
+   container with its image and what it is doing. *@
+<MokaDataList Dense Orientation="MokaDirection.Row" Items="Facts" />
+
+@if (Detail.Conditions.Count > 0)
+{
+	<MokaCard Inner Title="Conditions">
+		<MokaDataList Dense Orientation="MokaDirection.Row" Items="Conditions" />
+	</MokaCard>
+}
+
+@foreach (PodContainer container in Detail.Containers)
+{
+	<MokaCard @key="container.Name" Inner Title="@container.Name">
+		<HeaderActions>
+			<MokaTag Text="@container.StateWord" Color="@StateColor(container.State)" />
+		</HeaderActions>
+		<ChildContent>
+			<MokaDataList Dense Orientation="MokaDirection.Row" Items="@ContainerFacts(container)" />
+		</ChildContent>
+	</MokaCard>
+}
+
+@code {
+	[Parameter, EditorRequired]
+	public PodDetail Detail { get; set; } = default!;
+
+	private IReadOnlyList<MokaDataListItem> Facts =>
+	[
+		new("Phase", ValueContent: Tag(Detail.Phase.Length > 0 ? Detail.Phase : "unknown", PodsSection.PodTone(Detail.Phase))),
+		new("Node", ValueContent: Mono(Detail.Node.Length > 0 ? Detail.Node : "not scheduled yet")),
+		new("IP", ValueContent: Detail.Ip.Length > 0 ? Copyable(Detail.Ip, "Copy the pod's IP") : Mono("none yet")),
+		new("QoS", Detail.QosClass.Length > 0 ? Detail.QosClass : "not stated"),
+		new("Started", ValueContent: Mono(Detail.StartTime.Length > 0 ? Detail.StartTime : "not yet")),
+		new("Restart policy", Detail.RestartPolicy.Length > 0 ? Detail.RestartPolicy : "not stated"),
+	];
+
+	private IReadOnlyList<MokaDataListItem> Conditions =>
+	[
+		.. Detail.Conditions.Select(condition => new MokaDataListItem(
+			condition.Type.Length > 0 ? condition.Type : "condition",
+			ValueContent: ConditionValue(condition))),
+	];
+
+	private static IReadOnlyList<MokaDataListItem> ContainerFacts(PodContainer container)
+	{
+		List<MokaDataListItem> facts =
+		[
+			new("Image", ValueContent: Copyable(container.Image, $"Copy the {container.Name} image")),
+			new("Ready", ValueContent: Tag(container.Ready ? "ready" : "not ready", container.Ready ? MokaColor.Success : MokaColor.Warning)),
+			new("Restarts", ValueContent: Mono(container.Restarts.ToString(CultureInfo.CurrentCulture))),
+		];
+		if (container.Detail.Length > 0)
+		{
+			facts.Add(new("Detail", container.Detail));
+		}
+
+		return facts;
+	}
+
+	private static MokaColor StateColor(PodContainerState state) => state switch
+	{
+		PodContainerState.Running => MokaColor.Success,
+		PodContainerState.Waiting => MokaColor.Warning,
+		PodContainerState.Terminated => MokaColor.Secondary,
+		_ => MokaColor.Surface,
+	};
+
+	private static RenderFragment ConditionValue(PodCondition condition) => __builder =>
+	{
+		string note = condition.Reason.Length > 0
+			? condition.Reason + (condition.Message.Length > 0 ? $": {condition.Message}" : "")
+			: condition.Message;
+		<MokaFlexbox Gap="MokaSpacingScale.Xxs">
+			<span>
+				<MokaTag Text="@(condition.Status.Length > 0 ? condition.Status : "?")" Color="@(condition.Status == "True" ? MokaColor.Success : MokaColor.Warning)" />
+			</span>
+			@if (note.Length > 0)
+			{
+				<MokaCaption>@note</MokaCaption>
+			}
+		</MokaFlexbox>
+	};
+
+	private static RenderFragment Tag(string text, MokaColor color) => __builder =>
+	{
+		<MokaTag Text="@text" Color="color" />
+	};
+
+	private static RenderFragment Mono(string text) => __builder =>
+	{
+		<MokaText Element="span" Mono Size="MokaSize.Xs">@text</MokaText>
+	};
+
+	private static RenderFragment Copyable(string text, string label) => __builder =>
+	{
+		<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Xs">
+			<MokaText Element="span" Mono Size="MokaSize.Xs">@text</MokaText>
+			<CopyButton Text="@text" Label="@label" />
+		</MokaFlexbox>
+	};
+}

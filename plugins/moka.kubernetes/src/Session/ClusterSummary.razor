@@ -1,0 +1,143 @@
+@using Moka.Kubernetes.Server
+
+@* What one read of the cluster found: the headline figures, the pods by state, the services cluster-info names, and the
+   nodes. A cluster that never answered its version gets the figures that say so and nothing else. *@
+<MokaGrid MinColumn="160px" Gap="MokaSpacingScale.Sm">
+	<MokaStat Tile
+			  Label="API server"
+			  Value="@(Version.Server ?? "not reached")"
+			  Color="@(Version.HasServer ? null : MokaColor.Error)"
+			  HelpText="@(Version.HasServer ? null : "kubectl reached no API server, so the cluster's own version is not known.")" />
+	<MokaStat Tile Label="kubectl" Value="@(Version.Client ?? "version not reported")" />
+	<MokaStat Tile Label="Context" Value="@(Context is { Length: > 0 } context ? context : "not set")" />
+	@if (Version.HasServer)
+	{
+		<MokaStat Tile
+				  Label="Nodes ready"
+				  Value="@($"{ReadyNodes}/{Nodes.Count}")"
+				  Color="@(Nodes.Count > 0 && ReadyNodes == Nodes.Count ? MokaColor.Success : MokaColor.Warning)"
+				  HelpText="@NodesHelp" />
+		<MokaStat Tile
+				  Label="Pods"
+				  Value="@(Pods is { } pods ? Count(pods.Count) : "not listed")"
+				  Color="@(UnsettledPods > 0 ? MokaColor.Warning : null)"
+				  HelpText="@PodsHelp" />
+	}
+</MokaGrid>
+
+@if (Version.HasServer || Services.Count > 0)
+{
+	<MokaGrid MinColumn="300px" Gap="MokaSpacingScale.Md">
+		@if (Version.HasServer)
+		{
+			<MokaCard Inner Title="Pods by state">
+				@if (Pods is { Count: > 0 } pods)
+				{
+					<MokaDonutChart Segments="@StateShares(pods)" Size="MokaSize.Md" Thickness="22" Label="@($"{Count(pods.Count)} pods by state")">
+						<MokaStat Value="@Count(pods.Count)" Label="pods" Align="MokaTextAlign.Center" Size="MokaSize.Sm" />
+					</MokaDonutChart>
+				}
+				else if (PodsProblem is { } problem)
+				{
+					<MokaCaption>kubectl would not list the pods of every namespace: @problem</MokaCaption>
+				}
+				else
+				{
+					<MokaCaption>kubectl listed no pods in any namespace, which an empty cluster and an account that may see none answer the same way.</MokaCaption>
+				}
+			</MokaCard>
+		}
+		@if (Services.Count > 0)
+		{
+			<MokaCard Inner Title="Services">
+				<MokaDataList Dense Orientation="MokaDirection.Row" Items="ServiceItems" />
+			</MokaCard>
+		}
+	</MokaGrid>
+}
+
+@if (Version.HasServer)
+{
+	<MokaCard Inner Title="Nodes" Subtitle="From kubectl get nodes.">
+		<MokaTable TItem="NodeRow"
+				   Items="Nodes"
+				   ItemKey="node => node.Name"
+				   Label="The cluster's nodes"
+				   ShowToolbar="false"
+				   ShowPagination="false"
+				   Dense="true"
+				   Bleed="true"
+				   EmptyIcon="KubernetesIcons.Overview"
+				   EmptyTitle="No nodes listed"
+				   EmptyText="kubectl listed no nodes, which a cluster without any, or an account that may see none, answers the same way.">
+			<MokaColumn TItem="NodeRow" Title="Name" Field="node => node.Name" Mono />
+			<MokaColumn TItem="NodeRow" Title="Status" Field="node => node.Status">
+				<CellTemplate Context="node">
+					<MokaStatusDot Size="MokaSize.Xs" Color="@(node.Ready ? MokaColor.Success : MokaColor.Error)" Uppercase="false" Label="@node.Status" />
+				</CellTemplate>
+			</MokaColumn>
+			<MokaColumn TItem="NodeRow" Title="Roles" Field="node => node.Roles" />
+			<MokaColumn TItem="NodeRow" Title="Age" Field="node => node.Age" SortComparer="@((a, b) => KubectlColumns.Compare(KubectlColumns.AgeSeconds(a.Age), KubectlColumns.AgeSeconds(b.Age)))" />
+			<MokaColumn TItem="NodeRow" Title="Version" Field="node => node.Version" Mono />
+		</MokaTable>
+	</MokaCard>
+}
+
+@code {
+	[Parameter, EditorRequired]
+	public KubectlVersion Version { get; set; } = new(null, null);
+
+	[Parameter]
+	public string? Context { get; set; }
+
+	[Parameter]
+	public IReadOnlyList<ClusterService> Services { get; set; } = [];
+
+	[Parameter]
+	public IReadOnlyList<NodeRow> Nodes { get; set; } = [];
+
+	/// <summary>Every namespace's pods, or null when kubectl would not list them.</summary>
+	[Parameter]
+	public IReadOnlyList<PodRow>? Pods { get; set; }
+
+	/// <summary>Why the pods could not be listed, in kubectl's words as the tool puts them.</summary>
+	[Parameter]
+	public string? PodsProblem { get; set; }
+
+	private int ReadyNodes => Nodes.Count(node => node.Ready);
+
+	private int UnsettledPods => Pods?.Count(pod => !pod.Settled) ?? 0;
+
+	private string NodesHelp => Nodes.Count == 0
+		? "none listed"
+		: ReadyNodes == Nodes.Count ? "every node takes work" : $"{Count(Nodes.Count - ReadyNodes)} not ready";
+
+	private string? PodsHelp => Pods is null
+		? null
+		: UnsettledPods > 0 ? $"{Count(UnsettledPods)} to look at" : "in every namespace";
+
+	private IReadOnlyList<MokaDataListItem> ServiceItems =>
+		[.. Services.Select(service => new MokaDataListItem(service.Name, ValueContent: Link(service)))];
+
+	private static RenderFragment Link(ClusterService service) => __builder =>
+	{
+		<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Xs">
+			<MokaText Element="span" Mono Size="MokaSize.Xs">@service.Url</MokaText>
+			<CopyButton Text="@service.Url" Label="@($"Copy the {service.Name} address")" />
+		</MokaFlexbox>
+	};
+
+	/// <summary>One share per status kubectl words, the busiest first, coloured as the pods tab colours them.</summary>
+	internal static IReadOnlyList<MokaDonutSegment> StateShares(IReadOnlyList<PodRow> pods) =>
+		[.. pods.GroupBy(pod => pod.Status, StringComparer.Ordinal)
+			.OrderByDescending(group => group.Count())
+			.ThenBy(group => group.Key, StringComparer.Ordinal)
+			.Select(group => new MokaDonutSegment
+			{
+				Name = $"{group.Key} {Count(group.Count())}",
+				Value = group.Count(),
+				Color = PodsSection.PodTone(group.Key),
+			})];
+
+	private static string Count(int value) => value.ToString("N0", CultureInfo.CurrentCulture);
+}

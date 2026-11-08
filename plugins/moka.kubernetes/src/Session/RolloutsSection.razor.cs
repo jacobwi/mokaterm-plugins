@@ -3,7 +3,6 @@ using Moka.Kubernetes.Server;
 using Moka.Kubernetes.Settings;
 using Moka.Red.Core.Enums;
 using Mokaterm.Abstractions.Interaction;
-using Mokaterm.UI.Common.PluginUi;
 
 namespace Moka.Kubernetes.Session;
 
@@ -46,10 +45,6 @@ public sealed partial class RolloutsSection : SessionSectionBase
 		: Settings.Namespace.Length > 0
 			? $"Reading the {Settings.Namespace} namespace. Turn on All namespaces for every one."
 			: "Reading only the namespace kubectl defaults to, which is the context's own. Turn on All namespaces for every one.";
-
-	private string Columns => _all
-		? "--mk8s-columns: 0.9fr 1.6fr 70px 80px 90px 70px"
-		: "--mk8s-columns: 1.6fr 70px 80px 90px 70px";
 
 	private MokaColor DotColor => _selected is { } row && !row.FullyReady ? MokaColor.Warning : MokaColor.Success;
 
@@ -257,23 +252,5 @@ public sealed partial class RolloutsSection : SessionSectionBase
 		{
 			EndRun(run);
 		}
-	}
-
-	/// <summary>The detail panel's facts: the counts of the rollout as kubectl printed them.</summary>
-	internal static IReadOnlyList<Fact> DetailFacts(DeploymentRow row)
-	{
-		List<Fact> facts =
-		[
-			new("Ready", row.Ready, mono: true),
-			new("Up to date", row.UpToDate, mono: true),
-			new("Available", row.Available, mono: true),
-			new("Age", row.Age),
-		];
-		if (row.Namespace.Length > 0)
-		{
-			facts.Insert(0, new Fact("Namespace", row.Namespace, mono: true));
-		}
-
-		return facts;
 	}
 }

@@ -1,0 +1,66 @@
+@using Moka.Kubernetes.Server
+
+@* The deployments as kubectl listed them, one row each, the picked one marked, with how many of each one's pods stand
+   ready drawn as a bar beside the count. *@
+<MokaTable TItem="DeploymentRow"
+		   Items="Rows"
+		   ItemKey="row => (row.Namespace, row.Name)"
+		   Label="The cluster's deployments"
+		   ShowToolbar="false"
+		   ShowPagination="false"
+		   Dense="true"
+		   FixedHeader="true"
+		   Height="100%"
+		   Loading="Loading"
+		   SelectedItems="SelectedSet"
+		   OnRowClick="OnPick"
+		   EmptyIcon="KubernetesIcons.Rollout"
+		   EmptyTitle="No deployments listed"
+		   EmptyText="kubectl listed no deployments here, which a namespace without any and an account that may see none answer the same way.">
+	<MokaColumn TItem="DeploymentRow" Title="Namespace" Field="row => row.Namespace" Visible="AllNamespaces" />
+	<MokaColumn TItem="DeploymentRow" Title="Name" Field="row => row.Name" Class="mk8s-col-main">
+		<CellTemplate Context="row">
+			<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Sm">
+				<MokaStatusDot Size="MokaSize.Xs" Color="@(row.FullyReady ? MokaColor.Success : MokaColor.Warning)" />
+				<MokaText Element="span" Mono Size="MokaSize.Xs" Truncate title="@row.Name">@row.Name</MokaText>
+			</MokaFlexbox>
+		</CellTemplate>
+	</MokaColumn>
+	<MokaColumn TItem="DeploymentRow" Title="Ready" Field="row => row.Ready" MinWidth="140px"
+				SortComparer="@((a, b) => KubectlColumns.Compare(KubectlColumns.ReadyShare(a.Ready), KubectlColumns.ReadyShare(b.Ready)))">
+		<CellTemplate Context="row">
+			<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Sm">
+				<MokaProgress Segments="@ReadyBar(row)" Thin Style="width: 64px" aria-label="@($"{row.Ready} pods ready")" />
+				<MokaText Element="span" Mono Size="MokaSize.Xs">@row.Ready</MokaText>
+			</MokaFlexbox>
+		</CellTemplate>
+	</MokaColumn>
+	<MokaColumn TItem="DeploymentRow" Title="Up to date" Field="row => row.UpToDate" Mono Class="mk8s-col-wide" />
+	<MokaColumn TItem="DeploymentRow" Title="Available" Field="row => row.Available" Mono Class="mk8s-col-wide" />
+	<MokaColumn TItem="DeploymentRow" Title="Age" Field="row => row.Age"
+				SortComparer="@((a, b) => KubectlColumns.Compare(KubectlColumns.AgeSeconds(a.Age), KubectlColumns.AgeSeconds(b.Age)))" />
+</MokaTable>
+
+@code {
+	[Parameter, EditorRequired]
+	public IReadOnlyList<DeploymentRow> Rows { get; set; } = [];
+
+	/// <summary>The listing asked every namespace, so the rows carry one.</summary>
+	[Parameter]
+	public bool AllNamespaces { get; set; }
+
+	[Parameter]
+	public DeploymentRow? Selected { get; set; }
+
+	[Parameter]
+	public EventCallback<DeploymentRow> OnPick { get; set; }
+
+	[Parameter]
+	public bool Loading { get; set; }
+
+	private HashSet<DeploymentRow> SelectedSet => Selected is { } row ? [row] : [];
+
+	// One segment rather than Value, because only a segment takes a colour of its own.
+	private static IReadOnlyList<MokaProgressSegment> ReadyBar(DeploymentRow row) =>
+		[new((KubectlColumns.ReadyShare(row.Ready) ?? 0) * 100, row.FullyReady ? MokaColor.Success : MokaColor.Warning)];
+}
