@@ -1,0 +1,33 @@
+/* The tool is wide, so the dialog or window has a fixed height and this fills it; each tab scrolls its own parts. */
+.mn-tool {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	min-height: 360px;
+	min-width: 0;
+	padding: var(--moka-spacing-md) var(--moka-spacing-lg);
+	container-type: inline-size;
+	container-name: mn-tool mt-tool-nav;
+}
+
+@container mn-tool (max-width: 559px) {
+	.mn-tool {
+		padding: var(--moka-spacing-sm);
+	}
+}
+
+/* Moka's bleeding table reaches out by a full card's padding, but an inner card is padded less, so the overhang would cut
+   off the last row. Reach out by the inner card's own padding instead. */
+.mn-tool ::deep .moka-card--inner > .moka-card-body > .moka-table-wrapper--bleed {
+	margin: 0 calc(-1 * var(--moka-inner-padding)) calc(-1 * var(--moka-inner-padding));
+}
+
+.mn-tool ::deep .moka-card--inner > .moka-card-body > .moka-table-wrapper--bleed > .moka-table-container > .moka-table > thead > tr > th:first-child,
+.mn-tool ::deep .moka-card--inner > .moka-card-body > .moka-table-wrapper--bleed > .moka-table-container > .moka-table > tbody > tr > td:first-child {
+	padding-inline-start: var(--moka-inner-padding) !important;
+}
+
+.mn-tool ::deep .moka-card--inner > .moka-card-body > .moka-table-wrapper--bleed > .moka-table-container > .moka-table > thead > tr > th:last-child,
+.mn-tool ::deep .moka-card--inner > .moka-card-body > .moka-table-wrapper--bleed > .moka-table-container > .moka-table > tbody > tr > td:last-child {
+	padding-inline-end: var(--moka-inner-padding) !important;
+}

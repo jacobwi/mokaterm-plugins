@@ -1,32 +1,61 @@
-@using System.Globalization
 @using Moka.Network.Lookup
 
-@* One race's outcome: every resolver that answered, fastest first, then the ones that failed with the reason beside
-   them. A time covers the whole try behind a resolver's name, fallback servers included. *@
-<div class="mn-table mn-table--race" role="table" aria-label="Resolver race">
-	<div class="mn-tr mn-th" role="row">
-		<span role="columnheader">Resolver</span>
-		<span role="columnheader">Answer</span>
-		<span class="mn-td--end" role="columnheader">Time</span>
-	</div>
-	@foreach (ResolverRaceResult row in Results)
-	{
-		<div class="mn-tr" role="row">
-			<span class="mn-td mn-td--mono mn-td--dim" role="cell">@row.Entry.Label</span>
-			<span class="@(row.Result is null ? "mn-td mn-td--mono mn-td--bad" : "mn-td mn-td--mono")" role="cell" title="@row.Failure">
-				@(row.Result is { } result ? ResolverRace.AnswerSummary(result) : row.Failure)
-			</span>
-			<span class="mn-td mn-td--mono mn-td--end" role="cell">@Milliseconds(row.Elapsed)</span>
-		</div>
-	}
-</div>
+@* One race's outcome: the answering resolvers' times as bars, and every resolver in a table, fastest first, then the
+   ones that failed with the reason beside them. A time covers the whole try behind a resolver's name, fallback
+   servers included. *@
+<MokaCard Inner Outlined Title="Resolver race" Subtitle="@Question">
+	<MokaFlexbox Gap="MokaSpacingScale.Sm">
+		<MokaGrid MinColumn="320px" Gap="MokaSpacingScale.Md" AlignItems="MokaAlign.Start">
+			@if (Answered.Count > 0)
+			{
+				<MokaBarChart Series="@TimeSeries"
+							  Labels="@TimeLabels"
+							  TickFormat="0.#"
+							  ShowLegend="false"
+							  Label="How long each resolver took to answer, in milliseconds" />
+			}
+			<MokaTable TItem="ResolverRaceResult"
+					   Items="Results"
+					   ItemKey="@(row => row.Entry.Label)"
+					   Label="Resolver race"
+					   ShowToolbar="false"
+					   ShowPagination="false">
+				<MokaColumn TItem="ResolverRaceResult" Title="Resolver" Field="@(row => row.Entry.Label)" />
+				<MokaColumn TItem="ResolverRaceResult" Title="Answer" Field="@(row => row.Result is { } result ? ResolverRace.AnswerSummary(result) : row.Failure)" Mono>
+					<CellTemplate Context="row">
+						@if (row.Result is { } result)
+						{
+							@ResolverRace.AnswerSummary(result)
+						}
+						else
+						{
+							<MokaText Element="span" Color="MokaColor.Error">@row.Failure</MokaText>
+						}
+					</CellTemplate>
+				</MokaColumn>
+				<MokaColumn TItem="ResolverRaceResult" Title="Time" Field="@(row => row.Elapsed)" Mono Align="MokaTextAlign.Right" Width="96px">
+					<CellTemplate Context="row">@NetworkFormat.Milliseconds(row.Elapsed)</CellTemplate>
+				</MokaColumn>
+			</MokaTable>
+		</MokaGrid>
+		<MokaCaption>Every resolver got the same question at the same moment. Those that answered are ranked fastest first; each time covers every server tried behind that name.</MokaCaption>
+	</MokaFlexbox>
+</MokaCard>
 
 @code {
 	[Parameter, EditorRequired]
 	public IReadOnlyList<ResolverRaceResult> Results { get; set; } = [];
 
-	/// <summary>The same round trip print every tab uses: one decimal under 10 ms, whole milliseconds above.</summary>
-	private static string Milliseconds(TimeSpan elapsed) => elapsed.TotalMilliseconds < 10
-		? elapsed.TotalMilliseconds.ToString("0.0", CultureInfo.CurrentCulture) + " ms"
-		: elapsed.TotalMilliseconds.ToString("N0", CultureInfo.CurrentCulture) + " ms";
+	/// <summary>The question every resolver was asked, such as "example.com A".</summary>
+	[Parameter]
+	public string? Question { get; set; }
+
+	private IReadOnlyList<ResolverRaceResult> Answered => [.. Results.Where(row => row.Answered)];
+
+	private IReadOnlyList<MokaBarSeries> TimeSeries =>
+	[
+		new MokaBarSeries { Name = "Milliseconds", Values = [.. Answered.Select(row => Math.Round(row.Elapsed.TotalMilliseconds, 1))] },
+	];
+
+	private IReadOnlyList<string> TimeLabels => [.. Answered.Select(row => NetworkFormat.ResolverName(row.Entry.Label))];
 }

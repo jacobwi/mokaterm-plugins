@@ -1,26 +1,52 @@
 @inherits SessionSectionBase
 @using Moka.Network.Server
 
-<ToolPageFrame Title="Resolve"
-			   Summary="@Summary"
-			   Loaded="true"
-			   PrimaryText="@PrimaryText"
-			   PrimaryIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Start)"
-			   PrimaryDisabled="@(Busy && !Running)"
-			   PrimaryTitle="@PrimaryTitle"
-			   OnPrimary="PrimaryAsync">
-	<div class="mn-stack">
-		<div class="mn-group" @onkeydown="OnKeyAsync">
-			<div class="mn-fields">
-				<div class="mn-field mn-field--host">
-					<MokaTextField Label="Host" Value="@_host" ValueChanged="@(value => _host = value ?? "")" Placeholder="example.com or 192.0.2.10" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" Disabled="NotReady" />
-				</div>
-			</div>
-			<div class="mn-row">
-				<SessionOriginNote Session="Session" />
-				<span class="mn-note">An address asks for its name; a name asks for the addresses the server sees.</span>
-			</div>
-		</div>
+<NetworkPage Title="Resolve" Said="@Summary">
+	<Actions>
+		<Hint Text="@PrimaryTitle">
+			<MokaButton Variant="MokaVariant.Filled"
+						Color="MokaColor.Primary"
+						Size="MokaSize.Sm"
+						StartIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Start)"
+						Disabled="@(Busy && !Running)"
+						OnClick="PrimaryAsync">@PrimaryText</MokaButton>
+		</Hint>
+	</Actions>
+	<Origin>
+		<SessionOriginNote Session="Session" />
+	</Origin>
+	<ChildContent>
+		<MokaGrid MinColumn="400px" Gap="MokaSpacingScale.Md">
+			<MokaCard Inner Outlined Title="Name or address">
+				<MokaFlexbox Gap="MokaSpacingScale.Sm">
+					<div @onkeydown="OnKeyAsync">
+						<MokaTextField Label="Host"
+									   Value="@_host"
+									   ValueChanged="@(value => _host = value ?? "")"
+									   Placeholder="example.com or 192.0.2.10"
+									   HelperText="An address asks for its name; a name asks for the addresses the server sees."
+									   Size="MokaSize.Sm"
+									   spellcheck="false"
+									   autocomplete="off"
+									   Disabled="NotReady" />
+					</div>
+				</MokaFlexbox>
+			</MokaCard>
+			@if (_nameservers.Count > 0)
+			{
+				<MokaCard Inner Outlined Title="The server asks these resolvers" Subtitle="From its /etc/resolv.conf">
+					<MokaFlexbox Gap="MokaSpacingScale.Sm">
+						<MokaFlexbox Direction="MokaDirection.Row" Wrap GapValue="6px">
+							@for (int index = 0; index < _nameservers.Count; index++)
+							{
+								int server = index;
+								<MokaTag Text="@_nameservers[server].ToString()" Color="MokaColor.Info" @key="server" />
+							}
+						</MokaFlexbox>
+					</MokaFlexbox>
+				</MokaCard>
+			}
+		</MokaGrid>
 
 		@if (_error is { } error)
 		{
@@ -35,43 +61,20 @@
 			<MokaAlert Severity="MokaToastSeverity.Info" Dense>This server has no getent, so its resolver cannot be asked this way.</MokaAlert>
 		}
 
-		@if (_nameservers.Count > 0)
+		@if (Running)
 		{
-			<div class="mn-results">
-				<span class="mn-label">The server asks these resolvers</span>
-				<div class="mn-row">
-					@for (int index = 0; index < _nameservers.Count; index++)
-					{
-						int server = index;
-						<span class="mn-td mn-td--mono" @key="server">@_nameservers[server].ToString()</span>
-					}
-				</div>
-			</div>
+			<RunningCard Text="@(_target ?? "Asking the server")" />
 		}
-
-		@if (_target is { } target)
+		else if (_target is { } target)
 		{
-			<div class="mn-results">
-				<span class="mn-note mn-mono">@target</span>
-				@if (_rows.Count > 0)
-				{
-					<div class="mn-table mn-table--scroll" style="--mn-columns: 1fr 60px 1fr" role="table" aria-label="The server's answer">
-						<div class="mn-tr mn-th" role="row">
-							<span role="columnheader">Address</span>
-							<span role="columnheader">Family</span>
-							<span role="columnheader">@(_reverse ? "Name" : "Names")</span>
-						</div>
-						@foreach (GetentHost row in _rows)
-						{
-							<div class="mn-tr" role="row">
-								<span class="mn-td mn-td--mono" role="cell">@row.Address.ToString()</span>
-								<span class="mn-td mn-td--dim" role="cell">@(row.IsIPv6 ? "IPv6" : "IPv4")</span>
-								<span class="mn-td mn-td--mono" role="cell">@NameOf(row)</span>
-							</div>
-						}
-					</div>
-				}
-			</div>
+			<GetentAnswerView Target="@target" Rows="_rows" Reverse="_reverse" />
 		}
-	</div>
-</ToolPageFrame>
+		else if (Connected && !_absent && _error is null)
+		{
+			<MokaEmptyState Icon="NetworkIcons.Dns"
+							Title="Ask the server's own resolver"
+							Description="getent hosts on the server, so the answer is what the server sees: its hosts file, its search domains and its resolvers."
+							Compact />
+		}
+	</ChildContent>
+</NetworkPage>

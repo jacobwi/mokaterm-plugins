@@ -1,0 +1,38 @@
+@using Moka.Network.Server
+
+@* What getent on the server answered: a line naming the question, and every address with its family and names. A miss
+   is an answer too, so it is said in words rather than drawn as an empty table. *@
+<MokaText Element="div" Mono>@Target</MokaText>
+
+@if (Rows.Count > 0)
+{
+	<MokaTable TItem="GetentHost"
+			   Items="Rows"
+			   ItemKey="@(row => row.Address)"
+			   Label="The server's answer"
+			   ShowToolbar="false"
+			   ShowPagination="false">
+		<MokaColumn TItem="GetentHost" Title="Address" Field="@(row => row.Address.ToString())" Mono />
+		<MokaColumn TItem="GetentHost" Title="Family" Field="@(row => row.IsIPv6 ? "IPv6" : "IPv4")" Width="96px">
+			<CellTemplate Context="row">
+				<MokaTag Text="@(row.IsIPv6 ? "IPv6" : "IPv4")" Color="@(row.IsIPv6 ? MokaColor.Secondary : MokaColor.Info)" />
+			</CellTemplate>
+		</MokaColumn>
+		<MokaColumn TItem="GetentHost" Title="@(Reverse ? "Name" : "Names")" Field="@NameOf" Mono />
+	</MokaTable>
+}
+
+@code {
+	/// <summary>What was asked and how it came out, such as "example.com on the server".</summary>
+	[Parameter, EditorRequired]
+	public string Target { get; set; } = "";
+
+	[Parameter, EditorRequired]
+	public IReadOnlyList<GetentHost> Rows { get; set; } = [];
+
+	/// <summary>An address was asked for its name, so each row's name is the answer.</summary>
+	[Parameter]
+	public bool Reverse { get; set; }
+
+	private static string NameOf(GetentHost host) => host.Aliases.Count > 0 ? string.Join(' ', [host.Name, .. host.Aliases]) : host.Name;
+}

@@ -1,0 +1,171 @@
+@using System.Net
+@using Moka.Network.Echo
+
+@* A trace as it stands: the hop count and how it ended as tiles, each hop's best round trip as a bar, and every hop in
+   a table with its routers, their names and each probe's time. *@
+@if (Target is { } target)
+{
+	<MokaText Element="div" Mono>@target</MokaText>
+}
+
+@if (Hops.Count > 0)
+{
+	<MokaGrid MinColumn="120px" Gap="MokaSpacingScale.Sm" aria-label="Summary">
+		<MokaStat Tile Value="@NetworkFormat.Count(Hops.Count)" Label="Hops" />
+		<MokaStat Tile Value="@Outcome" Label="Destination" Color="@OutcomeColor" />
+		<MokaStat Tile Value="@NetworkFormat.Milliseconds(Hops.LastOrDefault(hop => hop.Reached) is { } reached ? Best(reached) : null)" Label="Round trip there" />
+		<MokaStat Tile Value="@NetworkFormat.Count(Hops.Count(hop => hop.Silent))" Label="Silent hops" />
+	</MokaGrid>
+
+	@if (Hops.Any(hop => Best(hop) is not null))
+	{
+		<MokaCard Inner Outlined Title="Latency per hop" Subtitle="The best of each hop's probes; a silent hop has no bar">
+			<MokaFlexbox Gap="MokaSpacingScale.Sm">
+				<MokaBarChart Series="@LatencySeries" Labels="@LatencyLabels" TickFormat="0.#" ShowLegend="false" Label="Best round trip per hop, in milliseconds" />
+			</MokaFlexbox>
+		</MokaCard>
+	}
+
+	<MokaTable TItem="TraceHop"
+			   Items="Hops"
+			   ItemKey="@(hop => hop.Ttl)"
+			   Label="Hops"
+			   ShowToolbar="false"
+			   ShowPagination="false">
+		<MokaColumn TItem="TraceHop" Title="Hop" Field="@(hop => hop.Ttl)" Mono Width="56px" />
+		<MokaColumn TItem="TraceHop" Title="Address" Field="@(hop => hop.Addresses.FirstOrDefault()?.ToString())" Sortable="false">
+			<CellTemplate Context="hop">
+				<MokaFlexbox GapValue="2px">
+					@if (hop.Addresses.Count == 0)
+					{
+						<MokaCaption>@(hop.AddressMissing ? "answered, address not given" : hop.Silent ? "no answer" : "")</MokaCaption>
+					}
+					@foreach (IPAddress address in hop.Addresses)
+					{
+						<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Wrap GapValue="6px">
+							<MokaText Element="span" Mono>@address</MokaText>
+							@if (Names.TryGetValue(address, out string? name))
+							{
+								<MokaCaption>@name</MokaCaption>
+							}
+						</MokaFlexbox>
+					}
+					@if (hop.Reached)
+					{
+						<span><MokaTag Text="Destination" Color="MokaColor.Success" /></span>
+					}
+				</MokaFlexbox>
+			</CellTemplate>
+		</MokaColumn>
+		@for (int probe = 0; probe < ProbesPerHop; probe++)
+		{
+			int index = probe;
+			<MokaColumn TItem="TraceHop" Title="@((index + 1).ToString(CultureInfo.CurrentCulture))" Mono Align="MokaTextAlign.Right" Width="80px" Sortable="false">
+				<CellTemplate Context="hop">
+					@ProbeCell(index < hop.Probes.Count ? hop.Probes[index] : null)
+				</CellTemplate>
+			</MokaColumn>
+		}
+	</MokaTable>
+}
+
+@if (End is { } end)
+{
+	<MokaAlert Severity="@EndSeverity(end)" Dense>@EndText(end)</MokaAlert>
+}
+
+@if (Hops.Any(hop => hop.AddressMissing))
+{
+	<MokaCallout Type="MokaCalloutType.Note">Some answers did not say which router sent them, so those hops show no address rather than a guessed one. On Linux without permission to send ICMP itself, .NET runs the ping program, which can leave the router out.</MokaCallout>
+}
+
+@code {
+	/// <summary>Who is being traced: "Tracing example.com (192.0.2.10), at most 30 hops".</summary>
+	[Parameter]
+	public string? Target { get; set; }
+
+	[Parameter, EditorRequired]
+	public IReadOnlyList<TraceHop> Hops { get; set; } = [];
+
+	/// <summary>The names found for the hops' addresses so far; a slow answer fills in later.</summary>
+	[Parameter]
+	public IReadOnlyDictionary<IPAddress, string> Names { get; set; } = new Dictionary<IPAddress, string>();
+
+	/// <summary>How the trace ended, or null while it runs.</summary>
+	[Parameter]
+	public TraceEnd? End { get; set; }
+
+	/// <summary>The trace was stopped by hand, which is how it ended whatever the last hop said.</summary>
+	[Parameter]
+	public bool Stopped { get; set; }
+
+	[Parameter]
+	public IPAddress? Destination { get; set; }
+
+	[Parameter]
+	public int ProbesPerHop { get; set; } = TraceOptions.DefaultProbesPerHop;
+
+	private IReadOnlyList<TraceHop> Timed => [.. Hops.Where(hop => Best(hop) is not null)];
+
+	private IReadOnlyList<MokaBarSeries> LatencySeries =>
+	[
+		new MokaBarSeries { Name = "Milliseconds", Values = [.. Timed.Select(hop => Math.Round(Best(hop)!.Value, 1))] },
+	];
+
+	private IReadOnlyList<string> LatencyLabels => [.. Timed.Select(hop => hop.Ttl.ToString(CultureInfo.CurrentCulture))];
+
+	private string Outcome => (End, Stopped) switch
+	{
+		(null, _) when Hops.Any(hop => hop.Reached) => "reached",
+		(null, _) => "tracing",
+		(_, true) => "stopped",
+		(TraceEnd.Reached, _) => "reached",
+		(TraceEnd.Unreachable, _) => "unreachable",
+		_ => "not reached",
+	};
+
+	private MokaColor? OutcomeColor => Outcome switch
+	{
+		"reached" => MokaColor.Success,
+		"unreachable" or "not reached" => MokaColor.Error,
+		_ => null,
+	};
+
+	/// <summary>The fastest probe of a hop that came back with a time, or null for a hop with none.</summary>
+	public static double? Best(TraceHop hop)
+	{
+		ArgumentNullException.ThrowIfNull(hop);
+		double[] times = [.. hop.Probes.Select(probe => probe.Milliseconds).OfType<double>()];
+		return times.Length > 0 ? times.Min() : null;
+	}
+
+	private static RenderFragment ProbeCell(TraceProbe? probe) => probe switch
+	{
+		null => _ => { },
+		{ Milliseconds: { } milliseconds } => builder => builder.AddContent(0, NetworkFormat.Milliseconds(milliseconds)),
+		{ Status: EchoStatus.TimedOut } => @<Hint Text="No answer in time"><MokaCaption>*</MokaCaption></Hint>,
+		{ Status: EchoStatus.Unreachable } => @<Hint Text="@($"Unreachable: {probe.Detail}")"><MokaText Element="span" Color="MokaColor.Error">!</MokaText></Hint>,
+		_ => @<Hint Text="@($"Failed: {probe.Detail}")"><MokaText Element="span" Color="MokaColor.Error">?</MokaText></Hint>,
+	};
+
+	private MokaToastSeverity EndSeverity(TraceEnd end) => Stopped
+		? MokaToastSeverity.Info
+		: end == TraceEnd.Reached ? MokaToastSeverity.Success : MokaToastSeverity.Error;
+
+	private string EndText(TraceEnd end)
+	{
+		if (Stopped)
+		{
+			return $"Stopped at hop {Hops.Count}.";
+		}
+
+		return end switch
+		{
+			TraceEnd.Reached => $"Reached {Destination} in {Hops.Count} hops.",
+			TraceEnd.Unreachable when Hops.LastOrDefault()?.Unreachable is { } probe =>
+				$"{(probe.From is { } from ? from.ToString() : "A router")} says {Destination} cannot be reached: {probe.Detail}.",
+			TraceEnd.Unreachable => $"{Destination} cannot be reached.",
+			_ => $"Did not reach {Destination} within {Hops.Count} hops. It may not answer ICMP, or the path is longer.",
+		};
+	}
+}

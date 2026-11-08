@@ -4,19 +4,17 @@
    from the server the session is logged in on. A side menu of tabs, each kept alive while another shows, so
    switching back finds what was typed and what a run found, and a capture left running keeps going. Closing the
    tool disposes every tab, which stops whatever still runs. *@
-<div class="mn-tool mn-session">
-	<ToolNavigation Entries="Entries" Current="@_current" CurrentChanged="Show" Label="Network from the server">
-		<div class="mn-section" hidden="@(_current != ResolveId)">
-			<ResolveSection Session="Session" IsActive="@(_current == ResolveId)" />
-		</div>
-		<div class="mn-section" hidden="@(_current != PortsId)">
-			<ListeningPortsSection Session="Session" IsActive="@(_current == PortsId)" />
-		</div>
-		<div class="mn-section" hidden="@(_current != ReachId)">
-			<ReachSection Session="Session" IsActive="@(_current == ReachId)" />
-		</div>
-		<div class="mn-section" hidden="@(_current != CaptureId)">
-			<CaptureSection Session="Session" IsActive="@(_current == CaptureId)" />
-		</div>
-	</ToolNavigation>
-</div>
+<NetworkToolShell Entries="Entries" Current="@_current" CurrentChanged="Show" Label="Network from the server" Class="mn-session">
+	<NetworkTab Shown="@(_current == ResolveId)">
+		<ResolveSection Session="Session" IsActive="@(_current == ResolveId)" />
+	</NetworkTab>
+	<NetworkTab Shown="@(_current == PortsId)">
+		<ListeningPortsSection Session="Session" IsActive="@(_current == PortsId)" />
+	</NetworkTab>
+	<NetworkTab Shown="@(_current == ReachId)">
+		<ReachSection Session="Session" IsActive="@(_current == ReachId)" />
+	</NetworkTab>
+	<NetworkTab Shown="@(_current == CaptureId)">
+		<CaptureSection Session="Session" IsActive="@(_current == CaptureId)" />
+	</NetworkTab>
+</NetworkToolShell>

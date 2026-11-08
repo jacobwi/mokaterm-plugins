@@ -1,43 +1,50 @@
 @inherits NetworkViewBase
 @using Moka.Network.Echo
 
-<ToolPageFrame Title="Ping"
-			   Summary="@Summary"
-			   Loaded="true"
-			   PrimaryText="@(Running ? "Stop" : "Start")"
-			   PrimaryIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Start)"
-			   PrimaryDisabled="@(Busy && !Running)"
-			   OnPrimary="PrimaryAsync">
-	<div class="mn-stack">
-		<div class="mn-group" @onkeydown="OnKeyAsync">
-			<div class="mn-fields">
-				<div class="mn-field mn-field--host">
-					<MokaTextField Label="Host" Value="@_host" ValueChanged="@(value => _host = value ?? "")" Placeholder="example.com or 192.0.2.10" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
-				</div>
-				<div class="mn-field">
-					<MokaTextField Label="Count" Value="@_count" ValueChanged="@(value => _count = value ?? "")" Placeholder="4" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" Disabled="_continuous" />
-				</div>
-				<div class="mn-field">
-					<MokaTextField Label="Every (s)" Value="@_interval" ValueChanged="@(value => _interval = value ?? "")" Placeholder="1" Size="MokaSize.Sm" inputmode="decimal" autocomplete="off" />
-				</div>
-				<div class="mn-field">
-					<MokaTextField Label="Wait (ms)" Value="@_timeout" ValueChanged="@(value => _timeout = value ?? "")" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
-				</div>
-				<PingShapeField Mode="_mode" Size="_size" SizeChanged="@(value => _size = value)" Port="_port" PortChanged="@(value => _port = value)" Disabled="Busy" />
-			</div>
-			@if (_mode == PingMode.Tcp)
-			{
-				<span class="mn-note">Size is an ICMP idea: a TCP probe is one connection attempt to a port, so there is no payload to choose.</span>
-			}
-			<RecentTargetsBar OnPick="@(value => _host = value)" />
-			<div class="mn-row">
-				<EnumSegmentedControl TEnum="PingMode" Value="_mode" ValueChanged="@(value => _mode = value)" Options="PingModeChoices.Options" AriaLabel="Request kind" Disabled="Busy" />
-				<EnumSegmentedControl TEnum="AddressChoice" Value="_choice" ValueChanged="@(value => _choice = value)" Options="AddressChoices.Options" AriaLabel="Address family" Disabled="Busy" />
-				<MokaCheckbox Label="Until stopped" Value="_continuous" ValueChanged="@(value => _continuous = value)" />
-				<span class="mn-gap"></span>
-				<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="NetworkIcons.Mtu" Disabled="Busy" OnClick="MtuAsync">Find path MTU</MokaButton>
-				<OriginNote />
-			</div>
+<NetworkPage Title="Ping" Said="@Summary">
+	<Actions>
+		<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Sm" StartIcon="NetworkIcons.Mtu" Disabled="Busy" OnClick="MtuAsync">Find path MTU</MokaButton>
+		<MokaButton Variant="MokaVariant.Filled"
+					Color="MokaColor.Primary"
+					Size="MokaSize.Sm"
+					StartIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Start)"
+					Disabled="@(Busy && !Running)"
+					OnClick="PrimaryAsync">@(Running ? "Stop" : "Start")</MokaButton>
+	</Actions>
+	<Origin>
+		<OriginNote />
+	</Origin>
+	<ChildContent>
+		<div @onkeydown="OnKeyAsync">
+			<MokaGrid MinColumn="400px" Gap="MokaSpacingScale.Md">
+				<MokaCard Inner Outlined Title="Target">
+					<MokaFlexbox Gap="MokaSpacingScale.Sm">
+						<MokaTextField Label="Host" Value="@_host" ValueChanged="@(value => _host = value ?? "")" Placeholder="example.com or 192.0.2.10" Size="MokaSize.Sm" spellcheck="false" autocomplete="off" />
+						<MokaFieldWrapper Label="Address family" CustomControl Size="MokaSize.Sm">
+							<EnumSegmentedControl TEnum="AddressChoice" Value="_choice" ValueChanged="@(value => _choice = value)" Options="AddressChoices.Options" AriaLabel="Address family" Disabled="Busy" />
+						</MokaFieldWrapper>
+						<RecentTargetsBar OnPick="@(value => _host = value)" />
+					</MokaFlexbox>
+				</MokaCard>
+				<MokaCard Inner Outlined Title="Requests">
+					<MokaFlexbox Gap="MokaSpacingScale.Sm">
+						<MokaFieldWrapper Label="Request kind" CustomControl Size="MokaSize.Sm">
+							<EnumSegmentedControl TEnum="PingMode" Value="_mode" ValueChanged="@(value => _mode = value)" Options="PingModeChoices.Options" AriaLabel="Request kind" Disabled="Busy" />
+						</MokaFieldWrapper>
+						<MokaGrid MinColumn="100px" Gap="MokaSpacingScale.Sm">
+							<MokaTextField Label="Count" Value="@_count" ValueChanged="@(value => _count = value ?? "")" Placeholder="4" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" Disabled="_continuous" />
+							<MokaTextField Label="Every (s)" Value="@_interval" ValueChanged="@(value => _interval = value ?? "")" Placeholder="1" Size="MokaSize.Sm" inputmode="decimal" autocomplete="off" />
+							<MokaTextField Label="Wait (ms)" Value="@_timeout" ValueChanged="@(value => _timeout = value ?? "")" Size="MokaSize.Sm" inputmode="numeric" autocomplete="off" />
+							<PingShapeField Mode="_mode" Size="@_size" SizeChanged="@(value => _size = value)" Port="@_port" PortChanged="@(value => _port = value)" Disabled="Busy" />
+						</MokaGrid>
+						<MokaCheckbox Label="Until stopped" Value="_continuous" ValueChanged="@(value => _continuous = value)" />
+						@if (_mode == PingMode.Tcp)
+						{
+							<MokaCaption>Size is an ICMP idea: a TCP probe is one connection attempt to a port, so there is no payload to choose.</MokaCaption>
+						}
+					</MokaFlexbox>
+				</MokaCard>
+			</MokaGrid>
 		</div>
 
 		@if (_error is { } error)
@@ -45,54 +52,28 @@
 			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
 		}
 
-		@if (_target is { } target)
+		@if (Running && _stats.Sent == 0 && _mtu is null)
 		{
-			<div class="mn-results">
-				<span class="mn-note mn-mono">@target</span>
-				@if (_mtu is { } mtu)
-				{
-					<div class="@MtuClass(mtu)">@MtuText(mtu)</div>
-					<FactList Facts="@MtuFacts(mtu)" />
-					<span class="mn-note">The search sends packets with the Don't Fragment bit set, halving the gap between a size that passes and one that fails. Which hop is too small stays hidden: without raw sockets, the answer that reports a too-big packet names no router.</span>
-				}
-				@if (_stats.Sent > 0)
-				{
-					<div class="mn-stats" aria-label="Summary">
-						<div class="mn-stat"><span class="mn-label">Sent</span><span class="mn-stat-value">@Count(_stats.Sent)</span></div>
-						<div class="mn-stat"><span class="mn-label">Received</span><span class="mn-stat-value">@Count(_stats.Received)</span></div>
-						<div class="mn-stat"><span class="mn-label">Loss</span><span class="@(_stats.Lost > 0 ? "mn-stat-value mn-stat-value--bad" : "mn-stat-value")">@LossText</span></div>
-						<div class="mn-stat"><span class="mn-label">Min</span><span class="mn-stat-value">@Rtt(_stats.Minimum)</span></div>
-						<div class="mn-stat"><span class="mn-label">Avg</span><span class="mn-stat-value">@Rtt(_stats.Average)</span></div>
-						<div class="mn-stat"><span class="mn-label">Max</span><span class="mn-stat-value">@Rtt(_stats.Maximum)</span></div>
-						<div class="mn-stat" title="The mean difference between one reply's round trip and the next."><span class="mn-label">Jitter</span><span class="mn-stat-value">@Rtt(_stats.Jitter)</span></div>
-					</div>
-				}
-				@if (_dropped > 0)
-				{
-					<span class="mn-note">The oldest @Count(_dropped) replies are counted above but no longer listed.</span>
-				}
-				@if (_rows.Count > 0)
-				{
-					<div class="mn-table mn-table--ping mn-table--scroll mn-table--live" role="table" aria-label="Replies">
-						@for (int index = _rows.Count - 1; index >= 0; index--)
-						{
-							PingRow row = _rows[index];
-							<div class="mn-tr" role="row" @key="row.Sequence">
-								<span class="mn-td mn-td--mono mn-td--dim" role="cell">@row.Sequence</span>
-								<span class="mn-td mn-td--mono" role="cell">@(row.Reply.From?.ToString() ?? "")</span>
-								<span class="@ResultClass(row.Reply)" role="cell">@ResultText(row.Reply)</span>
-								<span class="mn-td mn-td--mono mn-td--end" role="cell">@(row.Reply.Status == EchoStatus.Reply && row.Reply.Milliseconds is { } ms ? Milliseconds(ms) : "")</span>
-							</div>
-						}
-						<div class="mn-tr mn-th" role="row">
-							<span role="columnheader">#</span>
-							<span role="columnheader">From</span>
-							<span role="columnheader">Result</span>
-							<span class="mn-td--end" role="columnheader">Time</span>
-						</div>
-					</div>
-				}
-			</div>
+			<RunningCard Text="@(_target ?? "Starting")" />
 		}
-	</div>
-</ToolPageFrame>
+
+		@if (_target is not null && (_stats.Sent > 0 || _mtu is not null))
+		{
+			<PingResultView Target="@_target"
+							Stats="_stats"
+							Rows="_rows"
+							Dropped="_dropped"
+							Live="Running"
+							Interval="_runInterval"
+							Planned="_planned"
+							Mtu="_mtu" />
+		}
+		else if (!Busy && _error is null)
+		{
+			<MokaEmptyState Icon="NetworkIcons.Ping"
+							Title="Ping a host"
+							Description="ICMP echo, or TCP connection attempts to one port for a host that drops ICMP. Find path MTU searches for the largest packet the path carries whole."
+							Compact />
+		}
+	</ChildContent>
+</NetworkPage>

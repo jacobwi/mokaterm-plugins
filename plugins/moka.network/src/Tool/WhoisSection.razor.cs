@@ -1,11 +1,9 @@
-using System.Globalization;
 using System.Text;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Moka.Network.Components;
 using Moka.Network.Targets;
 using Moka.Network.Whois;
-using Mokaterm.UI.Common.PluginUi;
 
 namespace Moka.Network.Tool;
 
@@ -27,95 +25,10 @@ public sealed partial class WhoisSection : NetworkViewBase
 	private RdapClient Rdap { get; set; } = default!;
 
 	private string Summary => Running
-		? _askingRdap ? "asking the registry over RDAP" : $"asking {_answers.LastOrDefault()?.Referral ?? WhoisClient.RootServer}"
-		: _rdap is { } ? "registry record over RDAP" : _answers.Count > 0 ? $"{_answers.Count} servers asked" : "who holds a domain or an address block";
+		? RunningText
+		: _rdap is { } ? "Registry record over RDAP" : _answers.Count > 0 ? NetworkFormat.Plural(_answers.Count, "server") + " asked" : "Who holds a domain or an address block";
 
-	private string ServerLine
-	{
-		get
-		{
-			if (_answers.Count > 0)
-			{
-				return string.Join(" > ", _answers.Select(answer => answer.Server));
-			}
-
-			return _rdap is { RegistrarServer: { } registrar } rdap ? $"{rdap.Server} > {registrar} over RDAP"
-				: _rdap is { } alone ? $"{alone.Server} over RDAP"
-				: "";
-		}
-	}
-
-	private static string Detail(WhoisAnswer answer)
-	{
-		StringBuilder detail = new();
-		detail.Append(answer.Bytes.ToString("N0", CultureInfo.CurrentCulture)).Append(" bytes, ").Append(Milliseconds(answer.Elapsed));
-		if (answer.Cut)
-		{
-			detail.Append(", cut at the size limit");
-		}
-
-		if (answer.TimedOut)
-		{
-			detail.Append(", stopped at the time limit");
-		}
-
-		if (answer.Referral is { } referral)
-		{
-			detail.Append(", refers to ").Append(referral);
-		}
-
-		return detail.ToString();
-	}
-
-	/// <summary>The registry's facts as the result shows them: what it has, in the order it matters.</summary>
-	private static List<Fact> Facts(RdapResult rdap)
-	{
-		RdapDomain domain = rdap.Domain;
-		List<Fact> facts = [];
-		if (domain.Registrar is { } registrar)
-		{
-			List<string> values = [registrar];
-			if (domain.RegistrarId is { } identifier)
-			{
-				values.Add($"IANA ID {identifier}");
-			}
-
-			facts.Add(new Fact("Registrar", values));
-		}
-
-		if (domain.Statuses.Count > 0)
-		{
-			facts.Add(new Fact("Status", domain.Statuses));
-		}
-
-		if (domain.Registered is { } registered)
-		{
-			facts.Add(new Fact("Registered", [DateText(registered)], Mono: true));
-		}
-
-		if (domain.Updated is { } updated)
-		{
-			facts.Add(new Fact("Updated", [DateText(updated)], Mono: true));
-		}
-
-		if (domain.Expires is { } expires)
-		{
-			facts.Add(new Fact("Expires", [DateText(expires)], Mono: true));
-		}
-
-		if (domain.Nameservers.Count > 0)
-		{
-			facts.Add(new Fact("Nameservers", domain.Nameservers, Mono: true));
-		}
-
-		return facts;
-	}
-
-	/// <summary>An RDAP date the way the view prints it: the date and time the registry reported, in UTC.</summary>
-	private static string DateText(string date) =>
-		DateTimeOffset.TryParse(date, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset when)
-			? when.UtcDateTime.ToString("d MMM yyyy HH:mm", CultureInfo.CurrentCulture) + " UTC"
-			: date;
+	private string RunningText => _askingRdap ? "Asking the registry over RDAP" : $"Asking {_answers.LastOrDefault()?.Referral ?? WhoisClient.RootServer}";
 
 	private async Task OnKeyAsync(KeyboardEventArgs args)
 	{

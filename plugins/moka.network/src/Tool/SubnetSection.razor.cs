@@ -22,6 +22,9 @@ public sealed partial class SubnetSection : ComponentBase
 	/// <summary>What is wrong with the text, once there is text to be wrong.</summary>
 	private string? ShownProblem => _input.Trim().Length > 0 ? _problem : null;
 
+	/// <summary>Split subnets listed per page; a split can make up to <see cref="SubnetMath.MaxSplitRows"/>.</summary>
+	private const int SplitPage = 32;
+
 	private string Summary => _info is { } info ? $"{info.Cidr}, {CountText(info.HostCount, info)} hosts" : "IPv4 and IPv6 prefixes";
 
 	protected override void OnInitialized() => Calculate();
@@ -33,6 +36,19 @@ public sealed partial class SubnetSection : ComponentBase
 		int bits = info.Bits - info.PrefixLength;
 		return info.IsIPv6 && bits > 16 && count == BigInteger.One << bits ? $"2^{bits} ({text})" : text;
 	}
+
+	/// <summary>A count short enough for a tile: the power of two alone for a large IPv6 one.</summary>
+	private static string ShortCount(BigInteger count, SubnetInfo info)
+	{
+		int bits = info.Bits - info.PrefixLength;
+		return info.IsIPv6 && bits > 16 && count == BigInteger.One << bits
+			? $"2^{bits}"
+			: count.ToString("N0", CultureInfo.CurrentCulture);
+	}
+
+	/// <summary>The count in full under a tile that shows only its power of two, and nothing otherwise.</summary>
+	private static string? FullCount(BigInteger count, SubnetInfo info) =>
+		ShortCount(count, info).StartsWith("2^", StringComparison.Ordinal) ? count.ToString("N0", CultureInfo.CurrentCulture) : null;
 
 	private static string SplitSummary(SubnetInfo info, int prefix, BigInteger total, int shown)
 	{

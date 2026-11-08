@@ -1,0 +1,54 @@
+@using Moka.Network.Server
+
+@* The server's listening sockets: how many of each kind as tiles, then every socket with its address and the process
+   that holds it, as far as the logged-in account may see. *@
+<MokaGrid MinColumn="130px" Gap="MokaSpacingScale.Sm" aria-label="Summary">
+	<MokaStat Tile Value="@NetworkFormat.Count(Rows.Count)" Label="Listening sockets" />
+	<MokaStat Tile Value="@NetworkFormat.Count(Rows.Count(row => IsTcp(row)))" Label="TCP" />
+	<MokaStat Tile Value="@NetworkFormat.Count(Rows.Count(row => !IsTcp(row)))" Label="UDP" />
+	<MokaStat Tile Value="@NetworkFormat.Count(Rows.Count(row => row.Process.Length > 0))" Label="With a process named" />
+</MokaGrid>
+
+@if (Rows.All(row => row.Process.Length == 0))
+{
+	<MokaCallout Type="MokaCalloutType.Note">ss names a process only for sockets the logged-in account can look into; root sees every one.</MokaCallout>
+}
+
+<MokaTable TItem="IndexedRow<SsRow>"
+		   Items="@IndexedRows.Of(Rows)"
+		   ItemKey="@(row => row.Index)"
+		   Label="The server's listening sockets"
+		   ShowToolbar="false"
+		   ShowPagination="@(Rows.Count > Page)"
+		   PageSize="Page">
+	<MokaColumn TItem="IndexedRow<SsRow>" Title="Net" Field="@(row => row.Item.Netid)" Width="80px">
+		<CellTemplate Context="row">
+			<MokaTag Text="@row.Item.Netid" Color="@(IsTcp(row.Item) ? MokaColor.Info : MokaColor.Secondary)" />
+		</CellTemplate>
+	</MokaColumn>
+	<MokaColumn TItem="IndexedRow<SsRow>" Title="State" Field="@(row => row.Item.State)" Width="100px" />
+	<MokaColumn TItem="IndexedRow<SsRow>" Title="Local address" Field="@(row => row.Item.Local)" Mono />
+	<MokaColumn TItem="IndexedRow<SsRow>" Title="Process" Field="@(row => row.Item.Process)" Mono>
+		<CellTemplate Context="row">
+			@if (row.Item.ProcessDetail.Length > 0)
+			{
+				<Hint Text="@row.Item.ProcessDetail">@Process(row.Item)</Hint>
+			}
+			else
+			{
+				@Process(row.Item)
+			}
+		</CellTemplate>
+	</MokaColumn>
+</MokaTable>
+
+@code {
+	private const int Page = 25;
+
+	[Parameter, EditorRequired]
+	public IReadOnlyList<SsRow> Rows { get; set; } = [];
+
+	private static bool IsTcp(SsRow row) => row.Netid.StartsWith("tcp", StringComparison.OrdinalIgnoreCase);
+
+	private static string Process(SsRow row) => row.Process.Length > 0 ? row.Process : "-";
+}

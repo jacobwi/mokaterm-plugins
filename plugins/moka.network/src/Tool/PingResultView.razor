@@ -1,0 +1,179 @@
+@using Moka.Network.Echo
+
+@* A ping run as it stands: the path MTU search's answer when one ran, the summary as tiles, the round trips as a line
+   that slides while replies arrive, and every reply in a table, newest first. *@
+@if (Target is { } target)
+{
+	<MokaText Element="div" Mono>@target</MokaText>
+}
+
+@if (Mtu is { } mtu)
+{
+	<MokaCard Inner Outlined Title="Path MTU">
+		<MokaFlexbox Gap="MokaSpacingScale.Sm">
+			<MokaAlert Severity="@(mtu.LargestPayload is null ? MokaToastSeverity.Error : MokaToastSeverity.Success)" Dense>@MtuText(mtu)</MokaAlert>
+			<MokaGrid MinColumn="140px" Gap="MokaSpacingScale.Sm">
+				<MokaStat Tile Value="@(mtu.LargestPayload is { } largest ? $"{largest} bytes" : "none")" Label="Largest passing payload" />
+				<MokaStat Tile Value="@(mtu.PathMtuBytes is { } bytes ? $"{bytes} bytes" : "none")" Label="Path MTU" Color="@(mtu.PathMtuBytes is null ? MokaColor.Error : MokaColor.Success)" />
+				<MokaStat Tile Value="@mtu.Probes.ToString(CultureInfo.CurrentCulture)" Label="DF-set probes" />
+			</MokaGrid>
+			<MokaCaption>The search sends packets with the Don't Fragment bit set, halving the gap between a size that passes and one that fails. Which hop is too small stays hidden: without raw sockets, the answer that reports a too-big packet names no router.</MokaCaption>
+		</MokaFlexbox>
+	</MokaCard>
+}
+
+@if (Stats.Sent > 0)
+{
+	<MokaGrid MinColumn="110px" Gap="MokaSpacingScale.Sm" aria-label="Summary">
+		<MokaStat Tile Value="@($"{NetworkFormat.Count(Stats.Received)} of {NetworkFormat.Count(Stats.Sent)}")" Label="Received" />
+		<MokaStat Tile Value="@NetworkFormat.Percent(Stats.LossPercent)" Label="Loss" Color="@(Stats.Lost > 0 ? MokaColor.Error : MokaColor.Success)" />
+		<MokaStat Tile Value="@NetworkFormat.Milliseconds(Stats.Minimum)" Label="Min" />
+		<MokaStat Tile Value="@NetworkFormat.Milliseconds(Stats.Average)" Label="Avg" />
+		<MokaStat Tile Value="@NetworkFormat.Milliseconds(Stats.Maximum)" Label="Max" />
+		<MokaStat Tile Value="@NetworkFormat.Milliseconds(Stats.Jitter)" Label="Jitter" />
+	</MokaGrid>
+
+	<MokaCard Inner Outlined Title="Round trips" Subtitle="@ChartSubtitle">
+		<MokaFlexbox Gap="MokaSpacingScale.Sm">
+			<MokaLineChart Series="@ChartSeries"
+						   Labels="@ChartLabels"
+						   Formatter="NetworkFormat.Milliseconds"
+						   Live="Live"
+						   LiveInterval="Interval"
+						   ShowCurrent
+						   ShowPeak
+						   ShowArea
+						   ShowPoints="@(Window <= 30)"
+						   ShowLastPoint
+						   Min="0"
+						   Height="200px"
+						   Label="Round trip of each request"
+						   EmptyText="No reply yet" />
+			<MokaCaption>Jitter is the mean difference between one reply's round trip and the next.</MokaCaption>
+		</MokaFlexbox>
+	</MokaCard>
+}
+
+@if (Rows.Count > 0)
+{
+	<MokaTable TItem="PingRow"
+			   Items="NewestFirst"
+			   ItemKey="@(row => row.Sequence)"
+			   Label="Replies"
+			   ShowToolbar="false"
+			   ShowPagination="false"
+			   Height="@(Rows.Count > 10 ? "320px" : null)">
+		<MokaColumn TItem="PingRow" Title="#" Field="@(row => row.Sequence)" Mono Width="56px" />
+		<MokaColumn TItem="PingRow" Title="From" Field="@(row => row.Reply.From?.ToString() ?? "")" Mono />
+		<MokaColumn TItem="PingRow" Title="Result" Field="@(row => ResultText(row.Reply))">
+			<CellTemplate Context="row">
+				@if (row.Reply.Status == EchoStatus.Reply)
+				{
+					@ResultText(row.Reply)
+				}
+				else
+				{
+					<MokaTag Text="@ResultText(row.Reply)" Color="@(row.Reply.Status == EchoStatus.TimedOut ? MokaColor.Warning : MokaColor.Error)" />
+				}
+			</CellTemplate>
+		</MokaColumn>
+		<MokaColumn TItem="PingRow" Title="Time" Field="@(row => row.Reply.Milliseconds)" Mono Align="MokaTextAlign.Right" Width="96px">
+			<CellTemplate Context="row">@(row.Reply.Status == EchoStatus.Reply && row.Reply.Milliseconds is { } ms ? NetworkFormat.Milliseconds(ms) : "")</CellTemplate>
+		</MokaColumn>
+	</MokaTable>
+}
+
+@if (Dropped > 0)
+{
+	<MokaCaption>The oldest @NetworkFormat.Count(Dropped) replies are counted above but no longer listed.</MokaCaption>
+}
+
+@code {
+	/// <summary>The most round trips the chart draws; a longer run slides through them.</summary>
+	public const int MaxWindow = 60;
+
+	/// <summary>What is being pinged, and how: "Pinging example.com (192.0.2.10) with 32 bytes of data".</summary>
+	[Parameter]
+	public string? Target { get; set; }
+
+	[Parameter, EditorRequired]
+	public PingStatistics Stats { get; set; } = new();
+
+	/// <summary>The replies in the order they came, oldest first.</summary>
+	[Parameter, EditorRequired]
+	public IReadOnlyList<PingRow> Rows { get; set; } = [];
+
+	/// <summary>Replies counted in the summary but no longer kept in <see cref="Rows"/>.</summary>
+	[Parameter]
+	public int Dropped { get; set; }
+
+	/// <summary>True while replies are still arriving, which slides the chart instead of redrawing it.</summary>
+	[Parameter]
+	public bool Live { get; set; }
+
+	/// <summary>How far apart the requests go, which is how long one slide of the chart takes.</summary>
+	[Parameter]
+	public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(1);
+
+	/// <summary>How many requests the run sends, 0 until stopped; it sets the chart's width in requests.</summary>
+	[Parameter]
+	public int Planned { get; set; }
+
+	[Parameter]
+	public PathMtuResult? Mtu { get; set; }
+
+	private int Window => Planned is > 0 and <= MaxWindow ? Planned : MaxWindow;
+
+	private IEnumerable<PingRow> NewestFirst => Rows.Reverse();
+
+	private IReadOnlyList<PingRow> Shown => Rows.Count > Window ? [.. Rows.Skip(Rows.Count - Window)] : Rows;
+
+	private int Padding => Window - Shown.Count;
+
+	private string ChartSubtitle => Rows.Count > Window
+		? $"The last {Window} requests; a lost one leaves a gap"
+		: "Each request in order; a lost one leaves a gap";
+
+	private IReadOnlyList<MokaLineSeries> ChartSeries =>
+	[
+		new MokaLineSeries
+		{
+			Name = "Round trip",
+			Color = MokaColor.Info,
+			Values =
+			[
+				.. Enumerable.Repeat(double.NaN, Padding),
+				.. Shown.Select(row => row.Reply.Status == EchoStatus.Reply && row.Reply.Milliseconds is { } ms ? ms : double.NaN),
+			],
+		},
+	];
+
+	private IReadOnlyList<string> ChartLabels =>
+	[
+		.. Enumerable.Repeat("", Padding),
+		.. Shown.Select(row => row.Sequence.ToString(CultureInfo.CurrentCulture)),
+	];
+
+	public static string ResultText(EchoReply reply)
+	{
+		ArgumentNullException.ThrowIfNull(reply);
+		return reply.Status switch
+		{
+			EchoStatus.Reply => reply.Detail is { } detail ? $"reply ({detail})" : "reply",
+			EchoStatus.TimedOut => "timed out",
+			EchoStatus.TtlExpired => "TTL expired on the way",
+			EchoStatus.Unreachable => $"unreachable: {reply.Detail}",
+			_ => $"failed: {reply.Detail}",
+		};
+	}
+
+	public static string MtuText(PathMtuResult mtu)
+	{
+		ArgumentNullException.ThrowIfNull(mtu);
+		return mtu.AtCeiling
+			? $"Every size up to {PathMtu.MaxPayload} bytes passed, so the path carries at least the classic {PathMtu.MaxPayload + PathMtu.HeaderBytes} byte packet whole; whether it carries more cannot be seen from here."
+			: mtu.LargestPayload is { } largest
+				? $"Packets of {largest} bytes pass and {largest + 1} bytes do not, so no link on the way carries more than {largest + PathMtu.HeaderBytes} bytes whole."
+				: "Not even an empty packet got through. The host may not answer ICMP echo, or every packet is being dropped on the way.";
+	}
+}

@@ -1,0 +1,113 @@
+@using System.Text
+
+@* One resolver's whole answer: the response code, the count, the time and the server as tiles, the flags it set, what
+   the code means, every section as a table, and the answer laid out the way dig prints it. *@
+@{
+	DnsMessage message = Result.Exchange.Message;
+}
+
+<MokaGrid MinColumn="150px" Gap="MokaSpacingScale.Sm">
+	<MokaStat Tile Value="@message.ResponseCodeName" Label="Response" Color="@CodeColor(message.ResponseCode)" />
+	<MokaStat Tile Value="@NetworkFormat.Count(message.Answers.Count)" Label="@(message.Answers.Count == 1 ? "Answer" : "Answers")" />
+	<MokaStat Tile Value="@NetworkFormat.Milliseconds(Result.Exchange.Elapsed)" Label="Round trip" />
+	<MokaStat Tile Value="@DnsClient.Describe(Result.Exchange.Server)" Label="Server" />
+</MokaGrid>
+
+<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Wrap GapValue="6px">
+	@if (message.Header.AuthenticData)
+	{
+		<Hint Text="The resolver set AD: it checked the answer's signatures.">
+			<MokaTag Text="DNSSEC validated" Color="MokaColor.Success" />
+		</Hint>
+	}
+	@if (message.Header.Authoritative)
+	{
+		<Hint Text="AA: the answer comes from a server for the zone, not a cache.">
+			<MokaTag Text="Authoritative" Color="MokaColor.Info" />
+		</Hint>
+	}
+	@if (Result.Exchange.OverTcp)
+	{
+		<Hint Text="The UDP answer was cut, so the question went again over TCP.">
+			<MokaTag Text="Over TCP" Color="MokaColor.Surface" />
+		</Hint>
+	}
+	<MokaCaption>Flags</MokaCaption>
+	<MokaText Element="span" Mono>@string.Join(' ', message.Header.FlagNames())</MokaText>
+</MokaFlexbox>
+
+@if (Note is { } note)
+{
+	<MokaCallout Type="MokaCalloutType.Note">@note</MokaCallout>
+}
+@foreach (string failure in Result.EarlierFailures)
+{
+	<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@failure</MokaAlert>
+}
+@if (DnsNames.ResponseCodeMeaning(message.ResponseCode) is { } meaning)
+{
+	<MokaAlert Severity="@(message.ResponseCode == 3 ? MokaToastSeverity.Warning : MokaToastSeverity.Error)" Dense>@meaning</MokaAlert>
+}
+else if (message.Answers.Count == 0)
+{
+	<MokaAlert Severity="MokaToastSeverity.Warning" Dense>The name exists, but has no @DnsNames.TypeName(AskedType) records.</MokaAlert>
+}
+@if (Result.Exchange.IgnoredReplies > 0)
+{
+	<MokaCaption>@Result.Exchange.IgnoredReplies stray replies with another id or question were passed over.</MokaCaption>
+}
+
+<DnsRecordTable Title="Answer" Records="message.Answers" />
+<DnsRecordTable Title="Authority" Records="message.Authority" />
+<DnsRecordTable Title="Additional" Records="message.Additional" />
+
+<TextOutput Title="As text" Detail="@($"{message.Size} bytes, laid out as dig prints it")" Text="@AsText(Result)" CopyLabel="Copy the answer as text" />
+
+@code {
+	[Parameter, EditorRequired]
+	public DnsLookupResult Result { get; set; } = default!;
+
+	/// <summary>Why the question differs from what was typed, such as an address asked as its PTR record.</summary>
+	[Parameter]
+	public string? Note { get; set; }
+
+	/// <summary>The record type the question asked for, which an empty answer names.</summary>
+	[Parameter]
+	public int AskedType { get; set; }
+
+	private static MokaColor CodeColor(int code) => code switch
+	{
+		0 => MokaColor.Success,
+		3 => MokaColor.Warning,
+		_ => MokaColor.Error,
+	};
+
+	/// <summary>The answer the way dig lays it out, for pasting into a ticket.</summary>
+	public static string AsText(DnsLookupResult result)
+	{
+		ArgumentNullException.ThrowIfNull(result);
+		DnsMessage message = result.Exchange.Message;
+		StringBuilder text = new();
+		DnsQuestion? question = message.Questions.Count > 0 ? message.Questions[0] : null;
+		text.Append(CultureInfo.InvariantCulture, $";; {question?.Name} {DnsNames.TypeName(question?.Type ?? 0)} from {DnsClient.Describe(result.Exchange.Server)}");
+		text.Append(CultureInfo.InvariantCulture, $" in {result.Exchange.Elapsed.TotalMilliseconds:0} ms, {message.ResponseCodeName}, flags {string.Join(' ', message.Header.FlagNames())}\n");
+		Append(text, "ANSWER", message.Answers);
+		Append(text, "AUTHORITY", message.Authority);
+		Append(text, "ADDITIONAL", message.Additional);
+		return text.ToString().TrimEnd();
+
+		static void Append(StringBuilder text, string title, IReadOnlyList<DnsRecord> records)
+		{
+			if (records.Count == 0)
+			{
+				return;
+			}
+
+			text.Append(CultureInfo.InvariantCulture, $";; {title}\n");
+			foreach (DnsRecord record in records)
+			{
+				text.Append(CultureInfo.InvariantCulture, $"{record.Name}\t{record.Ttl}\t{DnsNames.ClassName(record.Class)}\t{record.TypeName}\t{record.Data}\n");
+			}
+		}
+	}
+}

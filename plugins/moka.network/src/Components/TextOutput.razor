@@ -1,25 +1,28 @@
-@* Text a server sent or a result put together: a micro-label title, a detail, a copy button, and the text in a box that
-   scrolls on its own. The text is already plain; this only draws it. *@
-<section class="mn-output" aria-label="@Title">
-	<div class="mn-output-head">
-		<span class="mn-output-title">@Title</span>
-		@if (Detail is { Length: > 0 } detail)
-		{
-			<span class="mn-output-detail" title="@detail">@detail</span>
-		}
-		<span class="mn-output-gap"></span>
+@* Text a server sent or a result put together, in a card: a title, a detail, a copy button that goes through
+   Mokaterm's clipboard, and the text in Moka's code block, which scrolls on its own. The text is already plain. *@
+<MokaCard Inner Outlined Title="@Title" Subtitle="@Detail">
+	<HeaderActions>
 		@Actions
 		@if (Text.Length > 0)
 		{
-			<CopyButton Text="@Text" Label="@($"Copy {Title}")" />
+			<CopyButton Text="@Text" Label="@(CopyLabel ?? $"Copy {Title}")" />
 		}
-	</div>
-	@if (Text.Length > 0)
-	{
-		<pre class="@(Tall ? "mn-output-text mn-output-text--tall" : "mn-output-text")" tabindex="0">@Text</pre>
-	}
-	@ChildContent
-</section>
+	</HeaderActions>
+	<ChildContent>
+		<MokaFlexbox Gap="MokaSpacingScale.Sm">
+			@if (Text.Length > 0)
+			{
+				<MokaCodeBlock Code="@Text"
+							   Language="@Language"
+							   ShowCopyButton="false"
+							   ShowLineNumbers="false"
+							   Wrap
+							   MaxHeight="@(Tall ? "420px" : "240px")" />
+			}
+			@ChildContent
+		</MokaFlexbox>
+	</ChildContent>
+</MokaCard>
 
 @code {
 	[Parameter, EditorRequired]
@@ -30,6 +33,14 @@
 
 	[Parameter]
 	public string Text { get; set; } = "";
+
+	/// <summary>What the copy button says it copies; "Copy" and the title when not set.</summary>
+	[Parameter]
+	public string? CopyLabel { get; set; }
+
+	/// <summary>The code block's language, such as json, for its colours. Plain text when not set.</summary>
+	[Parameter]
+	public string? Language { get; set; }
 
 	/// <summary>A long answer, such as whois, gets a taller box.</summary>
 	[Parameter]

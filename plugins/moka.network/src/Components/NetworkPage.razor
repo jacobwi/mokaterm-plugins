@@ -1,0 +1,29 @@
+@* One tab of either tool: Moka's page header with the tab's title, what is so right now and its actions, where its
+   probes leave from under the summary, and then the tab's own content, which scrolls under the header. *@
+<section class="mn-page" aria-label="@Title">
+	<MokaPageHeader Title="@Title" Said="@Said" Actions="Actions">
+		@Origin
+	</MokaPageHeader>
+	<div class="mn-page-body">
+		<div class="mn-page-stack">
+			@ChildContent
+		</div>
+	</div>
+</section>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Title { get; set; } = "";
+
+	[Parameter]
+	public string? Said { get; set; }
+
+	[Parameter]
+	public RenderFragment? Actions { get; set; }
+
+	[Parameter]
+	public RenderFragment? Origin { get; set; }
+
+	[Parameter]
+	public RenderFragment? ChildContent { get; set; }
+}

@@ -26,7 +26,7 @@ public sealed partial class WakeSection : NetworkViewBase
 	private WakeSent? _sent;
 	private string? _error;
 
-	private string Summary => _sent is { } sent ? $"last sent to {sent.Endpoint}" : "a magic packet to wake a machine";
+	private string Summary => _sent is { } sent ? $"Last sent to {sent.Endpoint}" : "A magic packet to wake a machine";
 
 	private async Task OnKeyAsync(KeyboardEventArgs args)
 	{

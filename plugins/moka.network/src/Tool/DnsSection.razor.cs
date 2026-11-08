@@ -1,11 +1,8 @@
-using System.Globalization;
 using System.Net;
-using System.Text;
 using Microsoft.AspNetCore.Components.Web;
 using Moka.Network.Components;
 using Moka.Network.Lookup;
 using Moka.Network.Targets;
-using Moka.Red.Core.Enums;
 using Mokaterm.UI.Common.Components;
 
 namespace Moka.Network.Tool;
@@ -44,69 +41,20 @@ public sealed partial class DnsSection : NetworkViewBase
 	private DnsLookupResult? _result;
 	private IReadOnlyList<ResolverRaceResult>? _race;
 	private string _raceQuestion = "";
+	private bool _racing;
 
 	private string Summary => Running
-		? "asking"
-		: _result is { } result ? $"{AnswerCount(result.Exchange.Message.Answers.Count)} from {DnsClient.Describe(result.Exchange.Server)}" : "records from any resolver, as it answers";
+		? "Asking"
+		: _result is { } result ? $"{AnswerCount(result.Exchange.Message.Answers.Count)} from {DnsClient.Describe(result.Exchange.Server)}"
+		: _race is { } race ? $"{race.Count(row => row.Answered)} of {race.Count} resolvers answered"
+		: "Records from any resolver, as it answers";
+
+	private static string AnswerCount(int count) => count == 1 ? "1 answer" : $"{count} answers";
 
 	protected override void OnInitialized()
 	{
 		_resolver = Settings.Resolver;
 		_custom = Settings.CustomResolver;
-	}
-
-	private static MokaColor CodeColor(int code) => code switch
-	{
-		0 => MokaColor.Success,
-		3 => MokaColor.Warning,
-		_ => MokaColor.Error,
-	};
-
-	private static string TtlText(uint ttl) => ttl switch
-	{
-		< 60 => ttl.ToString(CultureInfo.InvariantCulture) + "s",
-		< 3600 => string.Create(CultureInfo.InvariantCulture, $"{ttl / 60}m{(ttl % 60 == 0 ? "" : $"{ttl % 60}s")}"),
-		< 86400 => string.Create(CultureInfo.InvariantCulture, $"{ttl / 3600}h{(ttl % 3600 == 0 ? "" : $"{ttl % 3600 / 60}m")}"),
-		_ => string.Create(CultureInfo.InvariantCulture, $"{ttl / 86400}d{(ttl % 86400 == 0 ? "" : $"{ttl % 86400 / 3600}h")}"),
-	};
-
-	private static string AnswerCount(int count) => count == 1 ? "1 answer" : $"{count} answers";
-
-	private static string TtlTitle(uint ttl) => ttl.ToString("N0", CultureInfo.CurrentCulture) + " seconds";
-
-	private static string ServerLine(DnsLookupResult result)
-	{
-		DnsExchange exchange = result.Exchange;
-		string flags = string.Join(' ', exchange.Message.Header.FlagNames());
-		return $"{DnsClient.Describe(exchange.Server)}, {Milliseconds(exchange.Elapsed)}, flags {flags}";
-	}
-
-	/// <summary>The answer the way dig lays it out, for pasting into a ticket.</summary>
-	private static string AsText(DnsLookupResult result)
-	{
-		DnsMessage message = result.Exchange.Message;
-		StringBuilder text = new();
-		DnsQuestion? question = message.Questions.Count > 0 ? message.Questions[0] : null;
-		text.Append(CultureInfo.InvariantCulture, $";; {question?.Name} {DnsNames.TypeName(question?.Type ?? 0)} from {DnsClient.Describe(result.Exchange.Server)}");
-		text.Append(CultureInfo.InvariantCulture, $" in {result.Exchange.Elapsed.TotalMilliseconds:0} ms, {message.ResponseCodeName}, flags {string.Join(' ', message.Header.FlagNames())}\n");
-		Append(text, "ANSWER", message.Answers);
-		Append(text, "AUTHORITY", message.Authority);
-		Append(text, "ADDITIONAL", message.Additional);
-		return text.ToString().TrimEnd();
-
-		static void Append(StringBuilder text, string title, IReadOnlyList<DnsRecord> records)
-		{
-			if (records.Count == 0)
-			{
-				return;
-			}
-
-			text.Append(CultureInfo.InvariantCulture, $";; {title}\n");
-			foreach (DnsRecord record in records)
-			{
-				text.Append(CultureInfo.InvariantCulture, $"{record.Name}\t{record.Ttl}\t{DnsNames.ClassName(record.Class)}\t{record.TypeName}\t{record.Data}\n");
-			}
-		}
 	}
 
 	private async Task OnKeyAsync(KeyboardEventArgs args)
@@ -143,6 +91,7 @@ public sealed partial class DnsSection : NetworkViewBase
 		CancellationTokenSource run = BeginRun();
 		_result = null;
 		_race = null;
+		_racing = false;
 		StateHasChanged();
 		try
 		{
@@ -196,6 +145,7 @@ public sealed partial class DnsSection : NetworkViewBase
 		CancellationTokenSource run = BeginRun();
 		_result = null;
 		_race = null;
+		_racing = true;
 		StateHasChanged();
 		try
 		{

@@ -1,0 +1,30 @@
+@* What the last magic packet was and where it went. A sleeping machine does not answer, so there is nothing more to
+   show than what went out. *@
+<MokaAlert Severity="MokaToastSeverity.Success" Title="Magic packet sent" Dense>
+	@Sent.Bytes bytes went to @Sent.Endpoint over UDP: six bytes of FF, then @Sent.Mac sixteen times.
+</MokaAlert>
+
+<MokaGrid MinColumn="300px" Gap="MokaSpacingScale.Md" AlignItems="MokaAlign.Start">
+	<MokaCard Inner Outlined Title="Sent">
+		<MokaFlexbox Gap="MokaSpacingScale.Sm">
+			<MokaDataList Items="@Facts" Dense Orientation="MokaDirection.Row" />
+			<MokaCaption>A sleeping machine does not answer, so there is nothing to confirm here. Whether it woke shows when it comes up.</MokaCaption>
+		</MokaFlexbox>
+	</MokaCard>
+	<TextOutput Title="Packet" Detail="@($"{Sent.Bytes} bytes")" Text="@Sent.Hex" CopyLabel="Copy the packet as hex" />
+</MokaGrid>
+
+@code {
+	[Parameter, EditorRequired]
+	public WakeSent Sent { get; set; } = default!;
+
+	private IReadOnlyList<MokaDataListItem> Facts =>
+	[
+		new("MAC", ValueContent: Mono(Sent.Mac)),
+		new("SENT TO", ValueContent: Mono(Sent.Endpoint)),
+		new("SIZE", $"{Sent.Bytes} bytes"),
+		new("AT", ValueContent: Mono(Sent.At.ToString("HH:mm:ss", CultureInfo.CurrentCulture))),
+	];
+
+	private static RenderFragment Mono(string text) => @<MokaText Element="span" Mono>@text</MokaText>;
+}

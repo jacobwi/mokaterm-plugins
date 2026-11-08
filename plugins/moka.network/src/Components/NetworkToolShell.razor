@@ -1,0 +1,27 @@
+@* Both tools' frame: the side menu of tabs, with the tab on show beside it. The root names itself mt-tool-nav as well,
+   which is what ToolNavigation's own queries follow. *@
+<div class="@($"mn-tool {Class}".TrimEnd())">
+	<ToolNavigation Entries="Entries" Current="@Current" CurrentChanged="CurrentChanged" Label="@Label">
+		@ChildContent
+	</ToolNavigation>
+</div>
+
+@code {
+	[Parameter, EditorRequired]
+	public IReadOnlyList<ToolNavEntry> Entries { get; set; } = [];
+
+	[Parameter, EditorRequired]
+	public string Current { get; set; } = "";
+
+	[Parameter]
+	public EventCallback<string> CurrentChanged { get; set; }
+
+	[Parameter, EditorRequired]
+	public string Label { get; set; } = "";
+
+	[Parameter]
+	public string? Class { get; set; }
+
+	[Parameter]
+	public RenderFragment? ChildContent { get; set; }
+}

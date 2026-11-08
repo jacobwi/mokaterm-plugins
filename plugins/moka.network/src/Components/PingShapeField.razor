@@ -4,29 +4,25 @@
    field is left out entirely rather than shown grey, since it has no effect on the requests. *@
 @if (Mode == PingMode.Icmp)
 {
-	<div class="mn-field">
-		<MokaTextField Label="Size (bytes)"
-					   Value="@Size"
-					   ValueChanged="@(value => SizeChanged.InvokeAsync(value ?? ""))"
-					   Placeholder="32"
-					   Size="MokaSize.Sm"
-					   inputmode="numeric"
-					   autocomplete="off"
-					   Disabled="Disabled" />
-	</div>
+	<MokaTextField Label="Size (bytes)"
+				   Value="@Size"
+				   ValueChanged="@(value => SizeChanged.InvokeAsync(value ?? ""))"
+				   Placeholder="32"
+				   Size="MokaSize.Sm"
+				   inputmode="numeric"
+				   autocomplete="off"
+				   Disabled="Disabled" />
 }
 else
 {
-	<div class="mn-field">
-		<MokaTextField Label="Port"
-					   Value="@Port"
-					   ValueChanged="@(value => PortChanged.InvokeAsync(value ?? ""))"
-					   Placeholder="443"
-					   Size="MokaSize.Sm"
-					   inputmode="numeric"
-					   autocomplete="off"
-					   Disabled="Disabled" />
-	</div>
+	<MokaTextField Label="Port"
+				   Value="@Port"
+				   ValueChanged="@(value => PortChanged.InvokeAsync(value ?? ""))"
+				   Placeholder="443"
+				   Size="MokaSize.Sm"
+				   inputmode="numeric"
+				   autocomplete="off"
+				   Disabled="Disabled" />
 }
 
 @code {

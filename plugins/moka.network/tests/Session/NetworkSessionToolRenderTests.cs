@@ -60,11 +60,14 @@ public sealed class NetworkSessionToolRenderTests
 public sealed class DesktopConnectionsPanelRenderTests
 {
 	[Fact]
-	public async Task Panel_RendersItsTableAndItsHonestLimit()
+	public async Task Panel_RendersItsTablesItsTilesAndItsHonestLimit()
 	{
 		string html = await StaticRender.RenderAsync<DesktopConnectionsPanel>([]);
 
-		Assert.Contains("mn-conn", html, StringComparison.Ordinal);
+		Assert.Contains("aria-label=\"Connections\"", html, StringComparison.Ordinal);
+		Assert.Contains("aria-label=\"TCP connections\"", html, StringComparison.Ordinal);
+		Assert.Contains("aria-label=\"Listening ports\"", html, StringComparison.Ordinal);
+		Assert.Contains("Listening on TCP", html, StringComparison.Ordinal);
 		Assert.Contains("do not say which process owns a connection", html, StringComparison.Ordinal);
 	}
 }

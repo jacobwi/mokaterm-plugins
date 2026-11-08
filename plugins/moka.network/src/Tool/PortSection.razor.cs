@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.Components.Web;
 using Moka.Network.Components;
 using Moka.Network.Ports;
 using Moka.Network.Targets;
-using Moka.Red.Core.Enums;
-using Mokaterm.Abstractions.Protocols;
 
 namespace Moka.Network.Tool;
 
@@ -27,27 +25,8 @@ public sealed partial class PortSection : NetworkViewBase
 	private string? _error;
 
 	private string Summary => Running
-		? "connecting"
-		: _rows.Count > 0 ? $"{_rows.Count(row => row.Result?.State == PortState.Open)} of {_rows.Count} open" : "does a TCP port accept a connection";
-
-	private static string StateText(PortState state) => state switch
-	{
-		PortState.Open => "open",
-		PortState.Refused => "refused",
-		PortState.TimedOut => "no answer",
-		PortState.Unreachable => "unreachable",
-		_ => "failed",
-	};
-
-	private static MokaColor StateColor(PortState state) => state switch
-	{
-		PortState.Open => MokaColor.Success,
-		PortState.Refused => MokaColor.Error,
-		PortState.TimedOut => MokaColor.Warning,
-		_ => MokaColor.Error,
-	};
-
-	private static string Endpoint(PortResult result) => HostEndpoint.Format(result.Endpoint.Address.ToString(), result.Endpoint.Port);
+		? "Connecting"
+		: _rows.Count > 0 ? $"{_rows.Count(row => row.Result?.State == PortState.Open)} of {_rows.Count} open" : "Does a TCP port accept a connection";
 
 	private async Task OnKeyAsync(KeyboardEventArgs args)
 	{

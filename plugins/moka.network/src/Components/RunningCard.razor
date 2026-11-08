@@ -1,0 +1,22 @@
+@* What a tab says while its run is going: Moka's live card with a spinner and the step it is on. *@
+<MokaCard Inner Live role="status">
+	<MokaFlexbox Gap="MokaSpacingScale.Sm">
+		<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Gap="MokaSpacingScale.Sm">
+			<MokaSpinner Size="MokaSize.Sm" />
+			<span>@Text</span>
+		</MokaFlexbox>
+		@if (Progress is { } progress)
+		{
+			<MokaProgress Value="progress" Thin />
+		}
+	</MokaFlexbox>
+</MokaCard>
+
+@code {
+	[Parameter, EditorRequired]
+	public string Text { get; set; } = "";
+
+	/// <summary>How far along, from 0 to 100, for a run that knows; null draws no bar.</summary>
+	[Parameter]
+	public double? Progress { get; set; }
+}

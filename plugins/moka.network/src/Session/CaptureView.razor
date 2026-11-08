@@ -1,0 +1,75 @@
+@using Moka.Network.Server
+
+@* A capture's lines as they stand: the counts as tiles, then every kept packet in a table, newest first, with a copy of
+   the whole capture as tcpdump printed it. A long capture draws only the rows in view. *@
+<MokaGrid MinColumn="120px" Gap="MokaSpacingScale.Sm" aria-label="Summary">
+	<MokaStat Tile Value="@NetworkFormat.Count(Total)" Label="Lines" />
+	<MokaStat Tile Value="@NetworkFormat.Count(Rows.Count)" Label="Listed" />
+	<MokaStat Tile Value="@NetworkFormat.Count(Dropped)" Label="No longer listed" Color="@(Dropped > 0 ? MokaColor.Warning : null)" />
+</MokaGrid>
+
+@if (Dropped > 0)
+{
+	<MokaCaption>The oldest @NetworkFormat.Count(Dropped) lines are counted but no longer listed.</MokaCaption>
+}
+
+@if (Rows.Count > 0)
+{
+	<MokaCard Inner Outlined Title="Packets" Subtitle="@(Filter.Length > 0 ? $"Newest first, filter {Filter}" : "Newest first")">
+		<HeaderActions>
+			<CopyButton Text="@AllText" Label="Copy capture" />
+		</HeaderActions>
+		<ChildContent>
+			<MokaFlexbox Gap="MokaSpacingScale.Sm">
+				<MokaTable TItem="CaptureEntry"
+						   Items="NewestFirst"
+						   ItemKey="@(entry => entry)"
+						   Label="Captured packets"
+						   ShowToolbar="false"
+						   ShowPagination="false"
+						   Height="420px"
+						   Virtualize="@(Rows.Count > VirtualizeAbove)"
+						   Bleed>
+					<MokaColumn TItem="CaptureEntry" Title="Time" Field="@(entry => entry.Parsed.Time)" Mono Width="120px" Sortable="false" />
+					<MokaColumn TItem="CaptureEntry" Title="Source" Field="@(entry => entry.Parsed.Source)" Mono Sortable="false" />
+					<MokaColumn TItem="CaptureEntry" Title="Destination" Field="@(entry => entry.Parsed.Destination)" Mono Sortable="false" />
+					<MokaColumn TItem="CaptureEntry" Title="Proto" Field="@Protocol" Mono Width="96px" Sortable="false" />
+					<MokaColumn TItem="CaptureEntry" Title="Info" Field="@(entry => entry.Parsed.Info)" Sortable="false" />
+				</MokaTable>
+			</MokaFlexbox>
+		</ChildContent>
+	</MokaCard>
+}
+
+@code {
+	/// <summary>Past this many rows the table draws only those in view; a capture keeps up to ten thousand.</summary>
+	public const int VirtualizeAbove = 200;
+
+	/// <summary>The kept lines, oldest first, as the capture's snapshot gave them.</summary>
+	[Parameter, EditorRequired]
+	public IReadOnlyList<CaptureEntry> Rows { get; set; } = [];
+
+	/// <summary>Every line the capture produced, dropped ones included.</summary>
+	[Parameter]
+	public long Total { get; set; }
+
+	[Parameter]
+	public long Dropped { get; set; }
+
+	/// <summary>The tcpdump filter the capture runs under, while it runs.</summary>
+	[Parameter]
+	public string Filter { get; set; } = "";
+
+	/// <summary>The whole capture as text, for the copy button.</summary>
+	[Parameter]
+	public string AllText { get; set; } = "";
+
+	private IEnumerable<CaptureEntry> NewestFirst => Rows.Reverse();
+
+	public static string Protocol(CaptureEntry entry)
+	{
+		ArgumentNullException.ThrowIfNull(entry);
+		string proto = entry.Parsed.Protocol;
+		return entry.Parsed.Length.Length > 0 ? (proto.Length > 0 ? $"{proto} {entry.Parsed.Length}" : entry.Parsed.Length) : proto;
+	}
+}

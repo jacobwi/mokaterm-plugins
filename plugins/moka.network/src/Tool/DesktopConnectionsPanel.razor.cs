@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Net.NetworkInformation;
 using Microsoft.AspNetCore.Components;
+using Moka.Red.Core.Enums;
+using Moka.Red.Data.Chart;
 
 namespace Moka.Network.Tool;
 
@@ -23,7 +25,32 @@ public sealed partial class DesktopConnectionsPanel : ComponentBase, IDisposable
 	private IReadOnlyList<LocalConnectionRow> _connections = [];
 	private IReadOnlyList<LocalListenerRow> _listeners = [];
 
-	private string Read => $"Read {Time.GetLocalNow().ToString("T", CultureInfo.CurrentCulture)}";
+	private const int ConnectionsPage = 20;
+
+	private const int ListeningPage = 20;
+
+	private static readonly string Established = LocalConnections.Describe(TcpState.Established);
+
+	/// <summary>The table only draws again when a read changed it, so the time is that of the last change.</summary>
+	private string Said => string.Create(CultureInfo.CurrentCulture, $"Updated {Time.GetLocalNow():T}, read again every {RefreshEvery.TotalSeconds:0} s");
+
+	/// <summary>How many connections are in each state, most first, one slice each.</summary>
+	private IReadOnlyList<MokaDonutSegment> StateShare =>
+	[
+		.. _connections
+			.GroupBy(row => row.State, StringComparer.Ordinal)
+			.OrderByDescending(group => group.Count())
+			.ThenBy(group => group.Key, StringComparer.CurrentCulture)
+			.Select(group => new MokaDonutSegment { Name = group.Key, Value = group.Count(), Color = StateColor(group.Key) }),
+	];
+
+	private static MokaColor StateColor(string state) => state switch
+	{
+		_ when state == Established => MokaColor.Success,
+		"Listening" or "Opening" => MokaColor.Info,
+		_ when state.StartsWith("Closing", StringComparison.Ordinal) || state == "Waiting out the close" => MokaColor.Warning,
+		_ => MokaColor.Surface,
+	};
 
 	protected override void OnAfterRender(bool firstRender)
 	{

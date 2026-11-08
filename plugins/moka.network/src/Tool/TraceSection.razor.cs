@@ -29,55 +29,10 @@ public sealed partial class TraceSection : NetworkViewBase
 	private string? _error;
 
 	private string Summary => Running
-		? $"hop {_hops.Count}"
-		: _end is TraceEnd.Reached ? $"{_hops.Count} hops" : "the routers on the way, hop by hop";
+		? $"Hop {_hops.Count}"
+		: _end is TraceEnd.Reached && !_stopped ? $"Reached in {_hops.Count} hops" : _end is not null ? $"{_hops.Count} hops" : "The routers on the way, hop by hop";
 
 	protected override void OnInitialized() => _timeout = Math.Min(Settings.PingTimeoutMilliseconds, 3000).ToString(CultureInfo.CurrentCulture);
-
-	private static string ProbeText(TraceProbe? probe) => probe switch
-	{
-		null => "",
-		{ Milliseconds: { } milliseconds } => Milliseconds(milliseconds),
-		{ Status: EchoStatus.TimedOut } => "*",
-		{ Status: EchoStatus.Unreachable } => "!",
-		_ => "?",
-	};
-
-	private static string? ProbeTitle(TraceProbe? probe) => probe switch
-	{
-		{ Status: EchoStatus.TimedOut } => "No answer in time",
-		{ Status: EchoStatus.Unreachable } unreachable => $"Unreachable: {unreachable.Detail}",
-		{ Status: EchoStatus.Failed } failed => $"Failed: {failed.Detail}",
-		_ => null,
-	};
-
-	private static string ProbeClass(TraceProbe? probe) => probe?.Status switch
-	{
-		EchoStatus.TimedOut => "mn-td mn-td--mono mn-td--end mn-td--dim mn-c-probe",
-		EchoStatus.Unreachable or EchoStatus.Failed => "mn-td mn-td--mono mn-td--end mn-td--bad mn-c-probe",
-		_ => "mn-td mn-td--mono mn-td--end mn-c-probe",
-	};
-
-	private string EndClass(TraceEnd end) => _stopped
-		? "mn-result-line"
-		: end == TraceEnd.Reached ? "mn-result-line mn-result-line--good" : "mn-result-line mn-result-line--bad";
-
-	private string EndText(TraceEnd end)
-	{
-		if (_stopped)
-		{
-			return $"Stopped at hop {_hops.Count}.";
-		}
-
-		return end switch
-		{
-			TraceEnd.Reached => $"Reached {_destination} in {_hops.Count} hops.",
-			TraceEnd.Unreachable when _hops.LastOrDefault()?.Unreachable is { } probe =>
-				$"{(probe.From is { } from ? from.ToString() : "A router")} says {_destination} cannot be reached: {probe.Detail}.",
-			TraceEnd.Unreachable => $"{_destination} cannot be reached.",
-			_ => $"Did not reach {_destination} within {_hops.Count} hops. It may not answer ICMP, or the path is longer.",
-		};
-	}
 
 	private async Task OnKeyAsync(KeyboardEventArgs args)
 	{

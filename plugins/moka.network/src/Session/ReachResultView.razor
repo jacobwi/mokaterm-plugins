@@ -1,0 +1,111 @@
+@using Moka.Network.Server
+
+@* What the server found when it reached out: the TCP check's verdict, the ping's round trips as tiles and a line, and
+   the trace's hops as bars, each with the command's own text under it, as the server printed it. *@
+@if (Tcp is { } verdict)
+{
+	<MokaAlert Severity="@Severity(verdict.State)" Title="@($"{TcpTarget}: {verdict.Word}")" Dense>@verdict.Detail</MokaAlert>
+}
+
+@if (PingText.Length > 0)
+{
+	ServerPingResult ping = ServerPingOutput.Parse(PingText);
+	<MokaCard Inner Outlined Title="Ping from the server" Subtitle="@PingTarget">
+		<MokaFlexbox Gap="MokaSpacingScale.Sm">
+			@if (ping.Sent > 0)
+			{
+				<MokaGrid MinColumn="110px" Gap="MokaSpacingScale.Sm" aria-label="Ping summary">
+					<MokaStat Tile Value="@($"{NetworkFormat.Count(ping.Answered)} of {NetworkFormat.Count(ping.Sent)}")" Label="Received" />
+					<MokaStat Tile Value="@NetworkFormat.Percent(ping.LossPercent)" Label="Loss" Color="@(ping.Answered < ping.Sent ? MokaColor.Error : MokaColor.Success)" />
+					<MokaStat Tile Value="@NetworkFormat.Milliseconds(ping.Minimum)" Label="Min" />
+					<MokaStat Tile Value="@NetworkFormat.Milliseconds(ping.Average)" Label="Avg" />
+					<MokaStat Tile Value="@NetworkFormat.Milliseconds(ping.Maximum)" Label="Max" />
+				</MokaGrid>
+			}
+			@if (ping.Replies.Count > 1)
+			{
+				<MokaLineChart Series="@PingSeries(ping)"
+							   Labels="@PingLabels(ping)"
+							   Formatter="NetworkFormat.Milliseconds"
+							   ShowCurrent
+							   ShowPeak
+							   ShowArea
+							   Min="0"
+							   Height="180px"
+							   Label="Round trip of each reply the server got" />
+			}
+		</MokaFlexbox>
+	</MokaCard>
+	<TextOutput Title="Ping output" Detail="As the server printed it" Text="@PingText" CopyLabel="Copy the ping output" />
+}
+
+@if (TraceText.Length > 0)
+{
+	IReadOnlyList<ServerTraceHop> hops = ServerTraceOutput.Parse(TraceText);
+	IReadOnlyList<ServerTraceHop> timed = [.. hops.Where(hop => hop.Milliseconds is not null)];
+	<MokaCard Inner Outlined Title="@($"Trace from the server ({Tracer})")" Subtitle="@TraceTarget">
+		<MokaFlexbox Gap="MokaSpacingScale.Sm">
+			@if (hops.Count > 0)
+			{
+				<MokaGrid MinColumn="120px" Gap="MokaSpacingScale.Sm" aria-label="Trace summary">
+					<MokaStat Tile Value="@NetworkFormat.Count(hops.Count)" Label="Hops" />
+					<MokaStat Tile Value="@NetworkFormat.Count(hops.Count - timed.Count)" Label="Silent hops" />
+					<MokaStat Tile Value="@NetworkFormat.Milliseconds(timed.Count > 0 ? timed[^1].Milliseconds : null)" Label="Last hop" />
+				</MokaGrid>
+			}
+			@if (timed.Count > 0)
+			{
+				<MokaBarChart Series="@HopSeries(timed)" Labels="@HopLabels(timed)" TickFormat="0.#" ShowLegend="false" Label="Best round trip per hop from the server, in milliseconds" />
+			}
+		</MokaFlexbox>
+	</MokaCard>
+	<TextOutput Title="Trace output" Detail="As the server printed it" Text="@TraceText" CopyLabel="Copy the trace output" />
+}
+
+@code {
+	/// <summary>Where the TCP check went, such as "example.com:443 from the server".</summary>
+	[Parameter]
+	public string? TcpTarget { get; set; }
+
+	[Parameter]
+	public ReachVerdict? Tcp { get; set; }
+
+	[Parameter]
+	public string PingTarget { get; set; } = "";
+
+	[Parameter]
+	public string PingText { get; set; } = "";
+
+	[Parameter]
+	public string TraceTarget { get; set; } = "";
+
+	[Parameter]
+	public string TraceText { get; set; } = "";
+
+	/// <summary>The program the trace ran: tracepath or traceroute.</summary>
+	[Parameter]
+	public string Tracer { get; set; } = "";
+
+	private static MokaToastSeverity Severity(ReachState state) => state switch
+	{
+		ReachState.Open => MokaToastSeverity.Success,
+		ReachState.Closed or ReachState.NoAnswer or ReachState.Unreachable => MokaToastSeverity.Error,
+		_ => MokaToastSeverity.Warning,
+	};
+
+	private static IReadOnlyList<MokaLineSeries> PingSeries(ServerPingResult ping) =>
+	[
+		new MokaLineSeries { Name = "Round trip", Color = MokaColor.Info, Values = [.. ping.Replies.Select(reply => reply.Milliseconds)] },
+	];
+
+	private static IReadOnlyList<string> PingLabels(ServerPingResult ping) =>
+		[.. ping.Replies.Select(reply => reply.Sequence.ToString(CultureInfo.CurrentCulture))];
+
+	private static IReadOnlyList<MokaBarSeries> HopSeries(IReadOnlyList<ServerTraceHop> hops) =>
+	[
+		new MokaBarSeries { Name = "Milliseconds", Values = [.. hops.Select(hop => Math.Round(hop.Milliseconds!.Value, 1))] },
+	];
+
+	private static IReadOnlyList<string> HopLabels(IReadOnlyList<ServerTraceHop> hops) =>
+		[.. hops.Select(hop => hop.Hop.ToString(CultureInfo.CurrentCulture))];
+}

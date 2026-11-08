@@ -29,7 +29,7 @@ public sealed partial class ResolveSection : SessionSectionBase
 	private bool NotReady => !Connected || _absent;
 
 	private string Summary => _probed
-		? _hasGetent ? "getent answers for this server" : "no getent on this server"
+		? _hasGetent ? "getent answers for this server" : "No getent on this server"
 		: "Asking the server what it has";
 
 	private string PrimaryText => Running ? "Stop" : "Look up";
@@ -170,6 +170,4 @@ public sealed partial class ResolveSection : SessionSectionBase
 			EndRun(run);
 		}
 	}
-
-	private static string NameOf(GetentHost host) => host.Aliases.Count > 0 ? string.Join(' ', [host.Name, .. host.Aliases]) : host.Name;
 }

@@ -1,0 +1,139 @@
+@using Moka.Network.Ports
+@using Mokaterm.Abstractions.Protocols
+
+@* A port check as it stands: how many ports answered which way, every port's state in a table filled in as its answer
+   comes, the connect times side by side, and what each open port's server said first. *@
+@if (Target is { } target)
+{
+	<MokaText Element="div" Mono>@target</MokaText>
+}
+
+@if (Rows.Any(row => row.Result is not null))
+{
+	<MokaGrid MinColumn="110px" Gap="MokaSpacingScale.Sm" aria-label="Summary">
+		<MokaStat Tile Value="@Counted(PortState.Open)" Label="Open" Color="MokaColor.Success" />
+		<MokaStat Tile Value="@Counted(PortState.Refused)" Label="Refused" Color="@(CountOf(PortState.Refused) > 0 ? MokaColor.Error : null)" />
+		<MokaStat Tile Value="@Counted(PortState.TimedOut)" Label="No answer" Color="@(CountOf(PortState.TimedOut) > 0 ? MokaColor.Warning : null)" />
+		<MokaStat Tile Value="@NetworkFormat.Count(Rows.Count(row => row.Result is { State: PortState.Unreachable or PortState.Failed }))" Label="Failed" />
+	</MokaGrid>
+}
+
+@if (Rows.Count > 0)
+{
+	<MokaGrid MinColumn="340px" Gap="MokaSpacingScale.Md" AlignItems="MokaAlign.Start">
+		<MokaTable TItem="PortRow"
+				   Items="Rows"
+				   ItemKey="@(row => row.Port)"
+				   Label="Ports"
+				   ShowToolbar="false"
+				   ShowPagination="false">
+			<MokaColumn TItem="PortRow" Title="Port" Field="@(row => row.Port)" Mono>
+				<CellTemplate Context="row">
+					<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" GapValue="6px">
+						<span>@row.Port</span>
+						@if (Service(row) is { } service)
+						{
+							<MokaTag Text="@service" Color="MokaColor.Surface" />
+						}
+					</MokaFlexbox>
+				</CellTemplate>
+			</MokaColumn>
+			<MokaColumn TItem="PortRow" Title="State" Field="@(row => row.Result?.State)">
+				<CellTemplate Context="row">
+					@if (row.Result is { } result)
+					{
+						<MokaStatusDot Size="MokaSize.Xs" Color="StateColor(result.State)" Label="@StateText(result.State)" Uppercase="false" Glow="@(result.State == PortState.Open)" />
+					}
+					else
+					{
+						<MokaStatusDot Size="MokaSize.Xs" Color="MokaColor.Surface" Label="checking" Uppercase="false" Glow="false" Pulse />
+					}
+				</CellTemplate>
+			</MokaColumn>
+			<MokaColumn TItem="PortRow" Title="Endpoint" Field="@(row => row.Result is { } shown ? Endpoint(shown) : "")" Mono />
+			<MokaColumn TItem="PortRow" Title="Time" Field="@(row => row.Result?.Elapsed)" Mono Align="MokaTextAlign.Right" Width="96px">
+				<CellTemplate Context="row">@(row.Result is { State: PortState.Open or PortState.Refused } timed ? NetworkFormat.Milliseconds(timed.Elapsed) : "")</CellTemplate>
+			</MokaColumn>
+		</MokaTable>
+		@if (Timed.Count > 1)
+		{
+			<MokaCard Inner Outlined Title="Connect time" Subtitle="Milliseconds to an answer, open or refused">
+				<MokaFlexbox Gap="MokaSpacingScale.Sm">
+					<MokaBarChart Series="@TimeSeries" Labels="@TimeLabels" TickFormat="0.#" ShowLegend="false" Label="Connect time per port, in milliseconds" />
+				</MokaFlexbox>
+			</MokaCard>
+		}
+	</MokaGrid>
+
+	@foreach (PortRow row in Rows.Where(row => row.Result is { Detail: not null } && row.Result.State != PortState.TimedOut))
+	{
+		<MokaAlert Severity="MokaToastSeverity.Warning" Dense>Port @row.Port: @row.Result!.Detail</MokaAlert>
+	}
+
+	@if (GreetingAsked)
+	{
+		@foreach (PortRow row in Rows.Where(row => row.Result is { State: PortState.Open }))
+		{
+			@if (row.Result!.Greeting is { Length: > 0 } greeting)
+			{
+				<TextOutput Title="@($"Port {row.Port} says")" Detail="@Service(row)" Text="@greeting" CopyLabel="@($"Copy what port {row.Port} said")" />
+			}
+			else
+			{
+				<MokaCaption>Port @row.Port said nothing within @PortCheck.GreetingWait.TotalSeconds.ToString(CultureInfo.CurrentCulture) s. Many servers, web servers among them, wait for the client to speak first.</MokaCaption>
+			}
+		}
+	}
+}
+
+@code {
+	/// <summary>Who is being checked: "Connecting to example.com at 192.0.2.10".</summary>
+	[Parameter]
+	public string? Target { get; set; }
+
+	/// <summary>Every port in the order asked, each with its result once it came back.</summary>
+	[Parameter, EditorRequired]
+	public IReadOnlyList<PortRow> Rows { get; set; } = [];
+
+	/// <summary>Ports typed in the custom box that the known list has no name for.</summary>
+	[Parameter]
+	public IReadOnlySet<int> CustomOnly { get; set; } = new HashSet<int>();
+
+	/// <summary>The check read what each server said first, so an open port without a greeting says so.</summary>
+	[Parameter]
+	public bool GreetingAsked { get; set; }
+
+	private IReadOnlyList<PortResult> Timed =>
+		[.. Rows.Select(row => row.Result).OfType<PortResult>().Where(result => result.State is PortState.Open or PortState.Refused)];
+
+	private IReadOnlyList<MokaBarSeries> TimeSeries =>
+	[
+		new MokaBarSeries { Name = "Milliseconds", Values = [.. Timed.Select(result => Math.Round(result.Elapsed.TotalMilliseconds, 1))] },
+	];
+
+	private IReadOnlyList<string> TimeLabels => [.. Timed.Select(result => result.Port.ToString(CultureInfo.CurrentCulture))];
+
+	private int CountOf(PortState state) => Rows.Count(row => row.Result?.State == state);
+
+	private string Counted(PortState state) => NetworkFormat.Count(CountOf(state));
+
+	private string? Service(PortRow row) => PortList.ServiceName(row.Port) ?? (CustomOnly.Contains(row.Port) ? "custom" : null);
+
+	public static string StateText(PortState state) => state switch
+	{
+		PortState.Open => "open",
+		PortState.Refused => "refused",
+		PortState.TimedOut => "no answer",
+		PortState.Unreachable => "unreachable",
+		_ => "failed",
+	};
+
+	private static MokaColor StateColor(PortState state) => state switch
+	{
+		PortState.Open => MokaColor.Success,
+		PortState.TimedOut => MokaColor.Warning,
+		_ => MokaColor.Error,
+	};
+
+	private static string Endpoint(PortResult result) => HostEndpoint.Format(result.Endpoint.Address.ToString(), result.Endpoint.Port);
+}

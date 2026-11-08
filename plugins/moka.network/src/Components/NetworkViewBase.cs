@@ -119,13 +119,11 @@ public abstract class NetworkViewBase : ComponentBase, IDisposable
 	}
 
 	/// <summary>A round trip as the views print it: one decimal under 10 ms, whole milliseconds above.</summary>
-	protected static string Milliseconds(double milliseconds) => milliseconds < 10
-		? milliseconds.ToString("0.0", CultureInfo.CurrentCulture) + " ms"
-		: milliseconds.ToString("N0", CultureInfo.CurrentCulture) + " ms";
+	protected static string Milliseconds(double milliseconds) => NetworkFormat.Milliseconds(milliseconds);
 
-	protected static string Milliseconds(TimeSpan elapsed) => Milliseconds(elapsed.TotalMilliseconds);
+	protected static string Milliseconds(TimeSpan elapsed) => NetworkFormat.Milliseconds(elapsed);
 
-	protected static string Count(long value) => value.ToString("N0", CultureInfo.CurrentCulture);
+	protected static string Count(long value) => NetworkFormat.Count(value);
 
 	/// <summary>A whole number typed into a small field, or null when it does not read or falls outside the range.</summary>
 	protected static int? ReadNumber(string text, int min, int max) =>

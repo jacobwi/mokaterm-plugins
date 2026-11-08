@@ -1,0 +1,12 @@
+.mn-tab {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+}
+
+/* A display of its own would otherwise show a hidden tab. */
+.mn-tab[hidden] {
+	display: none;
+}

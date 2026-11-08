@@ -1,0 +1,208 @@
+@using Moka.Network.Lookup.Mapping
+
+@* Every view of the map that has run: the delegation from the roots as a chain, the CNAMEs hop by hop, each resolver's
+   answer side by side with their times, and the PTR sweep with its share of named addresses. *@
+<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Wrap Gap="MokaSpacingScale.Sm">
+	<CopyButton Text="@MapText.Render(Views)" Label="Copy the map" />
+	<MokaCaption>Every view that has run, as indented text.</MokaCaption>
+</MokaFlexbox>
+
+@if (Note is { } note)
+{
+	<MokaCallout Type="MokaCalloutType.Note">@note</MokaCallout>
+}
+
+@if (Views.Walk is { } walk)
+{
+	<MokaCard Inner Outlined Title="Delegation" Subtitle="@($"{NetworkFormat.Plural(walk.Steps.Count, "server")} asked, from the roots down, without recursion")">
+		<MokaFlexbox Gap="MokaSpacingScale.Sm">
+			<MokaChainCheck Steps="@DelegationSteps(walk)" Label="Delegation" FindingsLabel="What each server said" />
+			<MokaAlert Severity="@(walk.ReachedAnswer ? MokaToastSeverity.Success : MokaToastSeverity.Error)" Dense>@walk.Summary</MokaAlert>
+		</MokaFlexbox>
+	</MokaCard>
+}
+
+@if (Views.Chain is { } chain)
+{
+	<MokaCard Inner Outlined Title="CNAME chain" Subtitle="@NetworkFormat.Plural(chain.Hops.Count, "hop")">
+		<MokaFlexbox Gap="MokaSpacingScale.Sm">
+			<MokaTimeline>
+				@foreach (CnameHop hop in chain.Hops)
+				{
+					<MokaTimelineItem Title="@hop.Name"
+									  Timestamp="@($"{DnsClient.Describe(hop.Server)}, {NetworkFormat.Milliseconds(hop.Elapsed)}")"
+									  DotColor="@(hop.Records.Any(record => record.Type == (int)DnsRecordType.CNAME) ? MokaColor.Info : MokaColor.Success)">
+						@if (hop.Records.Count == 0)
+						{
+							<MokaCaption>No records</MokaCaption>
+						}
+						@foreach (DnsRecord record in hop.Records)
+						{
+							<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" GapValue="6px">
+								<MokaTag Text="@record.TypeName" Color="MokaColor.Info" />
+								<MokaText Element="span" Mono>@record.Data</MokaText>
+							</MokaFlexbox>
+						}
+					</MokaTimelineItem>
+				}
+			</MokaTimeline>
+			<MokaAlert Severity="@(chain.Outcome == CnameChainOutcome.Complete ? MokaToastSeverity.Success : MokaToastSeverity.Warning)" Dense>@chain.Summary</MokaAlert>
+		</MokaFlexbox>
+	</MokaCard>
+}
+
+@if (Views.Matrix is { } matrix)
+{
+	<MokaCard Inner Outlined Title="Resolvers" Subtitle="The same question, each in turn">
+		<MokaFlexbox Gap="MokaSpacingScale.Sm">
+			<MokaGrid MinColumn="320px" Gap="MokaSpacingScale.Md" AlignItems="MokaAlign.Start">
+				@if (matrix.Rows.Any(row => row.Answered))
+				{
+					<MokaBarChart Series="@MatrixSeries(matrix)"
+								  Labels="@MatrixLabels(matrix)"
+								  TickFormat="0.#"
+								  ShowLegend="false"
+								  Label="How long each resolver took to answer, in milliseconds" />
+				}
+				<MokaTable TItem="ResolverMatrixRow"
+						   Items="matrix.Rows"
+						   ItemKey="@(row => row.Resolver)"
+						   Label="Resolver matrix"
+						   ShowToolbar="false"
+						   ShowPagination="false">
+					<MokaColumn TItem="ResolverMatrixRow" Title="Resolver" Field="@(row => row.Resolver)" />
+					<MokaColumn TItem="ResolverMatrixRow" Title="Answer" Field="@(row => row.Answer ?? row.Failure)" Mono>
+						<CellTemplate Context="row">
+							@if (row.Answered)
+							{
+								@row.Answer
+							}
+							else
+							{
+								<MokaText Element="span" Color="MokaColor.Error">@row.Failure</MokaText>
+							}
+						</CellTemplate>
+					</MokaColumn>
+					<MokaColumn TItem="ResolverMatrixRow" Title="Code" Field="@(row => row.Code)">
+						<CellTemplate Context="row">
+							@if (row.Code is { } responseCode)
+							{
+								<MokaTag Text="@responseCode" Color="@CodeColor(responseCode)" />
+							}
+						</CellTemplate>
+					</MokaColumn>
+					<MokaColumn TItem="ResolverMatrixRow" Title="Time" Field="@(row => row.Elapsed)" Mono Align="MokaTextAlign.Right" Width="96px">
+						<CellTemplate Context="row">@(row.Answered ? NetworkFormat.Milliseconds(row.Elapsed) : "")</CellTemplate>
+					</MokaColumn>
+				</MokaTable>
+			</MokaGrid>
+			@foreach (string disagreement in matrix.Disagreements)
+			{
+				<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@disagreement</MokaAlert>
+			}
+		</MokaFlexbox>
+	</MokaCard>
+}
+
+@if (Views.Sweep is { } sweep && Views.SweepPrefix is { } prefix)
+{
+	<MokaCard Inner Outlined Title="PTR sweep" Subtitle="@prefix">
+		<MokaFlexbox Gap="MokaSpacingScale.Sm">
+			<MokaGrid MinColumn="260px" Gap="MokaSpacingScale.Md" AlignItems="MokaAlign.Center">
+				<MokaGrid MinColumn="90px" Gap="MokaSpacingScale.Sm">
+					<MokaStat Tile Value="@NetworkFormat.Count(sweep.Items.Count)" Label="Asked" />
+					<MokaStat Tile Value="@NetworkFormat.Count(sweep.Found)" Label="Named" Color="MokaColor.Success" />
+					<MokaStat Tile Value="@NetworkFormat.Count(sweep.Silent)" Label="Silent" />
+				</MokaGrid>
+				<MokaDonutChart Segments="@SweepShare(sweep)" Thickness="14" Size="MokaSize.Sm" Label="Named and silent addresses" />
+			</MokaGrid>
+			@if (sweep.Found > 0)
+			{
+				<MokaTable TItem="PtrSweepItem"
+						   Items="@(sweep.Items.Where(item => !item.Silent))"
+						   ItemKey="@(item => item.Address)"
+						   Label="Names found"
+						   ShowToolbar="false"
+						   ShowPagination="@(sweep.Found > SweepPage)"
+						   PageSize="SweepPage">
+					<MokaColumn TItem="PtrSweepItem" Title="Address" Field="@(item => item.Address.ToString())" Mono />
+					<MokaColumn TItem="PtrSweepItem" Title="Name" Field="@(item => item.Name)" Mono />
+				</MokaTable>
+			}
+			<MokaCaption>@NetworkFormat.Count(sweep.Silent) of @NetworkFormat.Count(sweep.Items.Count) addresses are silent: no PTR record, or nobody answered for them.</MokaCaption>
+		</MokaFlexbox>
+	</MokaCard>
+}
+
+@code {
+	/// <summary>Found names listed per page; a /24 can name all 256.</summary>
+	private const int SweepPage = 25;
+
+	[Parameter, EditorRequired]
+	public MapViews Views { get; set; } = default!;
+
+	[Parameter]
+	public string? Note { get; set; }
+
+	/// <summary>
+	/// The walk as a chain: a referral or an answer holds, no data is worth knowing, and a server that never answered
+	/// breaks the chain only when nothing after it did, since the walk asks the next one and goes on.
+	/// </summary>
+	public static IReadOnlyList<MokaChainStep> DelegationSteps(DelegationWalkResult walk)
+	{
+		ArgumentNullException.ThrowIfNull(walk);
+		List<MokaChainStep> steps = [];
+		for (int index = 0; index < walk.Steps.Count; index++)
+		{
+			DelegationStep step = walk.Steps[index];
+			bool last = index == walk.Steps.Count - 1;
+			(MokaChainTone tone, string word) = step.Kind switch
+			{
+				DelegationStepKind.Referral => (MokaChainTone.Ok, "referral"),
+				DelegationStepKind.Answer => (MokaChainTone.Ok, "answer"),
+				DelegationStepKind.NoData => (MokaChainTone.Warn, "no data"),
+				_ => (last ? MokaChainTone.Fail : MokaChainTone.Warn, "failed"),
+			};
+			string detail = step.Exchange is { } exchange
+				? $"{DnsClient.Describe(step.Server)}, {NetworkFormat.Milliseconds(exchange.Elapsed)}"
+				: DnsClient.Describe(step.Server);
+			steps.Add(new MokaChainStep(
+				index == 0 ? MokatermIcons.Globe : MokatermIcons.Server,
+				step.ServerName,
+				tone,
+				word,
+				Sentence(step.Outcome),
+				detail));
+		}
+
+		return steps;
+	}
+
+	private static string Sentence(string outcome) =>
+		outcome.Length == 0 ? outcome : char.ToUpper(outcome[0], CultureInfo.CurrentCulture) + outcome[1..];
+
+	private static MokaColor CodeColor(string code) => code switch
+	{
+		"NOERROR" => MokaColor.Success,
+		"NXDOMAIN" => MokaColor.Warning,
+		_ => MokaColor.Error,
+	};
+
+	private static IReadOnlyList<MokaBarSeries> MatrixSeries(ResolverMatrixResult matrix) =>
+	[
+		new MokaBarSeries
+		{
+			Name = "Milliseconds",
+			Values = [.. matrix.Rows.Where(row => row.Answered).Select(row => Math.Round(row.Elapsed.TotalMilliseconds, 1))],
+		},
+	];
+
+	private static IReadOnlyList<string> MatrixLabels(ResolverMatrixResult matrix) =>
+		[.. matrix.Rows.Where(row => row.Answered).Select(row => NetworkFormat.ResolverName(row.Resolver))];
+
+	private static IReadOnlyList<MokaDonutSegment> SweepShare(PtrSweepResult sweep) =>
+	[
+		new MokaDonutSegment { Name = "Named", Value = sweep.Found, Color = MokaColor.Success },
+		new MokaDonutSegment { Name = "Silent", Value = sweep.Silent, Color = MokaColor.Surface },
+	];
+}

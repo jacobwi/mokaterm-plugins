@@ -1,57 +1,74 @@
 @* This machine's own TCP connections and the ports it listens on, read again every few seconds while the
-   Connections tab is on screen. *@
-<div class="mn-conn">
-	<div class="mn-conn-head">
-		<span class="mn-label">This machine's connections</span>
-		<span class="mn-note">@Read</span>
-	</div>
-	<div class="mn-note">Read from this computer's own connection table. The .NET APIs it reads do not say which process owns a connection, so the table cannot either.</div>
+   Connections tab is on screen. Rows are keyed by their place in the read: a connection table can hold two rows with
+   the same local end, remote end and state, and a repeated key throws when the next read diffs. *@
+<NetworkPage Title="Connections" Said="@Said">
+	<Origin>
+		<OriginNote />
+	</Origin>
+	<ChildContent>
+		<MokaGrid MinColumn="320px" Gap="MokaSpacingScale.Md">
+			<MokaGrid Columns="2" Gap="MokaSpacingScale.Sm" aria-label="Summary">
+				<MokaStat Tile Value="@NetworkFormat.Count(_connections.Count)" Label="Connections" />
+				<MokaStat Tile Value="@NetworkFormat.Count(_connections.Count(row => row.State == Established))" Label="Established" Color="MokaColor.Success" />
+				<MokaStat Tile Value="@NetworkFormat.Count(_listeners.Count(row => row.Protocol == "tcp"))" Label="Listening on TCP" />
+				<MokaStat Tile Value="@NetworkFormat.Count(_listeners.Count(row => row.Protocol == "udp"))" Label="Listening on UDP" />
+			</MokaGrid>
+			<MokaCard Inner Outlined Title="States" Subtitle="The TCP connections by state">
+				<MokaFlexbox Gap="MokaSpacingScale.Sm">
+					@if (_connections.Count > 0)
+					{
+						<MokaDonutChart Segments="@StateShare" Thickness="14" Size="MokaSize.Sm" Label="TCP connections by state" />
+					}
+					else
+					{
+						<MokaCaption>This computer holds no TCP connections right now.</MokaCaption>
+					}
+				</MokaFlexbox>
+			</MokaCard>
+		</MokaGrid>
 
-	@if (_connections.Count > 0)
-	{
-		@* The heading sits outside the scrolled part: a sticky header over rows whose text changes every read left
-		   WebView2 showing a smear until something forced a repaint. The rows are deliberately NOT keyed: a connection
-		   table can hold two rows with the same local end, remote end and state, and a repeated key throws when the
-		   next read diffs, which took the whole tool down. *@
-		<div class="mn-conn-table" role="table" aria-label="TCP connections">
-			<div class="mn-conn-row mn-conn-row--head" role="row">
-				<span role="columnheader">Local</span>
-				<span role="columnheader">Remote</span>
-				<span role="columnheader">State</span>
-			</div>
-			<div class="mn-conn-rows" role="rowgroup">
-				@foreach (LocalConnectionRow row in _connections)
-				{
-					<div class="mn-conn-row" role="row">
-						<span class="mn-conn-cell mn-conn-cell--mono" role="cell">@row.Local</span>
-						<span class="mn-conn-cell mn-conn-cell--mono" role="cell">@row.Remote</span>
-						<span class="mn-conn-cell" role="cell">@row.State</span>
-					</div>
-				}
-			</div>
-		</div>
-	}
-	else
-	{
-		<p class="mn-note">This computer holds no TCP connections right now.</p>
-	}
+		<MokaCard Inner Outlined Title="TCP connections" Subtitle="The .NET APIs it reads do not say which process owns a connection, so the table cannot either.">
+			<MokaFlexbox Gap="MokaSpacingScale.Sm">
+				<MokaTable TItem="IndexedRow<LocalConnectionRow>"
+						   Items="@IndexedRows.Of(_connections)"
+						   ItemKey="@(row => row.Index)"
+						   Label="TCP connections"
+						   ShowToolbar="false"
+						   ShowPagination="@(_connections.Count > ConnectionsPage)"
+						   PageSize="ConnectionsPage"
+						   EmptyTitle="No connections"
+						   EmptyText="This computer holds no TCP connections right now."
+						   Bleed>
+					<MokaColumn TItem="IndexedRow<LocalConnectionRow>" Title="Local" Field="@(row => row.Item.Local)" Mono />
+					<MokaColumn TItem="IndexedRow<LocalConnectionRow>" Title="Remote" Field="@(row => row.Item.Remote)" Mono />
+					<MokaColumn TItem="IndexedRow<LocalConnectionRow>" Title="State" Field="@(row => row.Item.State)">
+						<CellTemplate Context="row">
+							<MokaTag Text="@row.Item.State" Color="@StateColor(row.Item.State)" />
+						</CellTemplate>
+					</MokaColumn>
+				</MokaTable>
+			</MokaFlexbox>
+		</MokaCard>
 
-	@if (_listeners.Count > 0)
-	{
-		<div class="mn-conn-table mn-conn-table--listening" role="table" aria-label="Listening ports">
-			<div class="mn-conn-row mn-conn-row--head" role="row">
-				<span role="columnheader">Protocol</span>
-				<span role="columnheader">Listening on</span>
-			</div>
-			<div class="mn-conn-rows" role="rowgroup">
-				@foreach (LocalListenerRow row in _listeners)
-				{
-					<div class="mn-conn-row" role="row">
-						<span class="mn-conn-cell mn-conn-cell--mono" role="cell">@row.Protocol</span>
-						<span class="mn-conn-cell mn-conn-cell--mono" role="cell">@row.Local</span>
-					</div>
-				}
-			</div>
-		</div>
-	}
-</div>
+		<MokaCard Inner Outlined Title="Listening" Subtitle="@NetworkFormat.Plural(_listeners.Count, "port")">
+			<MokaFlexbox Gap="MokaSpacingScale.Sm">
+				<MokaTable TItem="IndexedRow<LocalListenerRow>"
+						   Items="@IndexedRows.Of(_listeners)"
+						   ItemKey="@(row => row.Index)"
+						   Label="Listening ports"
+						   ShowToolbar="false"
+						   ShowPagination="@(_listeners.Count > ListeningPage)"
+						   PageSize="ListeningPage"
+						   EmptyTitle="Nothing is listening"
+						   Bleed>
+					<MokaColumn TItem="IndexedRow<LocalListenerRow>" Title="Protocol" Field="@(row => row.Item.Protocol)" Width="120px">
+						<CellTemplate Context="row">
+							<MokaTag Text="@row.Item.Protocol" Color="@(row.Item.Protocol == "tcp" ? MokaColor.Info : MokaColor.Secondary)" />
+						</CellTemplate>
+					</MokaColumn>
+					<MokaColumn TItem="IndexedRow<LocalListenerRow>" Title="Listening on" Field="@(row => row.Item.Local)" Mono />
+				</MokaTable>
+			</MokaFlexbox>
+		</MokaCard>
+	</ChildContent>
+</NetworkPage>

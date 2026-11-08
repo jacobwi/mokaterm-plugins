@@ -1,0 +1,43 @@
+/* The tool has a fixed height, so the header stays put and only the body scrolls. */
+.mn-page {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: var(--moka-spacing-md);
+	min-width: 0;
+	min-height: 0;
+}
+
+/* Moka sizes the title for a page of its own; here a tab sits under the dialog's own title. */
+.mn-page ::deep .moka-page-header__title {
+	font-size: var(--moka-font-size-lg);
+}
+
+.mn-page-body {
+	flex: 1;
+	min-height: 0;
+	padding-right: 2px;
+	overflow-y: auto;
+}
+
+/* Inside the scrolling box rather than on it: a flex column or a grid of the box's own height squeezes cards and
+   tables that clip their overflow down to nothing before the box scrolls, while one of its content's height cannot. */
+.mn-page-stack {
+	display: flex;
+	flex-direction: column;
+	gap: var(--moka-spacing-md);
+	min-width: 0;
+}
+
+/* Moka stacks its header below 720px of window, which is every narrow tool window; a tab keeps its actions beside its
+   title instead of stretching them across. */
+@media (max-width: 720px) {
+	.mn-page ::deep .moka-page-header__titles {
+		flex: 1 1 0;
+	}
+
+	.mn-page ::deep .moka-page-header__actions,
+	.mn-page ::deep .moka-page-header__actions > * {
+		flex: none;
+	}
+}

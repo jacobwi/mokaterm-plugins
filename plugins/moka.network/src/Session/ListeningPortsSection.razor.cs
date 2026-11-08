@@ -18,13 +18,11 @@ public sealed partial class ListeningPortsSection : SessionSectionBase
 
 	private bool _absent => _probed && !_hasSs;
 
-	private bool _hiddenProcesses => _rows.Count > 0 && _rows.All(row => row.Process.Length == 0);
-
 	private string Summary => !_probed
 		? "Asking the server what it has"
 		: _hasSs
-			? _rows.Count > 0 ? $"{_rows.Count} listening sockets on the server" : "no listening sockets found"
-			: "no ss on this server";
+			? _rows.Count > 0 ? $"{_rows.Count} listening sockets on the server" : "No listening sockets found"
+			: "No ss on this server";
 
 	private string? PrimaryTitle => !Connected
 		? "The session is not connected."
@@ -114,6 +112,4 @@ public sealed partial class ListeningPortsSection : SessionSectionBase
 		int end = text.IndexOf('\n');
 		return (end < 0 ? text : text[..end]).Trim();
 	}
-
-	private static string Process(SsRow row) => row.Process.Length > 0 ? row.Process : "-";
 }

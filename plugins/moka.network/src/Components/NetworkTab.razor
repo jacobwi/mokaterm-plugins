@@ -1,0 +1,12 @@
+@* One tab of a tool, kept alive while another shows, so switching back finds what was typed and what a run found. *@
+<div class="mn-tab" hidden="@(!Shown)">
+	@ChildContent
+</div>
+
+@code {
+	[Parameter]
+	public bool Shown { get; set; }
+
+	[Parameter]
+	public RenderFragment? ChildContent { get; set; }
+}

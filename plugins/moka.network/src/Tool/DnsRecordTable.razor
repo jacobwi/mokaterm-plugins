@@ -1,0 +1,63 @@
+@* One section of a DNS answer (answer, authority or additional) as a table: name, TTL, type and data, as the server
+   sent them. Nothing shows for a section the server left empty. *@
+@if (Records.Count > 0)
+{
+	<MokaCard Inner Outlined Title="@Title" Subtitle="@NetworkFormat.Plural(Records.Count, "record")">
+		<MokaFlexbox Gap="MokaSpacingScale.Sm">
+			<MokaTable TItem="IndexedRow<DnsRecord>"
+					   Items="Rows"
+					   ItemKey="@(row => row.Index)"
+					   Label="@Title"
+					   ShowToolbar="false"
+					   ShowPagination="false"
+					   Bleed>
+				<MokaColumn TItem="IndexedRow<DnsRecord>" Title="Name" Field="@(row => row.Item.Name)" Mono />
+				<MokaColumn TItem="IndexedRow<DnsRecord>" Title="TTL" Field="@(row => row.Item.Ttl)" Mono Align="MokaTextAlign.Right">
+					<CellTemplate Context="row">
+						<Hint Text="@TtlTitle(row.Item.Ttl)">@TtlText(row.Item.Ttl)</Hint>
+					</CellTemplate>
+				</MokaColumn>
+				<MokaColumn TItem="IndexedRow<DnsRecord>" Title="Type" Field="@(row => row.Item.TypeName)">
+					<CellTemplate Context="row">
+						<MokaTag Text="@row.Item.TypeName" Color="MokaColor.Info" />
+					</CellTemplate>
+				</MokaColumn>
+				<MokaColumn TItem="IndexedRow<DnsRecord>" Title="Data" Field="@(row => row.Item.Data)" Mono>
+					<CellTemplate Context="row">
+						@if (row.Item.Malformed)
+						{
+							<Hint Text="This record's data does not have the shape its type calls for.">
+								<MokaText Element="span" Color="MokaColor.Warning">@row.Item.Data</MokaText>
+							</Hint>
+						}
+						else
+						{
+							@row.Item.Data
+						}
+					</CellTemplate>
+				</MokaColumn>
+			</MokaTable>
+		</MokaFlexbox>
+	</MokaCard>
+}
+
+@code {
+	[Parameter, EditorRequired]
+	public string Title { get; set; } = "";
+
+	[Parameter, EditorRequired]
+	public IReadOnlyList<DnsRecord> Records { get; set; } = [];
+
+	private IReadOnlyList<IndexedRow<DnsRecord>> Rows => IndexedRows.Of(Records);
+
+	/// <summary>A TTL the way people read one: 45s, 5m, 1h30m, 2d.</summary>
+	public static string TtlText(uint ttl) => ttl switch
+	{
+		< 60 => ttl.ToString(CultureInfo.InvariantCulture) + "s",
+		< 3600 => string.Create(CultureInfo.InvariantCulture, $"{ttl / 60}m{(ttl % 60 == 0 ? "" : $"{ttl % 60}s")}"),
+		< 86400 => string.Create(CultureInfo.InvariantCulture, $"{ttl / 3600}h{(ttl % 3600 == 0 ? "" : $"{ttl % 3600 / 60}m")}"),
+		_ => string.Create(CultureInfo.InvariantCulture, $"{ttl / 86400}d{(ttl % 86400 == 0 ? "" : $"{ttl % 86400 / 3600}h")}"),
+	};
+
+	private static string TtlTitle(uint ttl) => ttl.ToString("N0", CultureInfo.CurrentCulture) + " seconds";
+}

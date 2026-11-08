@@ -41,28 +41,10 @@ public sealed partial class MapSection : NetworkViewBase
 	private int _sweepTotal;
 
 	private string Summary => Running
-		? _sweepTotal > 0 ? $"asked {Count(_sweepDone)} of {Count(_sweepTotal)}" : _stage ?? "asking"
-		: _views is { Any: true } views ? $"drawn for {Subject(views)}" : "how a name resolves, from the roots down";
+		? _sweepTotal > 0 ? $"Asked {Count(_sweepDone)} of {Count(_sweepTotal)}" : "Drawing"
+		: _views is { Any: true } views ? $"Drawn for {Subject(views)}" : "How a name resolves, from the roots down";
 
 	private static string Subject(MapViews views) => views.Name.Length > 0 ? views.Name : views.SweepPrefix ?? "";
-
-	/// <summary>The classes a delegation step's outcome colors it by.</summary>
-	private static string StepClass(DelegationStepKind kind) => kind switch
-	{
-		DelegationStepKind.Referral => "mn-map-level mn-map-level--referral",
-		DelegationStepKind.Answer => "mn-map-level mn-map-level--answer",
-		DelegationStepKind.NoData => "mn-map-level mn-map-level--nodata",
-		_ => "mn-map-level mn-map-level--failed",
-	};
-
-	/// <summary>The classes a resolver row's code cell gets: plain for NOERROR, warn for NXDOMAIN, bad for the rest.</summary>
-	private static string CodeClass(ResolverMatrixRow row) => row.Code switch
-	{
-		"NOERROR" => "mn-td mn-td--mono mn-c-code",
-		"NXDOMAIN" => "mn-td mn-td--mono mn-td--warn mn-c-code",
-		null => "mn-td mn-td--mono mn-td--dim mn-c-code",
-		_ => "mn-td mn-td--mono mn-td--bad mn-c-code",
-	};
 
 	private async Task OnKeyAsync(KeyboardEventArgs args)
 	{

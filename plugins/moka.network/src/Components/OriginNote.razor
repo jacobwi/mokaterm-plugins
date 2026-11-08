@@ -2,10 +2,12 @@
 
 @* Where a probe starts, so a result is read as what that machine sees: on the web host the server makes every
    connection, not the browser. *@
-<span class="mn-origin" title="@Explanation">
-	<MokaStatusDot Size="MokaSize.Xs" Color="@(IsDesktop ? MokaColor.Success : MokaColor.Info)" Glow />
-	<span>@(IsDesktop ? "Runs from this computer" : "Runs from the Mokaterm server")</span>
-</span>
+<Hint Text="@Explanation">
+	<MokaStatusDot Size="MokaSize.Xs"
+				   Color="@(IsDesktop ? MokaColor.Success : MokaColor.Info)"
+				   Label="@(IsDesktop ? "Runs from this computer" : "Runs from the Mokaterm server")"
+				   Uppercase="false" />
+</Hint>
 
 @code {
 	[Inject]

@@ -45,7 +45,7 @@ public sealed partial class ReachSection : SessionSectionBase
 
 	private string Summary => !_probed
 		? "Asking the server what it has"
-		: "TCP, ping and the path, from the server's side";
+		: Running ? "Waiting for the server" : "TCP, ping and the path, from the server's side";
 
 	private string PrimaryText => Running ? "Stop" : "Check";
 

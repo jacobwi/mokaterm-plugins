@@ -39,7 +39,7 @@ public sealed partial class CaptureSection : SessionSectionBase
 	private string Summary => Capturing
 		? $"Capturing: {_filter}"
 		: _probed
-			? _hasTcpDump ? $"{Count(_lines.Total)} lines so far" : "no tcpdump on this server"
+			? _hasTcpDump ? $"{Count(_lines.Total)} lines so far" : "No tcpdump on this server"
 			: "Asking the server what it has";
 
 	private string PrimaryText => Capturing ? "Stop" : "Start";
@@ -199,11 +199,5 @@ public sealed partial class CaptureSection : SessionSectionBase
 	{
 		StopRedraw();
 		base.Dispose(disposing);
-	}
-
-	private static string Protocol(CaptureEntry entry)
-	{
-		string proto = entry.Parsed.Protocol;
-		return entry.Parsed.Length.Length > 0 ? (proto.Length > 0 ? $"{proto} {entry.Parsed.Length}" : entry.Parsed.Length) : proto;
 	}
 }

@@ -2,13 +2,13 @@
    tab of the tool, and never written anywhere. *@
 @if (_shown.Count > 0)
 {
-	<div class="mn-recent" role="group" aria-label="Recent targets">
-		<span class="mn-label">Recent</span>
+	<MokaFlexbox Direction="MokaDirection.Row" Align="MokaAlign.Center" Wrap GapValue="6px" role="group" aria-label="Recent targets">
+		<MokaCaption Micro>Recent</MokaCaption>
 		@foreach (string target in _shown)
 		{
-			<button type="button" class="mn-recent-chip" title="@($"Put {target} in the field")" @onclick="() => OnPick.InvokeAsync(target)">@target</button>
+			<MokaChip Text="@target" Size="MokaSize.Sm" Variant="MokaVariant.Outlined" OnClick="() => OnPick.InvokeAsync(target)" @key="target" />
 		}
-	</div>
+	</MokaFlexbox>
 }
 
 @code {

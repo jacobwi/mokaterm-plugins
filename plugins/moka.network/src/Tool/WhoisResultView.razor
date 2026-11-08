@@ -1,0 +1,199 @@
+@using System.Text
+@using Moka.Network.Whois
+
+@* A whois lookup's answer: the servers asked as a chain of referrals, the registry's facts and dates when RDAP
+   answered, and each server's text or JSON as it sent it, made plain, with its own copy button. *@
+@if (Steps.Count > 0)
+{
+	<MokaCard Inner Outlined Title="Servers asked" Subtitle="@ServerLine">
+		<MokaFlexbox Gap="MokaSpacingScale.Sm">
+			<MokaChainCheck Steps="Steps" Label="Servers asked" FindingsLabel="What each server said" />
+		</MokaFlexbox>
+	</MokaCard>
+}
+
+@if (Note is { } note)
+{
+	<MokaAlert Severity="MokaToastSeverity.Info" Dense>@note</MokaAlert>
+}
+
+@if (Rdap is { } rdap)
+{
+	<MokaGrid MinColumn="300px" Gap="MokaSpacingScale.Md" AlignItems="MokaAlign.Start">
+		<MokaCard Inner Outlined Title="Registry record" Subtitle="@rdap.Domain.Name">
+			<MokaFlexbox Gap="MokaSpacingScale.Sm">
+				<MokaDataList Items="@Facts(rdap.Domain)" Dense Orientation="MokaDirection.Row" />
+			</MokaFlexbox>
+		</MokaCard>
+		@if (Dates(rdap.Domain).Count > 0)
+		{
+			<MokaCard Inner Outlined Title="Dates" Subtitle="As the registry reported them, in UTC">
+				<MokaFlexbox Gap="MokaSpacingScale.Sm">
+					<MokaTimeline>
+						@foreach ((string what, string when, MokaColor color) in Dates(rdap.Domain))
+						{
+							<MokaTimelineItem Title="@what" Timestamp="@when" DotColor="color" />
+						}
+					</MokaTimeline>
+				</MokaFlexbox>
+			</MokaCard>
+		}
+	</MokaGrid>
+	@if (rdap.Note is { } referralFailure)
+	{
+		<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@referralFailure</MokaAlert>
+	}
+	<TextOutput Title="@rdap.Server" Detail="RDAP, the registry's answer as JSON" Text="@rdap.RegistryJson" Language="json" CopyLabel="Copy the registry's JSON" Tall />
+	@if (rdap.RegistrarJson is { } registrarJson)
+	{
+		<TextOutput Title="@(rdap.RegistrarServer ?? "")" Detail="RDAP, the registrar's answer as JSON" Text="@registrarJson" Language="json" CopyLabel="Copy the registrar's JSON" Tall />
+	}
+}
+
+@foreach (WhoisAnswer answer in Answers)
+{
+	@if (answer.Error is { } failure)
+	{
+		<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@answer.Server: @failure</MokaAlert>
+	}
+	else
+	{
+		<TextOutput Title="@answer.Server" Detail="@Detail(answer)" Text="@answer.Text" CopyLabel="@($"Copy what {answer.Server} said")" Tall>
+			@if (answer.Text.Length == 0)
+			{
+				<MokaCaption>The server closed the connection without saying anything.</MokaCaption>
+			}
+		</TextOutput>
+	}
+}
+
+@code {
+	/// <summary>Every port 43 answer in the order the referrals led, failures included.</summary>
+	[Parameter]
+	public IReadOnlyList<WhoisAnswer> Answers { get; set; } = [];
+
+	/// <summary>The registry's record over RDAP, when port 43 gave nothing for a domain.</summary>
+	[Parameter]
+	public RdapResult? Rdap { get; set; }
+
+	[Parameter]
+	public string? Note { get; set; }
+
+	private string ServerLine => Answers.Count > 0
+		? string.Join(" > ", Answers.Select(answer => answer.Server))
+		: Rdap is { RegistrarServer: { } registrar } rdap ? $"{rdap.Server} > {registrar} over RDAP"
+		: Rdap is { } alone ? $"{alone.Server} over RDAP"
+		: "";
+
+	private IReadOnlyList<MokaChainStep> Steps => Answers.Count > 0 ? AnswerSteps(Answers) : Rdap is { } rdap ? RdapSteps(rdap) : [];
+
+	/// <summary>The referrals as a chain: an answer holds, one cut short is worth knowing, a failure breaks it.</summary>
+	public static IReadOnlyList<MokaChainStep> AnswerSteps(IReadOnlyList<WhoisAnswer> answers)
+	{
+		ArgumentNullException.ThrowIfNull(answers);
+		return [.. answers.Select((answer, index) => new MokaChainStep(
+			index == 0 ? MokatermIcons.Globe : MokatermIcons.Server,
+			answer.Server,
+			answer.Error is not null ? MokaChainTone.Fail : answer.Cut || answer.TimedOut ? MokaChainTone.Warn : MokaChainTone.Ok,
+			answer.Error is not null ? "failed" : answer.Referral is not null ? "refers on" : "answered",
+			answer.Error ?? Detail(answer)))];
+	}
+
+	private static IReadOnlyList<MokaChainStep> RdapSteps(RdapResult rdap)
+	{
+		List<MokaChainStep> steps =
+		[
+			new(NetworkIcons.Whois, "Port 43", MokaChainTone.Off, "gave nothing", ""),
+			new(MokatermIcons.Globe, rdap.Server, MokaChainTone.Ok, "registry", "The registry answered over RDAP."),
+		];
+		if (rdap.RegistrarServer is { } registrar)
+		{
+			steps.Add(new(MokatermIcons.Server, registrar, rdap.Note is null ? MokaChainTone.Ok : MokaChainTone.Warn, "registrar", rdap.Note ?? "The registrar answered over RDAP."));
+		}
+
+		return steps;
+	}
+
+	public static string Detail(WhoisAnswer answer)
+	{
+		ArgumentNullException.ThrowIfNull(answer);
+		StringBuilder detail = new();
+		detail.Append(answer.Bytes.ToString("N0", CultureInfo.CurrentCulture)).Append(" bytes, ").Append(NetworkFormat.Milliseconds(answer.Elapsed));
+		if (answer.Cut)
+		{
+			detail.Append(", cut at the size limit");
+		}
+
+		if (answer.TimedOut)
+		{
+			detail.Append(", stopped at the time limit");
+		}
+
+		if (answer.Referral is { } referral)
+		{
+			detail.Append(", refers to ").Append(referral);
+		}
+
+		return detail.ToString();
+	}
+
+	/// <summary>The registry's facts as the result shows them: who holds it, its states and its name servers.</summary>
+	private static IReadOnlyList<MokaDataListItem> Facts(RdapDomain domain)
+	{
+		List<MokaDataListItem> facts = [];
+		if (domain.Registrar is { } registrar)
+		{
+			facts.Add(new MokaDataListItem("REGISTRAR", domain.RegistrarId is { } identifier ? $"{registrar}, IANA ID {identifier}" : registrar));
+		}
+
+		if (domain.Statuses.Count > 0)
+		{
+			facts.Add(new MokaDataListItem("STATUS", ValueContent: @<MokaFlexbox Direction="MokaDirection.Row" Wrap GapValue="4px">
+				@foreach (string status in domain.Statuses)
+				{
+					<MokaTag Text="@status" Color="MokaColor.Info" />
+				}
+			</MokaFlexbox>));
+		}
+
+		if (domain.Nameservers.Count > 0)
+		{
+			facts.Add(new MokaDataListItem("NAMESERVERS", ValueContent: @<MokaFlexbox GapValue="2px">
+				@foreach (string server in domain.Nameservers)
+				{
+					<MokaText Element="span" Mono>@server</MokaText>
+				}
+			</MokaFlexbox>));
+		}
+
+		return facts;
+	}
+
+	/// <summary>Registered, updated and expires, in the order they happened, each as the registry wrote it in UTC.</summary>
+	private static IReadOnlyList<(string What, string When, MokaColor Color)> Dates(RdapDomain domain)
+	{
+		List<(string, string, MokaColor)> dates = [];
+		if (domain.Registered is { } registered)
+		{
+			dates.Add(("Registered", DateText(registered), MokaColor.Success));
+		}
+
+		if (domain.Updated is { } updated)
+		{
+			dates.Add(("Updated", DateText(updated), MokaColor.Info));
+		}
+
+		if (domain.Expires is { } expires)
+		{
+			dates.Add(("Expires", DateText(expires), MokaColor.Warning));
+		}
+
+		return dates;
+	}
+
+	/// <summary>An RDAP date the way the view prints it: the date and time the registry reported, in UTC.</summary>
+	public static string DateText(string date) =>
+		DateTimeOffset.TryParse(date, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTimeOffset when)
+			? when.UtcDateTime.ToString("d MMM yyyy HH:mm", CultureInfo.CurrentCulture) + " UTC"
+			: date;
+}

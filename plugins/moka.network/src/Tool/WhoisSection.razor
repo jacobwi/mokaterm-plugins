@@ -1,79 +1,59 @@
 @inherits NetworkViewBase
 @using Moka.Network.Whois
 
-<ToolPageFrame Title="Whois"
-			   Summary="@Summary"
-			   Loaded="true"
-			   PrimaryText="@(Running ? "Stop" : "Look up")"
-			   PrimaryIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Whois)"
-			   PrimaryDisabled="@(Busy && !Running)"
-			   OnPrimary="PrimaryAsync">
-	<div class="mn-stack">
-		<div class="mn-group" @onkeydown="OnKeyAsync">
-			<MokaTextField Label="Domain or address"
-						   Value="@_query"
-						   ValueChanged="@(value => _query = value ?? "")"
-						   Placeholder="example.com or 192.0.2.10"
-						   Size="MokaSize.Sm"
-						   spellcheck="false"
-						   autocomplete="off" />
-			<RecentTargetsBar OnPick="@(value => _query = value)" />
-			<div class="mn-row">
-				<OriginNote />
-				<span class="mn-note">Asks @WhoisClient.RootServer on TCP port 43, then follows up to @WhoisClient.MaxReferrals referrals. @Settings.WhoisTimeoutSeconds s per server, @(WhoisClient.MaxTotalBytes / 1024) KiB in all. A domain that port 43 gives nothing for is asked of its registry over RDAP, which is HTTPS.</span>
-			</div>
-		</div>
+<NetworkPage Title="Whois" Said="@Summary">
+	<Actions>
+		@if (_answers.Any(answer => answer.Error is null))
+		{
+			<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Sm" StartIcon="MokaIcons.Content.Copy" OnClick="CopyAllAsync">Copy all</MokaButton>
+		}
+		<MokaButton Variant="MokaVariant.Filled"
+					Color="MokaColor.Primary"
+					Size="MokaSize.Sm"
+					StartIcon="@(Running ? NetworkIcons.Stop : NetworkIcons.Whois)"
+					Disabled="@(Busy && !Running)"
+					OnClick="PrimaryAsync">@(Running ? "Stop" : "Look up")</MokaButton>
+	</Actions>
+	<Origin>
+		<OriginNote />
+	</Origin>
+	<ChildContent>
+		<MokaCard Inner Outlined Title="Query">
+			<MokaFlexbox Gap="MokaSpacingScale.Sm">
+				<div @onkeydown="OnKeyAsync">
+					<MokaTextField Label="Domain or address"
+								   Value="@_query"
+								   ValueChanged="@(value => _query = value ?? "")"
+								   Placeholder="example.com or 192.0.2.10"
+								   Size="MokaSize.Sm"
+								   spellcheck="false"
+								   autocomplete="off" />
+				</div>
+				<RecentTargetsBar OnPick="@(value => _query = value)" />
+				<MokaCaption>Asks @WhoisClient.RootServer on TCP port 43, then follows up to @WhoisClient.MaxReferrals referrals. @Settings.WhoisTimeoutSeconds s per server, @(WhoisClient.MaxTotalBytes / 1024) KiB in all. A domain that port 43 gives nothing for is asked of its registry over RDAP, which is HTTPS.</MokaCaption>
+			</MokaFlexbox>
+		</MokaCard>
 
 		@if (_error is { } error)
 		{
 			<MokaAlert Severity="MokaToastSeverity.Error" Dense>@error</MokaAlert>
 		}
 
+		@if (Running)
+		{
+			<RunningCard Text="@RunningText" />
+		}
+
 		@if (_answers.Count > 0 || _rdap is not null)
 		{
-			<div class="mn-results">
-				<div class="mn-row">
-					<span class="mn-note mn-mono">@ServerLine</span>
-					<span class="mn-gap"></span>
-					@if (_answers.Count > 0)
-					{
-						<MokaButton Variant="MokaVariant.Outlined" Size="MokaSize.Xs" StartIcon="MokaIcons.Content.Copy" OnClick="CopyAllAsync">Copy all</MokaButton>
-					}
-				</div>
-				@if (_note is { } note)
-				{
-					<MokaAlert Severity="MokaToastSeverity.Info" Dense>@note</MokaAlert>
-				}
-				@if (_rdap is { } rdap)
-				{
-					<FactList Facts="@Facts(rdap)" />
-					@if (rdap.Note is { } referralFailure)
-					{
-						<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@referralFailure</MokaAlert>
-					}
-					<TextOutput Title="@rdap.Server" Detail="RDAP, the registry's answer as JSON" Text="@rdap.RegistryJson" Tall />
-					@if (rdap.RegistrarJson is { } registrarJson)
-					{
-						<TextOutput Title="@(rdap.RegistrarServer ?? "")" Detail="RDAP, the registrar's answer as JSON" Text="@registrarJson" Tall />
-					}
-				}
-				@foreach (WhoisAnswer answer in _answers)
-				{
-					@if (answer.Error is { } failure)
-					{
-						<MokaAlert Severity="MokaToastSeverity.Warning" Dense>@answer.Server: @failure</MokaAlert>
-					}
-					else
-					{
-						<TextOutput Title="@answer.Server" Detail="@Detail(answer)" Text="@answer.Text" Tall>
-							@if (answer.Text.Length == 0)
-							{
-								<span class="mn-note">The server closed the connection without saying anything.</span>
-							}
-						</TextOutput>
-					}
-				}
-			</div>
+			<WhoisResultView Answers="_answers" Rdap="_rdap" Note="@_note" />
 		}
-	</div>
-</ToolPageFrame>
+		else if (!Busy && _error is null)
+		{
+			<MokaEmptyState Icon="NetworkIcons.Whois"
+							Title="Who holds a domain or an address"
+							Description="Starts at IANA and follows the registries' referrals, each answer shown as the server sent it."
+							Compact />
+		}
+	</ChildContent>
+</NetworkPage>

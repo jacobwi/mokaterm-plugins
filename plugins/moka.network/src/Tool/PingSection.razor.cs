@@ -6,7 +6,6 @@ using Moka.Network.Components;
 using Moka.Network.Echo;
 using Moka.Network.Settings;
 using Moka.Network.Targets;
-using Mokaterm.UI.Common.PluginUi;
 
 namespace Moka.Network.Tool;
 
@@ -35,51 +34,18 @@ public sealed partial class PingSection : NetworkViewBase
 	private string? _target;
 	private string? _error;
 	private PathMtuResult? _mtu;
+	private TimeSpan _runInterval = TimeSpan.FromSeconds(1);
+	private int _planned;
 
 	private string Summary => Running
-		? $"{_stats.Sent} sent"
+		? _stats.Sent > 0 ? $"{_stats.Sent} sent" : "Starting"
 		: _stats.Sent > 0 ? $"{_stats.Received} of {_stats.Sent} answered" : _mode == PingMode.Tcp ? "TCP connection attempts, one at a time" : "ICMP echo, one request at a time";
-
-	private string LossText => _stats.LossPercent.ToString(_stats.LossPercent is 0 or 100 ? "0" : "0.#", CultureInfo.CurrentCulture) + "%";
 
 	protected override void OnInitialized()
 	{
 		_timeout = Settings.PingTimeoutMilliseconds.ToString(CultureInfo.CurrentCulture);
 		_port = Settings.TcpPingPort.ToString(CultureInfo.CurrentCulture);
 	}
-
-	private static string Rtt(double? milliseconds) => milliseconds is { } value ? Milliseconds(value) : "-";
-
-	private static string ResultText(EchoReply reply) => reply.Status switch
-	{
-		EchoStatus.Reply => reply.Detail is { } detail ? $"reply ({detail})" : "reply",
-		EchoStatus.TimedOut => "timed out",
-		EchoStatus.TtlExpired => "TTL expired on the way",
-		EchoStatus.Unreachable => $"unreachable: {reply.Detail}",
-		_ => $"failed: {reply.Detail}",
-	};
-
-	private static string ResultClass(EchoReply reply) => reply.Status switch
-	{
-		EchoStatus.Reply => "mn-td",
-		EchoStatus.TimedOut => "mn-td mn-td--warn",
-		_ => "mn-td mn-td--bad",
-	};
-
-	private static string MtuClass(PathMtuResult mtu) => mtu.LargestPayload is null ? "mn-result-line mn-result-line--bad" : "mn-result-line mn-result-line--good";
-
-	private static string MtuText(PathMtuResult mtu) => mtu.AtCeiling
-		? $"Every size up to {PathMtu.MaxPayload} bytes passed, so the path carries at least the classic {PathMtu.MaxPayload + PathMtu.HeaderBytes} byte packet whole; whether it carries more cannot be seen from here."
-		: mtu.LargestPayload is { } largest
-			? $"Packets of {largest} bytes pass and {largest + 1} bytes do not, so no link on the way carries more than {largest + PathMtu.HeaderBytes} bytes whole."
-			: "Not even an empty packet got through. The host may not answer ICMP echo, or every packet is being dropped on the way.";
-
-	private static Fact[] MtuFacts(PathMtuResult mtu) =>
-	[
-		new Fact("Largest passing payload", mtu.LargestPayload is { } largest ? $"{largest} bytes" : "none", mono: true),
-		new Fact("Path MTU", mtu.PathMtuBytes is { } bytes ? $"{bytes} bytes" : "none", mono: true),
-		new Fact("DF-set probes", mtu.Probes.ToString(CultureInfo.CurrentCulture)),
-	];
 
 	private async Task OnKeyAsync(KeyboardEventArgs args)
 	{
@@ -137,6 +103,8 @@ public sealed partial class PingSection : NetworkViewBase
 		_stats = new PingStatistics();
 		_dropped = 0;
 		_mtu = null;
+		_runInterval = TimeSpan.FromSeconds(interval!.Value);
+		_planned = count!.Value;
 		_target = $"Looking up {target.Host}";
 		StateHasChanged();
 		try
