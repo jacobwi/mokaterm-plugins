@@ -225,6 +225,8 @@ jobs:
   deploy:
     name: Deploy
     needs: index
+    # Release is skipped whenever nothing new was built, and a skipped job anywhere upstream skips this one by default.
+    if: ${{ !cancelled() && needs.index.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
