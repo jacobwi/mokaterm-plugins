@@ -8,10 +8,10 @@ name: Publish
 # job summary; release refuses on its own as well.
 #
 # Plugin code runs only in the build jobs, one runner per plugin, each with a read-only token and no secrets. The jobs
-# that write (release: contents; index: the signing key and Pages) run only this repository's scripts on data: they
-# check every package again from its bytes and take ids, sources and commits from this repository, never from what a
-# build job wrote. GALLERY_SIGNING_KEY is a repository secret, and the index job, which runs only for main, is the one
-# step that reads it.
+# that write (release: contents; index: the signing key; deploy: Pages) run only this repository's scripts and GitHub's
+# own actions on data: they check every package again from its bytes and take ids, sources and commits from this
+# repository, never from what a build job wrote. GALLERY_SIGNING_KEY is a repository secret, and the index job, which
+# runs only for main, is the one step that reads it.
 on:
   push:
     branches: [main]
@@ -191,11 +191,6 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     defaults:
       run:
         working-directory: mokaterm-plugins
@@ -224,6 +219,22 @@ jobs:
         with:
           path: mokaterm-plugins/_site
 
+  # Deploying in the job that uploaded can look the artifact up a fraction of a second before the listing shows it, and
+  # a re-run then finds two of them (actions/deploy-pages#451), so the deploy is a job of its own, as GitHub's Pages
+  # starter workflows lay it out. It also keeps Pages and id-token rights away from the job that reads the signing key.
+  deploy:
+    name: Deploy
+    needs: index
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
