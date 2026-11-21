@@ -5,8 +5,9 @@ using System.Net.NetworkInformation;
 namespace Moka.Network.Echo;
 
 /// <summary>
-/// Echo requests through <see cref="Ping"/>. On Windows that is the ICMP API; on Linux .NET uses a raw or ICMP datagram
-/// socket when it may, and otherwise runs the system's ping program and reads what it prints.
+/// Echo requests through <see cref="Ping"/>. On Windows that is the ICMP API. On Linux .NET opens a raw ICMP socket when
+/// the process may, and otherwise runs the system's ping program and reads what it prints, which carries only .NET's own
+/// payload (<see cref="BufferFor"/>).
 /// </summary>
 public sealed class SystemPinger : IPinger
 {
@@ -18,14 +19,15 @@ public sealed class SystemPinger : IPinger
 	{
 		ArgumentNullException.ThrowIfNull(address);
 		ArgumentNullException.ThrowIfNull(request);
-		byte[] payload = Payload(Math.Clamp(request.PayloadSize, EchoRequest.MinPayload, EchoRequest.MaxPayload));
+		int size = Math.Clamp(request.PayloadSize, EchoRequest.MinPayload, EchoRequest.MaxPayload);
+		byte[]? buffer = BufferFor(size);
 		PingOptions options = new(Math.Clamp(request.Ttl, EchoRequest.MinTtl, EchoRequest.MaxTtl), request.DontFragment);
 		using Ping ping = new();
 		long started = Stopwatch.GetTimestamp();
 		PingReply reply;
 		try
 		{
-			reply = await ping.SendPingAsync(address, request.Timeout, payload, options, cancellationToken);
+			reply = await ping.SendPingAsync(address, request.Timeout, buffer, options, cancellationToken);
 		}
 		catch (PingException) when (cancellationToken.IsCancellationRequested)
 		{
@@ -34,6 +36,18 @@ public sealed class SystemPinger : IPinger
 		catch (PingException ex)
 		{
 			return new EchoReply(EchoStatus.Failed, null, null, Describe(ex));
+		}
+		catch (PlatformNotSupportedException) when (buffer is { Length: > 0 })
+		{
+			return new EchoReply(
+				EchoStatus.NotSent,
+				null,
+				null,
+				$"sending {size} bytes of data needs a raw ICMP socket, which this process cannot open; {EchoRequest.DefaultPayload} bytes or none go through the ping program");
+		}
+		catch (PlatformNotSupportedException)
+		{
+			return new EchoReply(EchoStatus.NotSent, null, null, "this platform cannot send ICMP from here");
 		}
 
 		cancellationToken.ThrowIfCancellationRequested();
@@ -60,6 +74,19 @@ public sealed class SystemPinger : IPinger
 			_ => new EchoReply(EchoStatus.Failed, Named(reply.Address), null, reply.Status.ToString()),
 		};
 	}
+
+	/// <summary>
+	/// The buffer handed to <see cref="Ping"/>. .NET's Linux fallback to the ping program refuses every array but its own
+	/// default payload and the shared empty one, even an array holding the same bytes (dotnet/runtime, Ping.PingUtility.cs).
+	/// So the default size passes null, for which .NET sends its own 32 bytes of this same alphabet, and an empty payload
+	/// passes <see cref="Array.Empty{T}"/> itself.
+	/// </summary>
+	internal static byte[]? BufferFor(int size) => size switch
+	{
+		EchoRequest.DefaultPayload => null,
+		0 => Array.Empty<byte>(),
+		_ => Payload(size),
+	};
 
 	/// <summary>The request's data: the alphabet Windows ping sends, repeated to the size asked for.</summary>
 	internal static byte[] Payload(int size)

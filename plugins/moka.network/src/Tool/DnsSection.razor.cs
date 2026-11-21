@@ -164,7 +164,7 @@ public sealed partial class DnsSection : NetworkViewBase
 						entries.Add(new($"Custom {DnsClient.Describe(endpoint)}", [endpoint]));
 					}
 
-					return await ResolverRace.RunAsync(entries, name, type, timeout, DnsLookup.RunAsync, run.Token);
+					return await ResolverRace.RunAsync(entries, name, type, timeout, DnsLookup.RunAsync, Time, run.Token);
 				},
 				run.Token);
 			_race = results;

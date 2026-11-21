@@ -17,4 +17,10 @@ public enum EchoStatus
 
 	/// <summary>Anything else, with the reason in <see cref="EchoReply.Detail"/>.</summary>
 	Failed,
+
+	/// <summary>
+	/// This machine would not send the request as asked, with the reason in <see cref="EchoReply.Detail"/>. Nothing went
+	/// out, so it says nothing about the path.
+	/// </summary>
+	NotSent,
 }

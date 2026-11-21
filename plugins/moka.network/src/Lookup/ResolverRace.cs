@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Net;
 
 namespace Moka.Network.Lookup;
@@ -28,12 +27,14 @@ public static class ResolverRace
 		int type,
 		TimeSpan timeout,
 		Func<IReadOnlyList<IPEndPoint>, string, int, TimeSpan, CancellationToken, Task<DnsLookupResult>> lookup,
+		TimeProvider time,
 		CancellationToken cancellationToken)
 	{
 		ArgumentNullException.ThrowIfNull(entries);
 		ArgumentNullException.ThrowIfNull(name);
 		ArgumentNullException.ThrowIfNull(lookup);
-		ResolverRaceResult[] results = await Task.WhenAll(entries.Select(entry => AskAsync(entry, name, type, timeout, lookup, cancellationToken)));
+		ArgumentNullException.ThrowIfNull(time);
+		ResolverRaceResult[] results = await Task.WhenAll(entries.Select(entry => AskAsync(entry, name, type, timeout, lookup, time, cancellationToken)));
 		return [.. results
 			.Select((result, index) => (result, index))
 			.OrderBy(pair => pair.result.Answered ? 0 : 1)
@@ -57,17 +58,18 @@ public static class ResolverRace
 		int type,
 		TimeSpan timeout,
 		Func<IReadOnlyList<IPEndPoint>, string, int, TimeSpan, CancellationToken, Task<DnsLookupResult>> lookup,
+		TimeProvider time,
 		CancellationToken cancellationToken)
 	{
-		long started = Stopwatch.GetTimestamp();
+		long started = time.GetTimestamp();
 		try
 		{
 			DnsLookupResult result = await lookup(entry.Servers, name, type, timeout, cancellationToken);
-			return new ResolverRaceResult(entry, result, null, Stopwatch.GetElapsedTime(started));
+			return new ResolverRaceResult(entry, result, null, time.GetElapsedTime(started));
 		}
 		catch (DnsLookupException ex)
 		{
-			return new ResolverRaceResult(entry, null, ex.Message, Stopwatch.GetElapsedTime(started));
+			return new ResolverRaceResult(entry, null, ex.Message, time.GetElapsedTime(started));
 		}
 	}
 }

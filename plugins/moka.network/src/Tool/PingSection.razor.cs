@@ -174,10 +174,10 @@ public sealed partial class PingSection : NetworkViewBase
 
 					Post(() => _target = $"Finding the path MTU to {address}");
 					PathMtuResult result = await PathMtu.FindAsync(
-						async (payload, token) => (await SystemPinger.Instance.SendAsync(
+						async (payload, token) => Fits(await SystemPinger.Instance.SendAsync(
 							address,
 							new EchoRequest(EchoRequest.DefaultTtl, TimeSpan.FromMilliseconds(timeout.Value), payload, DontFragment: true),
-							token)).Status == EchoStatus.Reply,
+							token)),
 						run.Token);
 					Post(() => _mtu = result);
 				},
@@ -197,6 +197,15 @@ public sealed partial class PingSection : NetworkViewBase
 			EndRun(run);
 		}
 	}
+
+	// A probe this machine would not send says nothing about the path, so the search stops with the reason instead of
+	// counting the size as too big.
+	private static bool Fits(EchoReply reply) => reply.Status switch
+	{
+		EchoStatus.Reply => true,
+		EchoStatus.NotSent => throw new ProbeException($"Path MTU discovery cannot run here: {reply.Detail}."),
+		_ => false,
+	};
 
 	private static string Describe(HostTarget target, IPAddress address, PingMode mode, int size, int port)
 	{

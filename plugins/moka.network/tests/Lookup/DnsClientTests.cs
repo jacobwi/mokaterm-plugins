@@ -8,6 +8,9 @@ namespace Moka.Network.Tests.Lookup;
 /// <summary>The DNS client against servers on the loopback address that answer the way the test needs, never the real network.</summary>
 public sealed class DnsClientTests
 {
+	// IANA's dynamic range, the ports nothing registers.
+	private const int FirstDynamicPort = 49152;
+
 	private static readonly TimeSpan Limit = TimeSpan.FromSeconds(5);
 
 	[Fact]
@@ -178,19 +181,21 @@ public sealed class DnsClientTests
 	}
 
 	/// <summary>
-	/// A UDP socket and a TCP listener on the same loopback port, as one DNS server listens on both. Windows keeps some
-	/// port ranges back per protocol, so a port free for TCP may still be refused for UDP; another one is tried then.
+	/// A UDP socket and a TCP listener on the same loopback port, as one DNS server listens on both. Windows keeps blocks
+	/// of ports back per protocol (Hyper-V reserves hundreds at a time) and hands out ephemeral ports nearly in order, so
+	/// taking the system's next TCP port and retrying UDP on it can walk the whole way through a reserved UDP block. Each
+	/// attempt picks a port in the dynamic range at random instead.
 	/// </summary>
 	private static (Socket Udp, TcpListener Tcp) PairedServers()
 	{
 		for (int attempt = 0; ; attempt++)
 		{
-			TcpListener listener = new(IPAddress.Loopback, 0);
-			listener.Start();
-			int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+			int port = Random.Shared.Next(FirstDynamicPort, IPEndPoint.MaxPort + 1);
+			TcpListener listener = new(IPAddress.Loopback, port);
 			Socket udp = new(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
 			try
 			{
+				listener.Start();
 				udp.Bind(new IPEndPoint(IPAddress.Loopback, port));
 				return (udp, listener);
 			}

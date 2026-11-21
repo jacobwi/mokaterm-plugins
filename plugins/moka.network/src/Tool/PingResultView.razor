@@ -163,6 +163,7 @@
 			EchoStatus.TimedOut => "timed out",
 			EchoStatus.TtlExpired => "TTL expired on the way",
 			EchoStatus.Unreachable => $"unreachable: {reply.Detail}",
+			EchoStatus.NotSent => $"not sent: {reply.Detail}",
 			_ => $"failed: {reply.Detail}",
 		};
 	}

@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.Extensions.Time.Testing;
 using Moka.Network.Lookup;
 
 namespace Moka.Network.Tests.Lookup;
@@ -16,7 +17,7 @@ public sealed class ResolverRaceTests
 		ResolverRaceEntry dead = new("Dead", [Endpoint(3)]);
 
 		IReadOnlyList<ResolverRaceResult> results = await ResolverRace.RunAsync(
-			[dead, slow, fast], "example.com", 1, Limit, Lookup, TestContext.Current.CancellationToken);
+			[dead, slow, fast], "example.com", 1, Limit, Lookup, TimeProvider.System, TestContext.Current.CancellationToken);
 
 		Assert.Equal(["Fast", "Slow", "Dead"], results.Select(result => result.Entry.Label));
 		Assert.All(results.Take(2), result => Assert.True(result.Answered));
@@ -48,7 +49,7 @@ public sealed class ResolverRaceTests
 		ResolverRaceEntry dead = new("Dead", [Endpoint(2)]);
 
 		IReadOnlyList<ResolverRaceResult> results = await ResolverRace.RunAsync(
-			[dead, refused], "example.com", 1, Limit, Lookup, TestContext.Current.CancellationToken);
+			[dead, refused], "example.com", 1, Limit, Lookup, TimeProvider.System, TestContext.Current.CancellationToken);
 
 		Assert.Equal("Refused", results[0].Entry.Label);
 		Assert.True(results[0].Answered);
@@ -71,21 +72,20 @@ public sealed class ResolverRaceTests
 	public async Task Run_CarriesTheFailureAndTheWholeTryTook()
 	{
 		ResolverRaceEntry dead = new("Dead", [Endpoint(1)]);
-		long started = TimeProvider.System.GetTimestamp();
+		FakeTimeProvider time = new();
 
 		IReadOnlyList<ResolverRaceResult> results = await ResolverRace.RunAsync(
-			[dead], "example.com", 1, Limit, Lookup, TestContext.Current.CancellationToken);
+			[dead], "example.com", 1, Limit, Lookup, time, TestContext.Current.CancellationToken);
 
 		ResolverRaceResult failure = Assert.Single(results);
 		Assert.Null(failure.Result);
 		Assert.Contains("did not answer", failure.Failure, StringComparison.Ordinal);
-		Assert.True(failure.Elapsed >= TimeSpan.FromMilliseconds(30));
-		Assert.True(failure.Elapsed < TimeSpan.FromSeconds(5));
+		Assert.Equal(TimeSpan.FromMilliseconds(30), failure.Elapsed);
 
-		async Task<DnsLookupResult> Lookup(IReadOnlyList<IPEndPoint> servers, string name, int type, TimeSpan timeout, CancellationToken cancellationToken)
+		Task<DnsLookupResult> Lookup(IReadOnlyList<IPEndPoint> servers, string name, int type, TimeSpan timeout, CancellationToken cancellationToken)
 		{
-			await Task.Delay(30, cancellationToken);
-			throw new DnsLookupException("192.0.2.1:53 did not answer within 5 s.");
+			time.Advance(TimeSpan.FromMilliseconds(30));
+			return Task.FromException<DnsLookupResult>(new DnsLookupException("192.0.2.1:53 did not answer within 5 s."));
 		}
 	}
 
@@ -97,7 +97,7 @@ public sealed class ResolverRaceTests
 		ResolverRaceEntry entry = new("Fast", [Endpoint(1)]);
 
 		await Assert.ThrowsAnyAsync<OperationCanceledException>(
-			() => ResolverRace.RunAsync([entry], "example.com", 1, Limit, Lookup, stop.Token));
+			() => ResolverRace.RunAsync([entry], "example.com", 1, Limit, Lookup, TimeProvider.System, stop.Token));
 
 		async Task<DnsLookupResult> Lookup(IReadOnlyList<IPEndPoint> servers, string name, int type, TimeSpan timeout, CancellationToken cancellationToken)
 		{
@@ -113,7 +113,7 @@ public sealed class ResolverRaceTests
 		ResolverRaceEntry two = new("Two", [Endpoint(2)]);
 		List<(IReadOnlyList<IPEndPoint> Servers, string Name, int Type, TimeSpan Timeout)> asked = [];
 
-		await ResolverRace.RunAsync([one, two], "example.com", 16, Limit, Lookup, TestContext.Current.CancellationToken);
+		await ResolverRace.RunAsync([one, two], "example.com", 16, Limit, Lookup, TimeProvider.System, TestContext.Current.CancellationToken);
 
 		Assert.Equal(2, asked.Count);
 		Assert.All(asked, question => Assert.Equal(("example.com", 16, Limit), (question.Name, question.Type, question.Timeout)));

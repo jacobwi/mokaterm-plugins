@@ -149,6 +149,14 @@ public sealed class TracerouteTests
 		Assert.Equal(expected is null ? null : IPAddress.Parse(expected), SystemPinger.HopAddress(IPAddress.Parse(reported), IPAddress.Parse(destination)));
 
 	[Fact]
+	public void Buffer_LeavesTheDefaultToDotnet_AndPassesTheSharedEmptyArray()
+	{
+		Assert.Null(SystemPinger.BufferFor(EchoRequest.DefaultPayload));
+		Assert.Same(Array.Empty<byte>(), SystemPinger.BufferFor(0));
+		Assert.Equal(SystemPinger.Payload(35), SystemPinger.BufferFor(35));
+	}
+
+	[Fact]
 	public void Payload_RepeatsTheAlphabetToTheSizeAsked()
 	{
 		Assert.Empty(SystemPinger.Payload(0));
