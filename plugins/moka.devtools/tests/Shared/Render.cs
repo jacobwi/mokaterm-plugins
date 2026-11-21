@@ -18,7 +18,6 @@ internal static class Render
 		string html = await StaticRender.RenderAsync<TComponent>(parameters, HostKind.Desktop, services =>
 		{
 			services.AddSingleton<TimeProvider>(new FixedClock(Now));
-			TestNavigation.Add(services);
 		});
 		return WebUtility.HtmlDecode(html);
 	}

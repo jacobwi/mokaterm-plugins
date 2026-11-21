@@ -23,7 +23,7 @@ public sealed partial class ToolRenderTests
 	[InlineData(HostKind.Web)]
 	public async Task Tool_ShowsTheThreeModesAndThePasswordOptions(HostKind host)
 	{
-		string html = await StaticRender.RenderAsync<PasswordGeneratorTool>([], host, TestNavigation.Add);
+		string html = await StaticRender.RenderAsync<PasswordGeneratorTool>([], host);
 
 		foreach (string tab in new[] { "Password", "Passphrase", "PIN" })
 		{
@@ -148,11 +148,7 @@ public sealed partial class ToolRenderTests
 		TestSettings settings = new();
 		settings.Set(section);
 		return StaticRender.RenderAsync<PasswordGeneratorTool>(
-			services =>
-			{
-				services.AddSingleton<ISettingsService>(settings);
-				TestNavigation.Add(services);
-			},
+			services => services.AddSingleton<ISettingsService>(settings),
 			[]);
 	}
 
